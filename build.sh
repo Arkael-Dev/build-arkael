@@ -176,20 +176,18 @@ if ksu_included; then
     fi
   done
 
-  log "Running KernelSU-Next setup (dev-susfs branch)..."
-  curl -LSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/refs/heads/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
-
+  install_ksu 'pershoot/KernelSU-Next' 'dev-susfs'
   config --enable CONFIG_KSU
 
-  # Apply Manager Support Patch
-  # Assuming setup script creates drivers/kernelsu
-  if [ -f "$KERNEL_PATCHES/ksu/ksun-add-more-managers-support.patch" ]; then
-    if [ -d "drivers/kernelsu" ]; then
-      cd drivers/kernelsu
-      patch -p1 < $KERNEL_PATCHES/ksu/ksun-add-more-managers-support.patch || true
-      cd $OLDPWD
-    fi
-  fi
+  cd KernelSU-Next
+  patch -p1 < $KERNEL_PATCHES/ksu/ksun-add-more-managers-support.patch
+  cd $OLDPWD
+    # Fix SUSFS Uname Symbol Error for KernelSU Next & All_Manager
+    log "Applying fix for undefined SUSFS symbols (KernelSU-Next)..."
+    # Disable SUSFS Uname handling block in supercalls.c to use standard kernel spoofing
+    # This fixes the linker error caused by missing functions in the current SUSFS patch
+    sed -i 's/#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME/#if 0 \/\* CONFIG_KSU_SUSFS_SPOOF_UNAME Disabled to fix build \*\//' drivers/kernelsu/supercalls.c
+    log "SUSFS symbol fix applied for KernelSU-Next."
 
 # --- VorteXSU Setup Block ---
 elif [ "$KSU" == "vortexsu" ]; then
@@ -263,32 +261,16 @@ if susfs_included; then
           log "Applying manual statfs CRC fix for KernelSU Next GKI 6.1..."
           sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
           sed -i '/#include "mount.h"/a #endif' fs/statfs.c
-          # PATCH: Fix unterminated conditional directive in statfs.c for KernelSU Next
-          if ! tail -1 fs/statfs.c | grep -q "#endif"; then
-             echo "#endif /* CONFIG_KSU_SUSFS_SUS_MOUNT */" >> fs/statfs.c
-          fi
         else
           # Versi lain (misal 6.6): Gunakan patch default
           log "Applying statfs CRC fix patch (KernelSU Next)..."
-          patch -p1 < $KERNEL_PATCHES/susfs/fix-statfs-crc-mismatch-susfs.patch || true
+          patch -p1 < $KERNEL_PATCHES/susfs/fix-statfs-crc-mismatch-susfs.patch
         fi
       elif [ "$KSU" == "vortexsu" ] && [ "$KVER" == "6.1" ]; then
         # VorteXSU 6.1: Skip patch, apply manual fix
         log "Applying manual statfs CRC fix for VorteXSU GKI 6.1..."
         sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
         sed -i '/#include "mount.h"/a #endif' fs/statfs.c
-        
-        # PATCH: Fix unterminated conditional directive in statfs.c
-        if ! tail -1 fs/statfs.c | grep -q "#endif"; then
-           echo "#endif /* CONFIG_KSU_SUSFS_SUS_MOUNT */" >> fs/statfs.c
-        fi
-
-        # PATCH: Fix supercalls.c extra closing brace for VorteXSU
-        log "Fixing VorteXSU supercalls.c syntax (extra brace)..."
-        if [ -f "drivers/kernelsu/supercalls.c" ]; then
-             # Remove last line if it is only a closing brace (ignoring whitespace)
-             sed -i '${/^[[:space:]]*}[[:space:]]*$/d;}' drivers/kernelsu/supercalls.c
-        fi
       fi
     fi
 
