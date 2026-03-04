@@ -1,3 +1,6 @@
+Original Author: Kingfinik98
+Do not remove credit under GPLv2 compliance.
+
 ## Fork & Credit Notice
 Build Gki Android 12.5.10 Android 14 6.1 Android 15.6.6
 
