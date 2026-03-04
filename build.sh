@@ -42,7 +42,7 @@ DEFCONFIG_TO_MERGE=""
 GKI_RELEASES_REPO="https://github.com/Kingfinik98/gki-builder"
 #Change the clang by removing the (#) sign then apply
 #CLANG_URL="https://github.com/linastorvaldz/idk/releases/download/clang-r547379/clang.tgz"
-#CLANG_URL="https://github.com/LineageOS/android_prebuilts_clang_kernel_linux-x86_clang-r416183b/archive/refs/heads/lineage-20.0.tar.gz"
+#CLANG_URL="https://github.com/LineageOS/android_prebuilts_clang_kernel/linux-x86_clang-r416183b/archive/refs/heads/lineage-20.0.tar.gz"
 #CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main-kernel-2025/clang-r536225.tar.gz"
 #CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/62cdcefa89e31af2d72c366e8b5ef8db84caea62/clang-r547379.tar.gz"
 #CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/105aba85d97a53d364585ca755752dae054b49e8/clang-r584948b.tar.gz"
@@ -257,23 +257,23 @@ if susfs_included; then
       if [ "$KSU" == "yes" ]; then
         # KernelSU Next Check specific version
         if [ "$KVER" == "6.1" ]; then
-          # Insert prefix before susfs_def.h GKI 6.1 only: Use manual fix because patch is problematic
+          # Khusus GKI 6.1: Gunakan manual fix karena patch bermasalah
           log "Applying manual statfs CRC fix for KernelSU Next GKI 6.1..."
-          # Insert prefix before susfs_def.h
+          # Sisipkan pembuka sebelum susfs_def.h
           sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
-          # FIX: Insert a closing #endif AFTER susfs_def.h (directly after the same line)
+          # PERBAIKAN: Sisipkan penutup #endif SETELAH susfs_def.h (langsung setelah baris yang sama)
           sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
         else
-          # Other versions (e.g. 6.6): Use default patch
+          # Versi lain (misal 6.6): Gunakan patch default
           log "Applying statfs CRC fix patch (KernelSU Next)..."
           patch -p1 < $KERNEL_PATCHES/susfs/fix-statfs-crc-mismatch-susfs.patch
         fi
       elif [ "$KSU" == "vortexsu" ] && [ "$KVER" == "6.1" ]; then
         # VorteXSU 6.1: Apply manual fix
         log "Applying manual statfs CRC fix for VorteXSU GKI 6.1..."
-        # Insert prefix before susfs_def.h
+        # Sisipkan pembuka sebelum susfs_def.h
         sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
-        # FIX: Insert a closing #endif AFTER susfs_def.h (directly after the same line)
+        # PERBAIKAN: Sisipkan penutup #endif SETELAH susfs_def.h (langsung setelah baris yang sama)
         sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
       fi
     fi
@@ -395,7 +395,7 @@ if [ "$KSU" == "vortexsu" ]; then
       log "✅ KPM Patch applied successfully."
     else
       log "Error: oImage not found!"
-    end if
+    fi
   else
     log "Warning: Image file not found in $PWD. Skipping KPM patch."
   fi
