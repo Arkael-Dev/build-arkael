@@ -252,28 +252,28 @@ if susfs_included; then
       patch -p1 < $KERNEL_PATCHES/susfs/pershoot-susfs-k5.10.patch
     fi
 
-    # CRC Fix Logic
+    # CRC Fix Logic (Khusus GKI 6.x)
     if [ $(echo "$LINUX_VERSION_CODE" | head -c1) -eq 6 ]; then
       if [ "$KSU" == "yes" ]; then
         # KernelSU Next Check specific version
         if [ "$KVER" == "6.1" ]; then
-          # Khusus GKI 6.1: Gunakan manual fix karena patch bermasalah
+          # GKI 6.1 only: Use manual fix because patch is problematic
           log "Applying manual statfs CRC fix for KernelSU Next GKI 6.1..."
-          # Sisipkan pembuka sebelum susfs_def.h
+          # Insert prefix before susfs_def.h
           sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
-          # PERBAIKAN: Sisipkan penutup #endif SETELAH susfs_def.h (langsung setelah baris yang sama)
+          # FIX: Insert closing #endif AFTER susfs_def.h
           sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
         else
-          # Versi lain (misal 6.6): Gunakan patch default
+          # Other versions (e.g. 6.6): Use default patch
           log "Applying statfs CRC fix patch (KernelSU Next)..."
           patch -p1 < $KERNEL_PATCHES/susfs/fix-statfs-crc-mismatch-susfs.patch
         fi
       elif [ "$KSU" == "vortexsu" ] && [ "$KVER" == "6.1" ]; then
         # VorteXSU 6.1: Apply manual fix
         log "Applying manual statfs CRC fix for VorteXSU GKI 6.1..."
-        # Sisipkan pembuka sebelum susfs_def.h
+        # Insert prefix before susfs_def.h
         sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
-        # PERBAIKAN: Sisipkan penutup #endif SETELAH susfs_def.h (langsung setelah baris yang sama)
+        # Insert prefix before susfs_def.h FIX: Insert closing #endif AFTER susfs_def.h
         sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
       fi
     fi
