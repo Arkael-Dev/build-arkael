@@ -1,5 +1,28 @@
 Original Author: Kingfinik98
 Do not remove credit under GPLv2 compliance.
+## A Note on Open Source & Contribution
+
+To those who call themselves “kernel developers” but only fork, copy, and re-edit scripts without meaningful contribution:
+
+Open source under the GPL license allows usage, modification, and redistribution.  
+However, ethics and integrity should always come first.
+
+Taking someone else's script, making minor changes, and claiming it as original hard work is not skill — it is simply copy-paste with new packaging.
+
+In the kernel world, real quality is reflected in:
+- The ability to fix bugs
+- Resolving complex build conflicts
+- Writing and adapting patches manually
+- Debugging bootloops
+- Consistent and meaningful commit history
+
+Not in renaming a repository or rewriting a README.
+
+Original work will always stand out.  
+So will copy-paste projects.
+
+I do not seek recognition.  
+Commit history never lies.
 
 ## Fork & Credit Notice
 Build Gki Android 12.5.10 Android 14 6.1 Android 15.6.6
