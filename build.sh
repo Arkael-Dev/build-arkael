@@ -87,7 +87,7 @@ fi
 
 # --- PATCH 300HZ (INSTALLED AT THE BEGINNING) ---
 log "Applying 300Hz patch..."
-wget -qO inject_300hz.sh https://raw.githubusercontent.com/Kingfinik98/gki-builder/refs/heads/6.x/inject_ksu/inject_300hz.sh
+wget -qO inject_300hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/inject_300hz.sh
 bash inject_300hz.sh
 rm inject_300hz.sh
 #--------------------------------------
