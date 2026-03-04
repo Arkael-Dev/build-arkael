@@ -176,27 +176,19 @@ if ksu_included; then
     fi
   done
 
-  install_ksu 'pershoot/KernelSU-Next' 'dev-susfs'
+  log "Running KernelSU-Next setup (dev-susfs branch)..."
+  curl -LSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/refs/heads/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
+
   config --enable CONFIG_KSU
 
-  cd KernelSU-Next
-  patch -p1 < $KERNEL_PATCHES/ksu/ksun-add-more-managers-support.patch
-  cd $OLDPWD
-
-  # --- KERNELSU-NEXT SUSFS FIXES (GKI 6.1) ---
-  if [ "$KVER" == "6.1" ]; then
-    log "Applying critical SUSFS fixes for KernelSU-Next GKI 6.1..."
-    
-    # Fix 1: Disable SUSFS Uname handling (Linker Error)
-    sed -i 's/#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME/#if 0 \/\* CONFIG_KSU_SUSFS_SPOOF_UNAME Disabled to fix build \*\//' drivers/kernelsu/supercalls.c
-    
-    # Fix 2: Define missing susfs_zygote_sid variable (Linker Error)
-    # The new setuid_hook.c expects this variable to exist.
-    if ! grep -q "susfs_zygote_sid" drivers/kernelsu/ksu.c; then
-       echo "u32 susfs_zygote_sid = 0;" >> drivers/kernelsu/ksu.c
+  # Apply Manager Support Patch
+  # Assuming setup script creates drivers/kernelsu
+  if [ -f "$KERNEL_PATCHES/ksu/ksun-add-more-managers-support.patch" ]; then
+    if [ -d "drivers/kernelsu" ]; then
+      cd drivers/kernelsu
+      patch -p1 < $KERNEL_PATCHES/ksu/ksun-add-more-managers-support.patch || true
+      cd $OLDPWD
     fi
-    
-    log "SUSFS symbol fixes applied."
   fi
 
 # --- VorteXSU Setup Block ---
