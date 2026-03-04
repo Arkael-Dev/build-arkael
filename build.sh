@@ -257,20 +257,24 @@ if susfs_included; then
       if [ "$KSU" == "yes" ]; then
         # KernelSU Next Check specific version
         if [ "$KVER" == "6.1" ]; then
-          # Khusus GKI 6.1: Gunakan manual fix karena patch bermasalah
+          # Insert prefix before susfs_def.h GKI 6.1 only: Use manual fix because patch is problematic
           log "Applying manual statfs CRC fix for KernelSU Next GKI 6.1..."
+          # Insert prefix before susfs_def.h
           sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
-          sed -i '/#include "mount.h"/a #endif' fs/statfs.c
+          # FIX: Insert a closing #endif AFTER susfs_def.h (directly after the same line)
+          sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
         else
-          # Versi lain (misal 6.6): Gunakan patch default
+          # Other versions (e.g. 6.6): Use default patch
           log "Applying statfs CRC fix patch (KernelSU Next)..."
           patch -p1 < $KERNEL_PATCHES/susfs/fix-statfs-crc-mismatch-susfs.patch
         fi
       elif [ "$KSU" == "vortexsu" ] && [ "$KVER" == "6.1" ]; then
-        # VorteXSU 6.1: Skip patch, apply manual fix
+        # VorteXSU 6.1: Apply manual fix
         log "Applying manual statfs CRC fix for VorteXSU GKI 6.1..."
+        # Insert prefix before susfs_def.h
         sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
-        sed -i '/#include "mount.h"/a #endif' fs/statfs.c
+        # FIX: Insert a closing #endif AFTER susfs_def.h (directly after the same line)
+        sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
       fi
     fi
 
@@ -391,7 +395,7 @@ if [ "$KSU" == "vortexsu" ]; then
       log "✅ KPM Patch applied successfully."
     else
       log "Error: oImage not found!"
-    fi
+    end if
   else
     log "Warning: Image file not found in $PWD. Skipping KPM patch."
   fi
