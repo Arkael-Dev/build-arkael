@@ -3,7 +3,7 @@
 # Define Kconfig Hz file location
 KCONFIG_HZ="kernel/Kconfig.hz"
 
-echo " Applying 500Hz patch to $KCONFIG_HZ..."
+echo " Applying 300Hz patch to $KCONFIG_HZ..."
 
 # Check if target file exists
 if [ ! -f "$KCONFIG_HZ" ]; then
@@ -13,8 +13,8 @@ if [ ! -f "$KCONFIG_HZ" ]; then
 fi
 
 # Perform replacement of 300Hz configuration to 300Hz
-sed -i 's/config HZ_500/config HZ_500/g' "$KCONFIG_HZ"
-sed -i 's/bool "500 HZ"/bool "500 HZ"/g' "$KCONFIG_HZ"
-sed -i 's/default 500 if HZ_500/default 500 if HZ_500/g' "$KCONFIG_HZ"
+sed -i 's/config HZ_300/config HZ_300/g' "$KCONFIG_HZ"
+sed -i 's/bool "300 HZ"/bool "300 HZ"/g' "$KCONFIG_HZ"
+sed -i 's/default 300 if HZ_300/default 300 if HZ_300/g' "$KCONFIG_HZ"
 
-echo " Successfully patched kernel for 500Hz support."
+echo " Successfully patched kernel for 300Hz support."
