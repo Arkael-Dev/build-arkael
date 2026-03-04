@@ -7,7 +7,7 @@ echo " Applying 300Hz patch to $KCONFIG_HZ..."
 
 # Check if target file exists
 if [ ! -f "$KCONFIG_HZ" ]; then
-    echo "❌ Error: File $KCONFIG_HZ not found."
+    echo "Error: File $KCONFIG_HZ not found."
     echo "Ensure the script is run from the kernel source root directory."
     exit 1
 fi
