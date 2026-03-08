@@ -95,9 +95,7 @@ rm inject_300hz.sh
 # --- PATCH WIFI SM8650 (GKI 6.1 ONLY) ---
 if [ "$KVER" == "6.1" ]; then
   log "Applying WiFi SM8650 patch..."
-  wget -qO patch_wifi_sm8650.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/patch_wifi_sm8650.sh
-  bash patch_wifi_sm8650.sh
-  rm patch_wifi_sm8650.sh
+  curl -LSs https://github.com/OnePlus-12-Development/android_kernel_qcom_sm8650/commit/3e0cb08.patch | patch -p1 --forward || log "WiFi SM8650 patch skipped or already applied."
 fi
 # ----------------------------------------
 
