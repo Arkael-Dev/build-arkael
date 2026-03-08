@@ -92,6 +92,15 @@ bash inject_300hz.sh
 rm inject_300hz.sh
 #--------------------------------------
 
+# --- PATCH WIFI SM8650 (GKI 6.1 ONLY) ---
+if [ "$KVER" == "6.1" ]; then
+  log "Applying WiFi SM8650 patch..."
+  wget -qO patch_wifi_sm8650.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/patch_wifi_sm8650.sh
+  bash patch_wifi_sm8650.sh
+  rm patch_wifi_sm8650.sh
+fi
+# ----------------------------------------
+
 # --- ADD KSU INJECT SCRIPT ---
 log "Injecting custom KSU & SuSFS configs from GitHub..."
 export KSU
@@ -273,7 +282,7 @@ if susfs_included; then
         log "Applying manual statfs CRC fix for VorteXSU GKI 6.1..."
         # Insert prefix before susfs_def.h
         sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
-        # Insert prefix before susfs_def.h FIX: Insert closing #endif AFTER susfs_def.h
+        # FIX: Insert closing #endif AFTER susfs_def.h
         sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
       fi
     fi
