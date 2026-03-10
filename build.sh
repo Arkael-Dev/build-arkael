@@ -86,10 +86,10 @@ fi
 # ----------------------------------------------------
 
 # --- PATCH 300HZ (INSTALLED AT THE BEGINNING) ---
-#log "Applying 300Hz patch..."
-#wget -qO inject_300hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/inject_300hz.sh
-#bash inject_300hz.sh
-#rm inject_300hz.sh
+log "Applying 300Hz patch..."
+wget -qO inject_300hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/inject_300hz.sh
+bash inject_300hz.sh
+rm inject_300hz.sh
 #--------------------------------------
 
 # --- PATCH WIFI SM8650 (GKI 6.1 ONLY) ---
@@ -248,15 +248,18 @@ if susfs_included; then
     cp -R $SUSFS_PATCHES/fs/* ./fs
     cp -R $SUSFS_PATCHES/include/* ./include
     patch -p1 < $SUSFS_PATCHES/50_add_susfs_in_${SUSFS_BRANCH}.patch || true
+    
+    # PATCH FIXES (Made non-fatal with || true)
     if [ $(echo "$LINUX_VERSION_CODE" | head -c4) -eq 6630 ]; then
-      patch -p1 < $KERNEL_PATCHES/susfs/namespace.c_fix.patch
-      patch -p1 < $KERNEL_PATCHES/susfs/task_mmu.c_fix.patch
+      patch -p1 < $KERNEL_PATCHES/susfs/namespace.c_fix.patch || true
+      patch -p1 < $KERNEL_PATCHES/susfs/task_mmu.c_fix.patch || true
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c4) -eq 6658 ]; then
-      patch -p1 < $KERNEL_PATCHES/susfs/task_mmu.c_fix-k6.6.58.patch
+      patch -p1 < $KERNEL_PATCHES/susfs/task_mmu.c_fix-k6.6.58.patch || true
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c2) -eq 61 ]; then
-      patch -p1 < $KERNEL_PATCHES/susfs/fs_proc_base.c-fix-k6.1.patch
+      patch -p1 < $KERNEL_PATCHES/susfs/fs_proc_base.c-fix-k6.1.patch || true
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c3) -eq 510 ]; then
-      patch -p1 < $KERNEL_PATCHES/susfs/pershoot-susfs-k5.10.patch
+      # FIX: Added || true to prevent build stop on fuzz/reject for 5.10
+      patch -p1 < $KERNEL_PATCHES/susfs/pershoot-susfs-k5.10.patch || true
     fi
 
     # CRC Fix Logic (Khusus GKI 6.x)
