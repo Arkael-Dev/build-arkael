@@ -199,8 +199,9 @@ if ksu_included; then
     # Fix duplicate symbol __stack_chk_guard for GKI 5.10
     if [ "$KVER" == "5.10" ]; then
       log "Applying fix for duplicate symbol __stack_chk_guard (GKI 5.10)..."
-      # Disable the stack protector workaround in ksu.c which conflicts with kernel's definition
-      sed -i 's/#if defined(CONFIG_STACKPROTECTOR) && !defined(CONFIG_STACKPROTECTOR_PER_TASK)/#if 0 \/\/ Disabled to fix duplicate symbol/' drivers/kernelsu/ksu.c
+      # Robust sed: Replace the whole line starting with #if and containing CONFIG_STACKPROTECTOR_PER_TASK
+      # This handles both the definition block and the assignment block
+      sed -i '/^#if.*CONFIG_STACKPROTECTOR_PER_TASK/c\#if 0 \/\/ Disabled to fix duplicate symbol' drivers/kernelsu/ksu.c
       log "Stack protector fix applied."
     fi
 
