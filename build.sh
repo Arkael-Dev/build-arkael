@@ -196,6 +196,14 @@ if ksu_included; then
     sed -i 's/#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME/#if 0 \/\* CONFIG_KSU_SUSFS_SPOOF_UNAME Disabled to fix build \*\//' drivers/kernelsu/supercalls.c
     log "SUSFS symbol fix applied for KernelSU-Next."
 
+    # Fix duplicate symbol __stack_chk_guard for GKI 5.10
+    if [ "$KVER" == "5.10" ]; then
+      log "Applying fix for duplicate symbol __stack_chk_guard (GKI 5.10)..."
+      # Disable the stack protector workaround in ksu.c which conflicts with kernel's definition
+      sed -i 's/#if defined(CONFIG_STACKPROTECTOR) && !defined(CONFIG_STACKPROTECTOR_PER_TASK)/#if 0 \/\/ Disabled to fix duplicate symbol/' drivers/kernelsu/ksu.c
+      log "Stack protector fix applied."
+    fi
+
 # --- VorteXSU Setup Block ---
 elif [ "$KSU" == "vortexsu" ]; then
   log "Setting up VorteXSU for KVER $KVER..."
