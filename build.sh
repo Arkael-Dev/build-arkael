@@ -85,11 +85,11 @@ if [ "$KVER" == "5.10" ]; then
 fi
 # ----------------------------------------------------
 
-# --- PATCH 300HZ (INSTALLED AT THE BEGINNING) ---
-log "Applying 300Hz patch..."
-wget -qO inject_300hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/inject_300hz.sh
-bash inject_300hz.sh
-rm inject_300hz.sh
+# --- PATCH inject.sh ---
+log "Applying inject.sh patch..."
+wget -qO inject.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/inject.sh
+bash inject.sh
+rm inject.sh
 #--------------------------------------
 
 # --- PATCH WIFI SM8650 (GKI 6.1 ONLY) ---
@@ -104,8 +104,8 @@ log "Injecting custom KSU & SuSFS configs from GitHub..."
 export KSU
 export KSU_SUSFS
 wget -qO inject.sh https://raw.githubusercontent.com/Kingfinik98/gki-builder/refs/heads/6.x/inject_ksu/gki_defconfig.sh
-bash inject.sh
-rm inject.sh
+bash gki_defconfig.sh
+rm gki_defconfig.sh
 # --------------------------------------
 cd $WORKDIR
 
