@@ -104,8 +104,8 @@ log "Injecting custom KSU & SuSFS configs from GitHub..."
 export KSU
 export KSU_SUSFS
 wget -qO inject.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/gki_defconfig.sh
-bash gki_defconfig.sh
-rm gki_defconfig.sh
+bash inject.sh
+rm inject.sh
 # --------------------------------------
 cd $WORKDIR
 
