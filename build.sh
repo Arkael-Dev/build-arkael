@@ -32,7 +32,7 @@ if [ "$KVER" == "6.6" ]; then
 elif [ "$KVER" == "6.1" ]; then
   KERNEL_REPO="https://github.com/ramabondanp/android_kernel_common-6.1.git"
   ANYKERNEL_BRANCH="master"
-  KERNEL_BRANCH="android14-6.1"
+  KERNEL_BRANCH="android14-6.1-staging"
 elif [ "$KVER" == "5.10" ]; then
   KERNEL_REPO="https://github.com/ramabondanp/android_kernel_common-5.10.git"
   ANYKERNEL_BRANCH="master"
@@ -87,9 +87,9 @@ fi
 
 # --- PATCH inject.sh ---
 log "Applying inject.sh patch..."
-wget -qO Inject_1000hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/Inject_1000hz.sh
-bash Inject_1000hz.sh
-rm Inject_1000hz.sh
+wget -qO Inject_1000hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/Inject_500hz.sh
+bash Inject_500hz.sh
+rm Inject_500hz.sh
 #--------------------------------------
 
 # --- PATCH WIFI SM8650 (GKI 6.1 ONLY) ---
