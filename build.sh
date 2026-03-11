@@ -87,7 +87,7 @@ fi
 
 # --- PATCH inject.sh ---
 log "Applying inject.sh patch..."
-wget -qO Inject_1000hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/Inject_500hz.sh
+wget -qO Inject_500hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/Inject_500hz.sh
 bash Inject_500hz.sh
 rm Inject_500hz.sh
 #--------------------------------------
