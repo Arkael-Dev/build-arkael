@@ -95,7 +95,7 @@ rm Inject_1000hz.sh
 # --- PATCH WIFI SM8650 (GKI 6.1 ONLY) ---
 if [ "$KVER" == "6.1" ]; then
   log "Applying WiFi SM8650 patch..."
-  curl -LSs https://github.com/OnePlus-12-Development/android_kernel_qcon_sm8650/commit/3e0cb08.patch | patch -p1 --forward || log "WiFi SM8650 patch skipped or already applied."
+  curl -LSs https://github.com/OnePlus-12-Development/android_kernel_qcom_sm8650/commit/3e0cb08.patch | patch -p1 --forward || log "WiFi SM8650 patch skipped or already applied."
 fi
 # ----------------------------------------
 
@@ -270,9 +270,11 @@ if susfs_included; then
       # === FIX START: Comprehensive SUSFS Definition Injection for GKI 6.1 ===
       log "Injecting full SUSFS definitions into namespace.c for GKI 6.1..."
       
-      # Define the block of code to insert
-      # This includes externs, static variables, and macros missing from the patch
-      read -r -d '' SUSFS_INJECT_BLOCK << 'EOF'
+      # Create a temporary file with the necessary definitions
+      # Using a temp file avoids 'read' command exit code issues
+      NS_INJECT_FILE="$WORKDIR/.ns_inject_tmp"
+      
+      cat << 'EOF' > "$NS_INJECT_FILE"
 
 #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 #include <linux/susfs_def.h>
@@ -292,15 +294,17 @@ static DEFINE_IDA(susfs_mnt_group_ida);
 
 EOF
 
-      # Check if already injected to avoid duplicates
+      # Check if definitions already exist
       if ! grep -q "static DEFINE_IDA(susfs_mnt_id_ida);" ./fs/namespace.c; then
-        # Insert after the last standard include line to ensure headers are loaded
-        # Using 'internal.h' as the anchor as it's standard in namespace.c
-        sed -i "/#include \"internal.h\"/r /dev/stdin" ./fs/namespace.c <<< "$SUSFS_INJECT_BLOCK"
-        log "Full SUSFS definitions injected."
+        # Insert the content of temp file after #include "internal.h"
+        sed -i '/#include "internal.h"/r '"$NS_INJECT_FILE" ./fs/namespace.c
+        log "SUSFS definitions injected successfully."
       else
         log "SUSFS definitions already exist."
       fi
+      
+      # Cleanup temp file
+      rm -f "$NS_INJECT_FILE"
       # === FIX END ===
 
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c3) -eq 510 ]; then
