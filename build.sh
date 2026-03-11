@@ -95,7 +95,7 @@ rm Inject_1000hz.sh
 # --- PATCH WIFI SM8650 (GKI 6.1 ONLY) ---
 if [ "$KVER" == "6.1" ]; then
   log "Applying WiFi SM8650 patch..."
-  curl -LSs https://github.com/OnePlus-12-Development/android_kernel_qcom_sm8650/commit/3e0cb08.patch | patch -p1 --forward || log "WiFi SM8650 patch skipped or already applied."
+  curl -LSs https://github.com/OnePlus-12-Development/android_kernel_qcon_sm8650/commit/3e0cb08.patch | patch -p1 --forward || log "WiFi SM8650 patch skipped or already applied."
 fi
 # ----------------------------------------
 
@@ -267,20 +267,39 @@ if susfs_included; then
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c2) -eq 61 ]; then
       patch -p1 < $KERNEL_PATCHES/susfs/fs_proc_base.c-fix-k6.1.patch || true
       
-      # === FIX START: Inject missing declarations for GKI 6.1 ===
-      log "Injecting missing SUSFS declarations into namespace.c for GKI 6.1..."
-      # Cek apakah deklarasi sudah ada untuk menghindari duplikasi
-      if ! grep -q "extern bool susfs_is_sdcard_android_data_decrypted;" ./fs/namespace.c; then
-        sed -i '/#include "internal.h"/a \
-\n#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\
-extern bool susfs_is_current_ksu_domain(void);\
-extern bool susfs_is_current_zygote_domain(void);\
-extern bool susfs_is_boot_completed_triggered;\
-extern bool susfs_is_sdcard_android_data_decrypted;\
-#endif' ./fs/namespace.c
-        log "Declarations injected successfully."
+      # === FIX START: Comprehensive SUSFS Definition Injection for GKI 6.1 ===
+      log "Injecting full SUSFS definitions into namespace.c for GKI 6.1..."
+      
+      # Define the block of code to insert
+      # This includes externs, static variables, and macros missing from the patch
+      read -r -d '' SUSFS_INJECT_BLOCK << 'EOF'
+
+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+#include <linux/susfs_def.h>
+extern bool susfs_is_current_ksu_domain(void);
+extern bool susfs_is_current_zygote_domain(void);
+extern bool susfs_is_boot_completed_triggered;
+extern bool susfs_is_sdcard_android_data_decrypted;
+
+static DEFINE_IDA(susfs_mnt_id_ida);
+static DEFINE_IDA(susfs_mnt_group_ida);
+
+#define DEFAULT_KSU_MNT_ID 100000
+#define DEFAULT_KSU_MNT_GROUP_ID 100000
+#define VFSMOUNT_MNT_FLAGS_KSU_UNSHARED_MNT BIT(24)
+#define CL_COPY_MNT_NS BIT(25)
+#endif
+
+EOF
+
+      # Check if already injected to avoid duplicates
+      if ! grep -q "static DEFINE_IDA(susfs_mnt_id_ida);" ./fs/namespace.c; then
+        # Insert after the last standard include line to ensure headers are loaded
+        # Using 'internal.h' as the anchor as it's standard in namespace.c
+        sed -i "/#include \"internal.h\"/r /dev/stdin" ./fs/namespace.c <<< "$SUSFS_INJECT_BLOCK"
+        log "Full SUSFS definitions injected."
       else
-        log "Declarations already exist."
+        log "SUSFS definitions already exist."
       fi
       # === FIX END ===
 
