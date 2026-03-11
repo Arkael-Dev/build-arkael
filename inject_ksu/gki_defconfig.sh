@@ -76,8 +76,11 @@ fi
 echo "⚙️ Adding Universal Performance Tuning"
 cat >> $DEFCONFIG <<EOF
 # --- Universal Performance Tuning ---
-CONFIG_HZ=1000
+CONFIG_HZ_1000
 CONFIG_HZ_1000=y
+CONFIG_NO_HZ_IDLE=y
+CONFIG_HIGH_RES_TIMERS=y
+CONFIG_PREEMPT=y
 CONFIG_TMPFS_XATTR=y
 CONFIG_TMPFS_POSIX_ACL=y
 CONFIG_IP_NF_TARGET_TTL=y
