@@ -103,7 +103,8 @@ fi
 log "Injecting custom KSU & SuSFS configs from GitHub..."
 export KSU
 export KSU_SUSFS
-wget -qO gki_defconfig.sh https://raw.githubusercontent.com/Kingfinik98/gki-builder/refs/heads/6.x/inject_ksu/gki_defconfig.sh
+# FIXED: Changed URL to build-vortex to match the inject.sh source and ensure correct patch alignment
+wget -qO gki_defconfig.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/gki_defconfig.sh
 bash gki_defconfig.sh
 rm gki_defconfig.sh
 # --------------------------------------
