@@ -87,9 +87,9 @@ fi
 
 # --- PATCH inject.sh ---
 log "Applying inject.sh patch..."
-wget -qO inject.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/inject.sh
-bash inject.sh
-rm inject.sh
+wget -qO Inject_1000hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/Inject_1000hz.sh
+bash Inject_1000hz.sh
+rm Inject_1000hz.sh
 #--------------------------------------
 
 # --- PATCH WIFI SM8650 (GKI 6.1 ONLY) ---
@@ -103,10 +103,9 @@ fi
 log "Injecting custom KSU & SuSFS configs from GitHub..."
 export KSU
 export KSU_SUSFS
-# FIXED: Changed URL to build-vortex to match the inject.sh source and ensure correct patch alignment
 wget -qO inject.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/gki_defconfig.sh
-bash inject.sh
-rm inject.sh
+bash gki_defconfig.sh
+rm gki_defconfig.sh
 # --------------------------------------
 cd $WORKDIR
 
