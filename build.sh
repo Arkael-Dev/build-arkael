@@ -42,7 +42,7 @@ DEFCONFIG_TO_MERGE=""
 GKI_RELEASES_REPO="https://github.com/Kingfinik98/gki-builder"
 #Change the clang by removing the (#) sign then apply
 #CLANG_URL="https://github.com/linastorvaldz/idk/releases/download/clang-r547379/clang.tgz"
-#CLANG_URL="https://github.com/LineageOS/android_prebuilts_clang_kernel/linux-x86_clang-r416183b/archive/refs/heads/lineage-20.0.tar.gz"
+#CLANG_URL="https://github.com/LineageOS/android_prebuilts_clang/kernel/linux-x86_clang-r416183b/archive/refs/heads/lineage-20.0.tar.gz"
 #CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main-kernel-2025/clang-r536225.tar.gz"
 #CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/62cdcefa89e31af2d72c366e8b5ef8db84caea62/clang-r547379.tar.gz"
 #CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/105aba85d97a53d364585ca755752dae054b49e8/clang-r584948b.tar.gz"
@@ -266,6 +266,24 @@ if susfs_included; then
       patch -p1 < $KERNEL_PATCHES/susfs/task_mmu.c_fix-k6.6.58.patch || true
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c2) -eq 61 ]; then
       patch -p1 < $KERNEL_PATCHES/susfs/fs_proc_base.c-fix-k6.1.patch || true
+      
+      # === FIX START: Inject missing declarations for GKI 6.1 ===
+      log "Injecting missing SUSFS declarations into namespace.c for GKI 6.1..."
+      # Cek apakah deklarasi sudah ada untuk menghindari duplikasi
+      if ! grep -q "extern bool susfs_is_sdcard_android_data_decrypted;" ./fs/namespace.c; then
+        sed -i '/#include "internal.h"/a \
+\n#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\
+extern bool susfs_is_current_ksu_domain(void);\
+extern bool susfs_is_current_zygote_domain(void);\
+extern bool susfs_is_boot_completed_triggered;\
+extern bool susfs_is_sdcard_android_data_decrypted;\
+#endif' ./fs/namespace.c
+        log "Declarations injected successfully."
+      else
+        log "Declarations already exist."
+      fi
+      # === FIX END ===
+
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c3) -eq 510 ]; then
       # FIX: Added || true to prevent build stop on fuzz/reject for 5.10
       patch -p1 < $KERNEL_PATCHES/susfs/pershoot-susfs-k5.10.patch || true
