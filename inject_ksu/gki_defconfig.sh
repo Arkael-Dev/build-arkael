@@ -6,14 +6,9 @@ DEFCONFIG="arch/arm64/configs/gki_defconfig"
 echo "⚙️ Added KSU & SuSFS configuration"
 
 # Base KSU Config & Dependencies
-sed -i '/CONFIG_KSU/d' $DEFCONFIG
-sed -i '/CONFIG_KPM/d' $DEFCONFIG
-sed -i '/CONFIG_KPROBES/d' $DEFCONFIG
-sed -i '/CONFIG_KPROBE_EVENTS/d' $DEFCONFIG
-
 cat >> $DEFCONFIG <<EOF
 # ===============================================
-# KernelSU Base Configuration
+# Konfigurasi KernelSU Base
 CONFIG_KSU=y
 CONFIG_KPM=y
 CONFIG_KSU_MULTI_MANAGER_SUPPORT=y
@@ -37,7 +32,7 @@ EOF
     fi
 
 elif [ "$KSU_SUSFS" = "true" ]; then
-  # LOGIC STANDARD FOR KSU NEXT, REGULAR, RISSU, RKSU, MAMBO, WILDKSU
+  # LOGIC STANDARD FOR KSU NEXT, REGULAR, RISSU, RKSU
   echo "🔧 Mode: SuSFS Hook Enabled"
   cat >> $DEFCONFIG <<EOF
 # --- SuSFS Configuration ---
@@ -79,39 +74,6 @@ fi
 
 # --- Universal Performance Tuning Addition ---
 echo "⚙️ Adding Universal Performance Tuning"
-
-# CLEANUP ALL POTENTIAL OVERRIDE
-sed -i '/CONFIG_HZ/d' $DEFCONFIG
-sed -i '/CONFIG_HIGH_RES_TIMERS/d' $DEFCONFIG
-sed -i '/CONFIG_UCLAMP_TASK/d' $DEFCONFIG
-sed -i '/CONFIG_ZRAM/d' $DEFCONFIG
-sed -i '/CONFIG_LRU_GEN/d' $DEFCONFIG
-sed -i '/CONFIG_PREEMPT/d' $DEFCONFIG
-sed -i '/CONFIG_TMPFS_XATTR/d' $DEFCONFIG
-sed -i '/CONFIG_TMPFS_POSIX_ACL/d' $DEFCONFIG
-sed -i '/CONFIG_IP_NF_TARGET_TTL/d' $DEFCONFIG
-sed -i '/CONFIG_TCP_CONG/d' $DEFCONFIG
-sed -i '/CONFIG_NET_SCH_FQ/d' $DEFCONFIG
-sed -i '/CONFIG_CPU_FREQ/d' $DEFCONFIG
-sed -i '/CONFIG_SWAP/d' $DEFCONFIG
-sed -i '/CONFIG_BLOCK/d' $DEFCONFIG
-
-# Clean Default Scheduler/Governor specifically
-sed -i '/CONFIG_DEFAULT_IOSCHED/d' $DEFCONFIG
-sed -i '/CONFIG_DEFAULT_DEADLINE/d' $DEFCONFIG
-sed -i '/CONFIG_DEFAULT_KYBER/d' $DEFCONFIG
-sed -i '/CONFIG_DEFAULT_NONE/d' $DEFCONFIG
-sed -i '/CONFIG_DEFAULT_BFQ/d' $DEFCONFIG
-sed -i '/CONFIG_DEFAULT_SSG/d' $DEFCONFIG
-sed -i '/CONFIG_CPU_FREQ_DEFAULT_GOV/d' $DEFCONFIG
-
-# Clean IOSCHED duplicates
-sed -i '/CONFIG_MQ_IOSCHED/d' $DEFCONFIG
-sed -i '/CONFIG_IOSCHED_BFQ/d' $DEFCONFIG
-sed -i '/CONFIG_BFQ_GROUP/d' $DEFCONFIG
-sed -i '/CONFIG_IOSCHED_SSG/d' $DEFCONFIG
-sed -i '/CONFIG_IOSCHED_CPQ/d' $DEFCONFIG
-
 cat >> $DEFCONFIG <<EOF
 # --- Universal Performance Tuning ---
 CONFIG_HZ=1000
@@ -131,15 +93,11 @@ CONFIG_NET_SCH_FQ=y
 CONFIG_DEFAULT_BBR=y
 CONFIG_CPU_FREQ=y
 CONFIG_SWAP=y
-
-# --- CPU Governor (Schedutil Default) ---
 CONFIG_CPU_FREQ_GOV_SCHEDUTIL=y
 CONFIG_CPU_FREQ_GOV_ONDEMAND=y
 CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL=y
-
 CONFIG_BLOCK=y
 
-# --- I/O Schedulers (SSG Default, BFQ Enabled) ---
 CONFIG_MQ_IOSCHED_DEADLINE=y
 CONFIG_MQ_IOSCHED_KYBER=y
 CONFIG_IOSCHED_BFQ=y
@@ -154,11 +112,6 @@ EOF
 # --- Additional LTO & Compiler Optimization (5.10 ONLY) ---
 if [ "$KVER" == "5.10" ]; then
   echo "⚙️ Added LTO & Compiler Optimization (KVER 5.10 Only)"
-  # Clean LTO duplicates
-  sed -i '/CONFIG_LTO/d' $DEFCONFIG
-  sed -i '/CONFIG_HAS_LTO_CLANG/d' $DEFCONFIG
-  sed -i '/CONFIG_ARCH_SUPPORTS_LTO/d' $DEFCONFIG
-
   cat >> $DEFCONFIG <<EOF
 # --- LTO & Compiler Optimization ---
 CONFIG_LTO=y
