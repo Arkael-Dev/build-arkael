@@ -84,27 +84,12 @@ if [ "$KVER" == "5.10" ]; then
   rm infinix_cam.patch
 fi
 # ----------------------------------------------------
-# remove the # sign if you want to use the Manualhz version
 
 # --- PATCH inject.sh ---
 log "Applying inject.sh patch..."
 wget -qO Inject_1000hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/Inject_1000hz.sh
 bash Inject_1000hz.sh
 rm Inject_1000hz.sh
-#--------------------------------------
-
-#-------------------------------------
-#log "Applying inject.sh patch..."
-#wget -qO Inject_300hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/Inject_300hz.sh
-#bash Inject_300hz.sh
-#rm Inject_300hz.sh
-#--------------------------------------
-
-# --- PATCH inject.sh ---
-#log "Applying inject.sh patch..."
-#wget -qO Inject_500hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/Inject_500hz.sh
-#bash Inject_500hz.sh
-#rm Inject_500hz.sh
 #--------------------------------------
 
 # --- PATCH WIFI SM8650 (GKI 6.1 ONLY) ---
