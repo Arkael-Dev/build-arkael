@@ -87,9 +87,9 @@ fi
 
 # --- PATCH inject.sh ---
 log "Applying inject.sh patch..."
-wget -qO Inject_1000hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/Inject_1000hz.sh
-bash Inject_1000hz.sh
-rm Inject_1000hz.sh
+wget -qO Inject_300hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/Inject_300hz.sh
+bash Inject_300hz.sh
+rm Inject_300hz.sh
 #--------------------------------------
 
 # --- PATCH WIFI SM8650 (GKI 6.1 ONLY) ---
