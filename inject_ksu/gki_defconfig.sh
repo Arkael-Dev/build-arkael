@@ -6,7 +6,6 @@ DEFCONFIG="arch/arm64/configs/gki_defconfig"
 echo "⚙️ Added KSU & SuSFS configuration"
 
 # Base KSU Config & Dependencies
-# Bersihkan simbol KSU & Kprobes dulu jika ada
 sed -i '/CONFIG_KSU/d' $DEFCONFIG
 sed -i '/CONFIG_KPM/d' $DEFCONFIG
 sed -i '/CONFIG_KPROBES/d' $DEFCONFIG
@@ -38,7 +37,7 @@ EOF
     fi
 
 elif [ "$KSU_SUSFS" = "true" ]; then
-  # LOGIC STANDARD FOR KSU NEXT, REGULAR, RISSU, RKSU
+  # LOGIC STANDARD FOR KSU NEXT, REGULAR, RISSU, RKSU, MAMBO, WILDKSU
   echo "🔧 Mode: SuSFS Hook Enabled"
   cat >> $DEFCONFIG <<EOF
 # --- SuSFS Configuration ---
@@ -81,8 +80,7 @@ fi
 # --- Universal Performance Tuning Addition ---
 echo "⚙️ Adding Universal Performance Tuning"
 
-# CLEANUP ALL POTENTIAL OVERRIDES
-# Ini hapus semua config yang mau kita timpa biar gak warning
+# CLEANUP ALL POTENTIAL OVERRIDE
 sed -i '/CONFIG_HZ/d' $DEFCONFIG
 sed -i '/CONFIG_HIGH_RES_TIMERS/d' $DEFCONFIG
 sed -i '/CONFIG_UCLAMP_TASK/d' $DEFCONFIG
