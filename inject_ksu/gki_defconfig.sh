@@ -74,6 +74,16 @@ fi
 
 # --- Universal Performance Tuning Addition ---
 echo "⚙️ Adding Universal Performance Tuning"
+
+# Sed: Clean up old default scheduler & governor to avoid conflicts
+sed -i '/CONFIG_DEFAULT_IOSCHED/d' $DEFCONFIG
+sed -i '/CONFIG_DEFAULT_DEADLINE/d' $DEFCONFIG
+sed -i '/CONFIG_DEFAULT_KYBER/d' $DEFCONFIG
+sed -i '/CONFIG_DEFAULT_NONE/d' $DEFCONFIG
+sed -i '/CONFIG_DEFAULT_BFQ/d' $DEFCONFIG
+sed -i '/CONFIG_DEFAULT_SSG/d' $DEFCONFIG
+sed -i '/CONFIG_CPU_FREQ_DEFAULT_GOV/d' $DEFCONFIG
+
 cat >> $DEFCONFIG <<EOF
 # --- Universal Performance Tuning ---
 CONFIG_HZ=1000
@@ -93,11 +103,15 @@ CONFIG_NET_SCH_FQ=y
 CONFIG_DEFAULT_BBR=y
 CONFIG_CPU_FREQ=y
 CONFIG_SWAP=y
+
+# --- CPU Governor (Schedutil Default) ---
 CONFIG_CPU_FREQ_GOV_SCHEDUTIL=y
 CONFIG_CPU_FREQ_GOV_ONDEMAND=y
 CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL=y
+
 CONFIG_BLOCK=y
 
+# --- I/O Schedulers (SSG Default, BFQ Enabled) ---
 CONFIG_MQ_IOSCHED_DEADLINE=y
 CONFIG_MQ_IOSCHED_KYBER=y
 CONFIG_IOSCHED_BFQ=y
