@@ -84,14 +84,21 @@ if [ "$KVER" == "5.10" ]; then
   rm infinix_cam.patch
 fi
 # ----------------------------------------------------
-
+# remove the # sign if you want to use the 1000hz version
 # --- PATCH inject.sh ---
 log "Applying inject.sh patch..."
-wget -qO Inject_500hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/Inject_500hz.sh
-bash Inject_500hz.sh
-rm Inject_500hz.sh
+wget -qO Inject_300hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/Inject_300hz.sh
+bash Inject_300hz.sh
+rm Inject_300hz.sh
 #--------------------------------------
-# remove the # sign if you want to use the 1000hz version
+# ----------------------------------------------------
+
+# --- PATCH inject.sh ---
+#log "Applying inject.sh patch..."
+#wget -qO Inject_500hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/Inject_500hz.sh
+#bash Inject_500hz.sh
+#rm Inject_500hz.sh
+#--------------------------------------
 # ----------------------------------------------------
 
 # --- PATCH inject.sh ---
