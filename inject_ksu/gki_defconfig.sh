@@ -18,17 +18,17 @@ CONFIG_KPROBE_EVENTS=y
 EOF
 
 # Hook method selection logic based on KSU env
-if [ "$KSU" == "SukiSU" ]; then
+if [ "$KSU" == "vortexsu" ]; then
     # SUKISU SPECIAL HANDLING
     if [ "$KSU_SUSFS" = "true" ]; then
-        echo "🔧 Mode: SukiSU + SuSFS Enabled"
+        echo "🔧 Mode: VorteXSU + SuSFS Enabled"
         cat >> $DEFCONFIG <<EOF
 # --- SuSFS Configuration for SukiSU ---
 CONFIG_KSU_SUSFS=y
 # Let SukiSU handle the hook & mount details internally.
 EOF
     else
-        echo "🔧 Mode: SukiSU Standard (No SuSFS)"
+        echo "🔧 Mode: KSU Standard (No SuSFS)"
     fi
 
 elif [ "$KSU_SUSFS" = "true" ]; then
@@ -96,6 +96,17 @@ CONFIG_SWAP=y
 CONFIG_CPU_FREQ_GOV_SCHEDUTIL=y
 CONFIG_CPU_FREQ_GOV_ONDEMAND=y
 CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL=y
+CONFIG_BLOCK=y
+
+CONFIG_MQ_IOSCHED_DEADLINE=y
+CONFIG_MQ_IOSCHED_KYBER=y
+CONFIG_IOSCHED_BFQ=y
+CONFIG_BFQ_GROUP_IOSCHED=y
+CONFIG_IOSCHED_SSG=y
+CONFIG_IOSCHED_CPQ=y
+CONFIG_MQ_IOSCHED_NONE=y
+CONFIG_DEFAULT_SSG=y
+CONFIG_DEFAULT_IOSCHED="ssg"
 EOF
 
 # --- Additional LTO & Compiler Optimization (5.10 ONLY) ---
