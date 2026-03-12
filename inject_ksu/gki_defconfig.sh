@@ -8,7 +8,6 @@ echo "⚙️ Added KSU & SuSFS configuration"
 # Base KSU Config & Dependencies
 cat >> $DEFCONFIG <<EOF
 # ===============================================
-# Konfigurasi KernelSU Base
 CONFIG_KSU=y
 CONFIG_KPM=y
 CONFIG_KSU_MULTI_MANAGER_SUPPORT=y
@@ -74,6 +73,14 @@ fi
 
 # --- Universal Performance Tuning Addition ---
 echo "⚙️ Adding Universal Performance Tuning"
+
+sed -i '/CONFIG_DEFAULT_IOSCHED/d' $DEFCONFIG
+sed -i '/CONFIG_DEFAULT_DEADLINE/d' $DEFCONFIG
+sed -i '/CONFIG_DEFAULT_KYBER/d' $DEFCONFIG
+sed -i '/CONFIG_DEFAULT_NONE/d' $DEFCONFIG
+sed -i '/CONFIG_DEFAULT_BFQ/d' $DEFCONFIG
+sed -i '/CONFIG_DEFAULT_SSG/d' $DEFCONFIG
+
 cat >> $DEFCONFIG <<EOF
 # --- Universal Performance Tuning ---
 CONFIG_HZ=1000
