@@ -348,6 +348,27 @@ EOF
       fi
     fi
 
+    # --- TAMBAHAN: PATCH ZEROMOUNT UNTUK GKI 6.1 & 6.6 ---
+    # Logic: Apply specific ZeroMount patch based on Kernel Version and KSU Variant
+    if [ "$KVER" == "6.1" ]; then
+      if [ "$KSU" == "yes" ]; then
+        log "Applying ZeroMount patch for KernelSU-Next (GKI 6.1)..."
+        curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android14-6.1/KernelSU-Next/patches/60_zeromount-android14-6.1.patch" | patch -p1 || log "ZeroMount patch skipped or already applied."
+      elif [ "$KSU" == "vortexsu" ]; then
+        log "Applying ZeroMount patch for VorteXSU (GKI 6.1)..."
+        curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android14-6.1/ReSukiSU/patches/60_zeromount-android14-6.1.patch" | patch -p1 || log "ZeroMount patch skipped or already applied."
+      fi
+    elif [ "$KVER" == "6.6" ]; then
+      if [ "$KSU" == "yes" ]; then
+        log "Applying ZeroMount patch for KernelSU-Next (GKI 6.6)..."
+        curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android15-6.6/KernelSU-Next/patches/60_zeromount-android15-6.6.patch" | patch -p1 || log "ZeroMount patch skipped or already applied."
+      elif [ "$KSU" == "vortexsu" ]; then
+        log "Applying ZeroMount patch for VorteXSU (GKI 6.6)..."
+        curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android15-6.6/ReSukiSU/patches/60_zeromount-android15-6.6.patch" | patch -p1 || log "ZeroMount patch skipped or already applied."
+      fi
+    fi
+    # ---------------------------------------------------
+
     SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
     config --enable CONFIG_KSU_SUSFS
   else
