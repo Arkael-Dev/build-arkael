@@ -48,7 +48,7 @@ GKI_RELEASES_REPO="https://github.com/Kingfinik98/gki-builder"
 #CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/105aba85d97a53d364585ca755752dae054b49e8/clang-r584948b.tar.gz"
 #CLANG_URL="https://github.com/greenforce-project/greenforce_clang/releases/download/20260210/gf-clang-23.0.0-20260210.tar.gz"
 CLANG_URL="https://github.com/greenforce-project/greenforce_clang/releases/download/20260302/gf-clang-23.0.0-20260302.tar.gz"
-#CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/42d2c090c14c9c7f4dfd365ae551e2b959dc775c/clang-r584948b.tar.gz"
+#CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/42d2c090c14c9c7f4dfd365ae551e2b959dc775c/clang-r584948.tar.gz"
 #CLANG_URL="https://github.com/linastorvaldz/gki-builder/releases/download/clang-r487747c/clang-r487747c.tar.gz"
 #CLANG_URL="$(./clang.sh slim)"
 CLANG_BRANCH=""
@@ -189,6 +189,32 @@ if ksu_included; then
   cd KernelSU-Next
   patch -p1 < $KERNEL_PATCHES/ksu/ksun-add-more-managers-support.patch
   cd $OLDPWD
+
+  # --- PATCH TAMBAHAN KERNELSU NEXT GKI 5.10 ---
+  if [ "$KVER" == "5.10" ]; then
+    log "Menerapkan patch tambahan KernelSU-Next untuk GKI 5.10..."
+    TMP_SB_PATCHES="$WORKDIR/sb_ksu_patches"
+    git clone https://github.com/Kingfinik98/Super-Builders "$TMP_SB_PATCHES"
+    cd "$TMP_SB_PATCHES"
+    git checkout b41c45d4346635c9985585e41307486d72e4cd1e 2>/dev/null || log "Menggunakan branch default."
+    cd "$OLDPWD"
+    
+    cd KernelSU-Next
+    if [ -d "$TMP_SB_PATCHES/android12-5.10/KernelSU-Next/patches" ]; then
+      for p_file in "$TMP_SB_PATCHES/android12-5.10/KernelSU-Next/patches"/*.patch; do
+        if [ -f "$p_file" ]; then
+          log "Menerapkan patch: $(basename "$p_file")"
+          patch -p1 < "$p_file" || log "Patch $(basename "$p_file") gagal atau sudah diterapkan."
+        fi
+      done
+    else
+      log "Direktori patch tidak ditemukan."
+    fi
+    cd $OLDPWD
+    rm -rf "$TMP_SB_PATCHES"
+  fi
+  # ---------------------------------------------
+
     # Fix SUSFS Uname Symbol Error for KernelSU Next & All_Manager
     log "Applying fix for undefined SUSFS symbols (KernelSU-Next)..."
     # Disable SUSFS Uname handling block in supercalls.c to use standard kernel spoofing
