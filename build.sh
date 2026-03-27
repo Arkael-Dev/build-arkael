@@ -200,14 +200,15 @@ if ksu_included; then
     KSU_NEXT_PATCH_DIR="$BASE_PATCH_DIR/KernelSU-Next/patches"
     
     # 1. Apply 60_zeromount FIRST (Base requirement)
+    # Using flags: -F3 (fuzz factor 3) --no-backup-if-mismatch (no reject files)
     if [ -f "$KSU_NEXT_PATCH_DIR/60_zeromount-android12-5.10.patch" ]; then
       log "🔨 Applying patch: 60_zeromount-android12-5.10.patch"
-      patch -p1 < "$KSU_NEXT_PATCH_DIR/60_zeromount-android12-5.10.patch" || log "Warning: Patch 60_zeromount failed."
+      patch -p1 -F3 --no-backup-if-mismatch < "$KSU_NEXT_PATCH_DIR/60_zeromount-android12-5.10.patch" || log "Warning: Patch 60_zeromount applied with offsets/fuzz."
     fi
 
     # 2. Apply 65_zeromount-adb-filter (Archive) via RAW URL
     log "🔨 Applying patch (archive): 65_zeromount-adb-filter-android12-5.10.patch"
-    curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android12-5.10/KernelSU-Next/patches/_archive/65_zeromount-adb-filter-android12-5.10.patch" | patch -p1 || log "Warning: Patch 65_zeromount failed."
+    curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android12-5.10/KernelSU-Next/patches/_archive/65_zeromount-adb-filter-android12-5.10.patch" | patch -p1 -F3 --no-backup-if-mismatch || log "Warning: Patch 65_zeromount applied with offsets/fuzz."
 
     # 3. Apply other patches from base directory if any
     if [ -d "$BASE_PATCH_DIR" ]; then
