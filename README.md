@@ -1,4 +1,4 @@
-# 🚨 WARNING — READ BEFORE FORKING 🚨
+# 🚨 WARNING — READ BEFORE FORKING
 
 This repository is actively monitored.
 
