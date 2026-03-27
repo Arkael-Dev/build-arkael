@@ -190,28 +190,53 @@ if ksu_included; then
   patch -p1 < $KERNEL_PATCHES/ksu/ksun-add-more-managers-support.patch
   cd $OLDPWD
   
-  # --- PATCH ZRAM KHUSUS GKI 5.10 ---
+  # --- PATCH ZRAM FOR ALL GKI VERSIONS (Vanilla KernelSU-Next) ---
+  log "📥 Downloading & Applying Zram patches for GKI $KVER..."
+  TMP_ZRAM_PATCH="$WORKDIR/zram_patches"
+  git clone --depth=1 -b main https://github.com/Kingfinik98/Super-Builders "$TMP_ZRAM_PATCH"
+  
+  # Determine version specific patch directory
+  ZRAM_VER_DIR=""
   if [ "$KVER" == "5.10" ]; then
-    log "📥 Downloading & Applying Zram patches for GKI 5.10..."
-    TMP_PATCH_DIR="$WORKDIR/extra_patches"
-    git clone --depth=1 -b main https://github.com/Kingfinik98/Super-Builders "$TMP_PATCH_DIR"
-    
-    ZRAM_PATCH_DIR="$TMP_PATCH_DIR/zram/5.10"
-    
-    if [ -d "$ZRAM_PATCH_DIR" ]; then
-      for p in "$ZRAM_PATCH_DIR"/*.patch; do
-        if [ -f "$p" ]; then
-          log "🔨 Applying patch: $(basename "$p")"
-          patch -p1 < "$p" || log "Warning: Patch $(basename "$p") failed or already applied."
-        fi
-      done
-    else
-      log "Warning: Zram patch directory not found."
-    fi
-
-    rm -rf "$TMP_PATCH_DIR"
+    ZRAM_VER_DIR="$TMP_ZRAM_PATCH/zram/5.10"
+  elif [ "$KVER" == "6.1" ]; then
+    ZRAM_VER_DIR="$TMP_ZRAM_PATCH/zram/6.1"
+  elif [ "$KVER" == "6.6" ]; then
+    ZRAM_VER_DIR="$TMP_ZRAM_PATCH/zram/6.6"
   fi
-  # ---------------------------------------------
+
+  # Apply Version Specific Patches
+  if [ -d "$ZRAM_VER_DIR" ]; then
+    for p in "$ZRAM_VER_DIR"/*.patch; do
+      if [ -f "$p" ]; then
+        log "🔨 Applying ZRAM patch: $(basename "$p")"
+        patch -p1 < "$p" || log "Warning: ZRAM patch $(basename "$p") failed."
+      fi
+    done
+  else
+    log "Warning: ZRAM patch directory for $KVER not found."
+  fi
+
+  # Apply LZ4 Patches
+  LZ4_PATCH_DIR="$TMP_ZRAM_PATCH/zram/lz4"
+  if [ -d "$LZ4_PATCH_DIR" ]; then
+    for p in "$LZ4_PATCH_DIR"/*.patch; do
+      if [ -f "$p" ]; then
+        log "🔨 Applying LZ4 patch: $(basename "$p")"
+        patch -p1 < "$p" || log "Warning: LZ4 patch $(basename "$p") failed."
+      fi
+    done
+  fi
+
+  # Copy LZ4 Header
+  LZ4_HEADER_SRC="$TMP_ZRAM_PATCH/zram/include/linux/lz4.h"
+  if [ -f "$LZ4_HEADER_SRC" ]; then
+    log "📄 Copying lz4.h header..."
+    cp "$LZ4_HEADER_SRC" "$KSRC/include/linux/lz4.h"
+  fi
+
+  rm -rf "$TMP_ZRAM_PATCH"
+  # -------------------------------------------------------------
 
     # Fix SUSFS Uname Symbol Error for KernelSU Next & All_Manager
     log "Applying fix for undefined SUSFS symbols (KernelSU-Next)..."
@@ -259,6 +284,55 @@ elif [ "$KSU" == "vortexsu" ]; then
     config --enable CONFIG_KSU_SUSFS
     log "SUSFS config enabled for $KVER. Applying patches in Standard block..."
   fi
+
+  # --- PATCH ZRAM FOR ALL GKI VERSIONS (VorteXSU) ---
+  log "📥 Downloading & Applying Zram patches for GKI $KVER (VorteXSU)..."
+  TMP_ZRAM_PATCH="$WORKDIR/zram_patches"
+  git clone --depth=1 -b main https://github.com/Kingfinik98/Super-Builders "$TMP_ZRAM_PATCH"
+  
+  # Determine version specific patch directory
+  ZRAM_VER_DIR=""
+  if [ "$KVER" == "5.10" ]; then
+    ZRAM_VER_DIR="$TMP_ZRAM_PATCH/zram/5.10"
+  elif [ "$KVER" == "6.1" ]; then
+    ZRAM_VER_DIR="$TMP_ZRAM_PATCH/zram/6.1"
+  elif [ "$KVER" == "6.6" ]; then
+    ZRAM_VER_DIR="$TMP_ZRAM_PATCH/zram/6.6"
+  fi
+
+  # Apply Version Specific Patches
+  if [ -d "$ZRAM_VER_DIR" ]; then
+    for p in "$ZRAM_VER_DIR"/*.patch; do
+      if [ -f "$p" ]; then
+        log "🔨 Applying ZRAM patch: $(basename "$p")"
+        patch -p1 < "$p" || log "Warning: ZRAM patch $(basename "$p") failed."
+      fi
+    done
+  else
+    log "Warning: ZRAM patch directory for $KVER not found."
+  fi
+
+  # Apply LZ4 Patches
+  LZ4_PATCH_DIR="$TMP_ZRAM_PATCH/zram/lz4"
+  if [ -d "$LZ4_PATCH_DIR" ]; then
+    for p in "$LZ4_PATCH_DIR"/*.patch; do
+      if [ -f "$p" ]; then
+        log "🔨 Applying LZ4 patch: $(basename "$p")"
+        patch -p1 < "$p" || log "Warning: LZ4 patch $(basename "$p") failed."
+      fi
+    done
+  fi
+
+  # Copy LZ4 Header
+  LZ4_HEADER_SRC="$TMP_ZRAM_PATCH/zram/include/linux/lz4.h"
+  if [ -f "$LZ4_HEADER_SRC" ]; then
+    log "📄 Copying lz4.h header..."
+    cp "$LZ4_HEADER_SRC" "$KSRC/include/linux/lz4.h"
+  fi
+
+  rm -rf "$TMP_ZRAM_PATCH"
+  # -------------------------------------------------------------
+
 fi
 
 # SUSFS (Standard Logic for KernelSU yes & VorteXSU 6.1/6.6)
