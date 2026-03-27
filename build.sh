@@ -190,9 +190,6 @@ if ksu_included; then
   patch -p1 < $KERNEL_PATCHES/ksu/ksun-add-more-managers-support.patch
   cd $OLDPWD
 
-  # CATATAN: Manual fixes (sed) untuk GKI 5.10 dihapus karena akan ditangani oleh Patch 70.
-  # Ini mencegah konflik antara manual fix dan Patch 70.
-
 # --- VorteXSU Setup Block ---
 elif [ "$KSU" == "vortexsu" ]; then
   log "Setting up VorteXSU for KVER $KVER..."
@@ -239,31 +236,50 @@ if susfs_included; then
     log "Applying kernel-side susfs patches (Standard Method)"
     
     # --- LOGIKA BARU UNTUK GKI 5.10 (Super-Builders Architecture) ---
-    # Mengikuti Application Order: 50_ -> 51_ -> 70_ -> 60_
+    # Mengikuti Application Order & Opsi Patch yang PERSIS seperti Super-Builders
     if [ "$KVER" == "5.10" ]; then
-      log "Applying Super-Builders patches sequence (50 -> 51 -> 70 -> 60) for GKI 5.10..."
+      log "Applying Super-Builders patches sequence (50 -> 51 -> 70 -> 60 -> Fix) for GKI 5.10..."
       
+      # Variabel helper untuk URL
+      SB_BASE="https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android12-5.10/KernelSU-Next/patches"
+      SB_HELPER="https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android12-5.10/build-helpers"
+      
+      # Opsi Patch Super-Builders: -p1 -F3 --no-backup-if-mismatch
+      # -F3 memaksa patch untuk mentoleransi offset dan perbedaan konteks
+      PATCH_OPTS="-p1 -F3 --no-backup-if-mismatch"
+
       # 1. SUSFS Upstream (50_)
       log "Applying 50_add_susfs_in_gki..."
-      curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android12-5.10/KernelSU-Next/patches/50_add_susfs_in_gki-android12-5.10.patch" | patch -p1 || log "Patch 50 skipped or already applied."
+      curl -LSs "$SB_BASE/50_add_susfs_in_gki-android12-5.10.patch" | patch $PATCH_OPTS || log "Patch 50 skipped."
 
       # 2. Enhanced SUSFS (51_)
       log "Applying 51_enhanced_susfs..."
-      curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android12-5.10/KernelSU-Next/patches/51_enhanced_susfs-android12-5.10.patch" | patch -p1 || log "Patch 51 skipped or already applied."
+      curl -LSs "$SB_BASE/51_enhanced_susfs-android12-5.10.patch" | patch $PATCH_OPTS || log "Patch 51 skipped."
 
-      # 3. KSU Safety (70_) - Khusus KernelSU-Next
-      # PERBAIKAN: Patch 70 berisi path 'kernel/Kbuild' dll, padahal file KSU ada di 'drivers/kernelsu'
-      # Kita terapkan patch di dalam folder drivers/kernelsu dengan opsi -p2 (strip 'a/kernel/')
+      # 3. KSU Safety (70_)
+      # Menggunakan logika "if file exists" style atau langsung apply
+      # Karena kita pakai branch dev-susfs, patch ini mungkin sudah ada (reversed), 
+      # tapi -F3 akan mengatasinya.
       if [ "$KSU" == "yes" ]; then
         log "Applying 70_ksu_safety-kernelsu-next..."
-        pushd drivers/kernelsu > /dev/null
-        curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android12-5.10/KernelSU-Next/patches/70_ksu_safety-kernelsu-next-5.10.patch" | patch -p2 || log "Patch 70 skipped or failed."
-        popd > /dev/null
+        curl -LSs "$SB_BASE/70_ksu_safety-kernelsu-next-5.10.patch" | patch $PATCH_OPTS || log "Patch 70 skipped or already applied."
       fi
 
       # 4. ZeroMount (60_)
       log "Applying 60_zeromount..."
-      curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android12-5.10/KernelSU-Next/patches/60_zeromount-android12-5.10.patch" | patch -p1 || log "Patch 60 skipped or already applied."
+      curl -LSs "$SB_BASE/60_zeromount-android12-5.10.patch" | patch $PATCH_OPTS || log "Patch 60 skipped."
+
+      # 5. Fix Compat Script (Langkah Penting di Super-Builders)
+      log "Running fix-susfs-compat.sh..."
+      curl -LSs "$SB_HELPER/fix-susfs-compat.sh" -o fix_susfs_compat.sh
+      if [ -f fix_susfs_compat.sh ]; then
+        chmod +x fix_susfs_compat.sh
+        # Args: . sublevel android_ver kernel_ver kernel_patches_dir
+        # Extract sublevel from LINUX_VERSION (e.g 5.10.246 -> 246)
+        SUBLEVEL=$(echo $LINUX_VERSION | cut -d'.' -f3)
+        bash fix_susfs_compat.sh . "$SUBLEVEL" "android12" "5.10" "$KERNEL_PATCHES" || log "Compat fix script finished with warnings."
+        rm fix_susfs_compat.sh
+      fi
 
       # Get SUSFS version for build info
       SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
