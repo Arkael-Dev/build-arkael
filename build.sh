@@ -211,13 +211,14 @@ if ksu_included; then
   fi
 
   # ============================================================
-  # FIX: SKIP LZ4 OPTIMIZATION TO PREVENT LINKER ERROR
-  # The custom lz4.h header expects optimized symbols (LZ4_arm64_decompress_safe)
-  # which are not present in the standard kernel source or if the patch failed.
-  # We use the standard kernel LZ4 library instead.
+  # FIX: REVERT LZ4 HEADER TO STANDARD KERNEL VERSION
+  # The ZRAM patches modify include/linux/lz4.h to use optimized functions (LZ4_arm64_decompress_safe).
+  # Since we do NOT have the optimized implementation (skipped lz4 folder), we MUST revert the header
+  # to the standard one so the kernel uses the standard LZ4 library.
   # ============================================================
-  log "⚠️ Skipping LZ4 optimization patches to prevent linker errors."
-  log "Using standard kernel LZ4 implementation."
+  log "Reverting include/linux/lz4.h to standard kernel version to prevent linker errors..."
+  git checkout include/linux/lz4.h
+  # Note: We also ensure we don't copy the optimized header from the patch repo.
 
   # Cleanup
   rm -rf "$TMP_ZRAM_PATCH"
@@ -268,10 +269,10 @@ elif [ "$KSU" == "vortexsu" ]; then
   fi
 
   # ============================================================
-  # FIX: SKIP LZ4 OPTIMIZATION TO PREVENT LINKER ERROR
+  # FIX: REVERT LZ4 HEADER (Same as above)
   # ============================================================
-  log "⚠️ Skipping LZ4 optimization patches to prevent linker errors."
-  log "Using standard kernel LZ4 implementation."
+  log "Reverting include/linux/lz4.h to standard kernel version..."
+  git checkout include/linux/lz4.h
 
   rm -rf "$TMP_ZRAM_PATCH"
   # -------------------------------------------------------------
