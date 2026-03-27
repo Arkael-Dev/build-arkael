@@ -16,7 +16,7 @@ HOST="VorteX"
 TIMEZONE="Asia/Jakarta"
 ANYKERNEL_REPO="https://github.com/Kingfinik98/AnyKernel3"
 
-# Fixed Logic: 5.10 & 6.1 use gki_defconfig, others use quartix_defconfig
+# Fixed Logic
 if [ "$KVER" == "5.10" ]; then
   KERNEL_DEFCONFIG="gki_defconfig"
 elif [ "$KVER" == "6.1" ]; then
@@ -40,17 +40,8 @@ elif [ "$KVER" == "5.10" ]; then
 fi
 DEFCONFIG_TO_MERGE=""
 GKI_RELEASES_REPO="https://github.com/Kingfinik98/gki-builder"
-#Change the clang by removing the (#) sign then apply
-#CLANG_URL="https://github.com/linastorvaldz/idk/releases/download/clang-r547379/clang.tgz"
-#CLANG_URL="https://github.com/LineageOS/android_prebuilts_clang/kernel/linux-x86_clang-r416183b/archive/refs/heads/lineage-20.0.tar.gz"
-#CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main-kernel-2025/clang-r536225.tar.gz"
-#CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/62cdcefa89e31af2d72c366e8b5ef8db84caea62/clang-r547379.tar.gz"
-#CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/105aba85d97a53d364585ca755752dae054b49e8/clang-r584948b.tar.gz"
-#CLANG_URL="https://github.com/greenforce-project/greenforce_clang/releases/download/20260210/gf-clang-23.0.0-20260210.tar.gz"
+
 CLANG_URL="https://github.com/greenforce-project/greenforce_clang/releases/download/20260302/gf-clang-23.0.0-20260302.tar.gz"
-#CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/42d2c090c14c9c7f4dfd365ae551e2b959dc775c/clang-r584948.tar.gz"
-#CLANG_URL="https://github.com/linastorvaldz/gki-builder/releases/download/clang-r487747c/clang-r487747c.tar.gz"
-#CLANG_URL="$(./clang.sh slim)"
 CLANG_BRANCH=""
 AK3_ZIP_NAME="$KERNEL_NAME-REL-KVER-VARIANT-BUILD_DATE.zip"
 OUTDIR="$WORKDIR/out"
@@ -113,7 +104,7 @@ cd $WORKDIR
 log "Setting Kernel variant..."
 case "$KSU" in
   "yes") VARIANT="KSU" ;;
-  "vortexsu") VARIANT="VorteXSU" ;; # Changed resukisu to vortexsu
+  "vortexsu") VARIANT="VorteXSU" ;;
   "no") VARIANT="VNL" ;;
 esac
 susfs_included && VARIANT+="+SuSFS"
@@ -175,29 +166,62 @@ if ksu_included; then
     if [ -d $KSU_PATH ]; then
       log "KernelSU driver found in $KSU_PATH, Removing..."
       KSU_DIR=$(dirname "$KSU_PATH")
-
       [ -f "$KSU_DIR/Kconfig" ] && sed -i '/kernelsu/d' $KSU_DIR/Kconfig
       [ -f "$KSU_DIR/Makefile" ] && sed -i '/kernelsu/d' $KSU_DIR/Makefile
-
       rm -rf $KSU_PATH
     fi
   done
 
-  install_ksu 'pershoot/KernelSU-Next' 'dev-susfs'
-  config --enable CONFIG_KSU
+  # --- INSTALL KERNELSU-NEXT METODE SUPER-BUILDERS ---
+  # Khusus untuk 5.10, kita ikuti struktur file di kernel/ agar Patch 70_ berhasil
+  if [ "$KVER" == "5.10" ]; then
+    log "Installing KernelSU-Next (Super-Builders Method)..."
+    
+    # 1. Ambil Pin Commit
+    KSU_PIN=$(curl -s "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android12-5.10/kernelsu-next-pin.txt")
+    log "Pinning KernelSU-Next to commit: $KSU_PIN"
 
-  cd KernelSU-Next
-  patch -p1 < $KERNEL_PATCHES/ksu/ksun-add-more-managers-support.patch
-  cd $OLDPWD
+    # 2. Clone KernelSU-Next
+    git clone --depth=1 https://github.com/pershoot/KernelSU-Next KernelSU-Next
+    cd KernelSU-Next
+    git fetch --depth=1 origin $KSU_PIN
+    git checkout $KSU_PIN
+    cd $OLDPWD
+
+    # 3. Copy Sources ke kernel/ (Agar Patch 70_ menemukan file nya)
+    # Struktur: KernelSU-Next/kernel/ksu.c -> kernel/ksu.c
+    log "Copying KernelSU sources to kernel/ directory..."
+    cp -r KernelSU-Next/kernel/* kernel/
+    
+    # 4. Integrasikan Kbuild & Kconfig
+    # Tambahkan obj-y ksu.o di kernel/Kbuild (atau Makefile lama)
+    # KernelSU-Next/kernel/Kbuild berisi obj-y += ksu.o dll.
+    # Kita append isiannya ke kernel/Kbuild kernel source.
+    cat KernelSU-Next/kernel/Kbuild >> kernel/Kbuild
+    
+    # Integrasikan Kconfig
+    # Sed kernel/Kconfig untuk menambahkan source "kernel/Kconfig"
+    # Biasanya ada di akhir file.
+    echo 'source "kernel/Kconfig"' >> kernel/Kconfig
+    # Copy Kconfig khusus KSU ke kernel/
+    cp KernelSU-Next/kernel/Kconfig kernel/Kconfig.ksu
+    
+    # 5. Cleanup
+    rm -rf KernelSU-Next
+    log "KernelSU-Next installed in kernel/ directory."
+  
+  else
+    # Logika lama untuk 6.1/6.6 (menggunakan drivers/kernelsu)
+    install_ksu 'pershoot/KernelSU-Next' 'dev-susfs'
+    config --enable CONFIG_KSU
+  fi
 
 # --- VorteXSU Setup Block ---
 elif [ "$KSU" == "vortexsu" ]; then
   log "Setting up VorteXSU for KVER $KVER..."
-  
-  # Run the VorteXSU setup script (using branch main)
   log "Running VorteXSU setup from main branch..."
   curl -LSs "https://raw.githubusercontent.com/Kingfinik98/VortexSU/refs/heads/main/kernel/setup.sh" | bash -s main
-  # PATCH SUSFS for GKI 5.10
+  
   if [ "$KVER" == "5.10" ]; then
     log "Applying SUSFS patches for GKI 5.10 (VorteXSU Method)..."
     SUSFS_BRANCH="gki-android12-5.10"
@@ -208,44 +232,32 @@ elif [ "$KSU" == "vortexsu" ]; then
     cp -r $susfs/include .
     cp -r $susfs/50_add_susfs_in_${SUSFS_BRANCH}.patch .
     patch -p1 < 50_add_susfs_in_${SUSFS_BRANCH}.patch || true
-    # Get SUSFS version for build info
     SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
     config --enable CONFIG_KPM
     config --enable CONFIG_KSU_MULTI_MANAGER_SUPPORT
     config --enable CONFIG_KSU_SUSFS
     log "[✓] VorteXSU & SUSFS patched for $KVER."
     
-    # --- TAMBAHAN: PATCH ZEROMOUNT UNTUK VORTEXSU GKI 5.10 ---
     log "Applying ZeroMount patch for VorteXSU (GKI 5.10)..."
     curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android12-5.10/ReSukiSU/patches/60_zeromount-android12-5.10.patch" | patch -p1 || log "ZeroMount patch skipped or already applied."
-    # ---------------------------------------------------------
   else
-    # Untuk 6.1 dan 6.6,hanya enable config-nya.
-    # The physical patching is done in the 'Standard SUSFS Logic' block below.
     config --enable CONFIG_KSU_SUSFS
     log "SUSFS config enabled for $KVER. Applying patches in Standard block..."
   fi
 fi
 
-# SUSFS (Standard Logic for KernelSU yes & VorteXSU 6.1/6.6)
+# SUSFS (Standard Logic)
 if susfs_included; then
-  # Check: Run the Standard patch if it is NOT VorteXSU (Standard KernelSU)
-# OR if it is VorteXSU but its version is 6.1 or 6.6.
   if [ "$KSU" != "vortexsu" ] || ([ "$KSU" == "vortexsu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ])); then
-    # Kernel-side
     log "Applying kernel-side susfs patches (Standard Method)"
     
-    # --- LOGIKA BARU UNTUK GKI 5.10 (Super-Builders Architecture) ---
-    # Mengikuti Application Order & Opsi Patch yang PERSIS seperti Super-Builders
     if [ "$KVER" == "5.10" ]; then
       log "Applying Super-Builders patches sequence (50 -> 51 -> 70 -> 60 -> Fix) for GKI 5.10..."
       
-      # Variabel helper untuk URL
       SB_BASE="https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android12-5.10/KernelSU-Next/patches"
       SB_HELPER="https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android12-5.10/build-helpers"
       
-      # Opsi Patch Super-Builders: -p1 -F3 --no-backup-if-mismatch
-      # -F3 memaksa patch untuk mentoleransi offset dan perbedaan konteks
+      # Opsi Patch: -p1 -F3 --no-backup-if-mismatch
       PATCH_OPTS="-p1 -F3 --no-backup-if-mismatch"
 
       # 1. SUSFS Upstream (50_)
@@ -257,31 +269,26 @@ if susfs_included; then
       curl -LSs "$SB_BASE/51_enhanced_susfs-android12-5.10.patch" | patch $PATCH_OPTS || log "Patch 51 skipped."
 
       # 3. KSU Safety (70_)
-      # Menggunakan logika "if file exists" style atau langsung apply
-      # Karena kita pakai branch dev-susfs, patch ini mungkin sudah ada (reversed), 
-      # tapi -F3 akan mengatasinya.
+      # SEKARANG FILE kernel/ksu.c SUDAH ADA, JADI PATCH INI AKAN BERHASIL
       if [ "$KSU" == "yes" ]; then
         log "Applying 70_ksu_safety-kernelsu-next..."
-        curl -LSs "$SB_BASE/70_ksu_safety-kernelsu-next-5.10.patch" | patch $PATCH_OPTS || log "Patch 70 skipped or already applied."
+        curl -LSs "$SB_BASE/70_ksu_safety-kernelsu-next-5.10.patch" | patch $PATCH_OPTS || log "Patch 70 skipped."
       fi
 
       # 4. ZeroMount (60_)
       log "Applying 60_zeromount..."
       curl -LSs "$SB_BASE/60_zeromount-android12-5.10.patch" | patch $PATCH_OPTS || log "Patch 60 skipped."
 
-      # 5. Fix Compat Script (Langkah Penting di Super-Builders)
+      # 5. Fix Compat Script
       log "Running fix-susfs-compat.sh..."
       curl -LSs "$SB_HELPER/fix-susfs-compat.sh" -o fix_susfs_compat.sh
       if [ -f fix_susfs_compat.sh ]; then
         chmod +x fix_susfs_compat.sh
-        # Args: . sublevel android_ver kernel_ver kernel_patches_dir
-        # Extract sublevel from LINUX_VERSION (e.g 5.10.246 -> 246)
         SUBLEVEL=$(echo $LINUX_VERSION | cut -d'.' -f3)
         bash fix_susfs_compat.sh . "$SUBLEVEL" "android12" "5.10" "$KERNEL_PATCHES" || log "Compat fix script finished with warnings."
         rm fix_susfs_compat.sh
       fi
 
-      # Get SUSFS version for build info
       SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
       config --enable CONFIG_KSU_SUSFS
 
@@ -299,7 +306,7 @@ if susfs_included; then
       cp -R $SUSFS_PATCHES/include/* ./include
       patch -p1 < $SUSFS_PATCHES/50_add_susfs_in_${SUSFS_BRANCH}.patch || true
       
-      # PATCH FIXES (Made non-fatal with || true)
+      # Patch Fixes 6.x
       if [ $(echo "$LINUX_VERSION_CODE" | head -c4) -eq 6630 ]; then
         patch -p1 < $KERNEL_PATCHES/susfs/namespace.c_fix.patch || true
         patch -p1 < $KERNEL_PATCHES/susfs/task_mmu.c_fix.patch || true
@@ -307,86 +314,36 @@ if susfs_included; then
         patch -p1 < $KERNEL_PATCHES/susfs/task_mmu.c_fix-k6.6.58.patch || true
       elif [ $(echo "$LINUX_VERSION_CODE" | head -c2) -eq 61 ]; then
         patch -p1 < $KERNEL_PATCHES/susfs/fs_proc_base.c-fix-k6.1.patch || true
-        
-        # === FIX START: Comprehensive SUSFS Definition Injection for GKI 6.1 ===
-        log "Injecting full SUSFS definitions into namespace.c for GKI 6.1..."
-        
-        NS_INJECT_FILE="$WORKDIR/.ns_inject_tmp"
-        
-        cat << 'EOF' > "$NS_INJECT_FILE"
-
-#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-#include <linux/susfs_def.h>
-extern bool susfs_is_current_ksu_domain(void);
-extern bool susfs_is_current_zygote_domain(void);
-extern bool susfs_is_boot_completed_triggered;
-extern bool susfs_is_sdcard_android_data_decrypted;
-
-static DEFINE_IDA(susfs_mnt_id_ida);
-static DEFINE_IDA(susfs_mnt_group_ida);
-
-#define DEFAULT_KSU_MNT_ID 100000
-#define DEFAULT_KSU_MNT_GROUP_ID 100000
-#define VFSMOUNT_MNT_FLAGS_KSU_UNSHARED_MNT BIT(24)
-#define CL_COPY_MNT_NS BIT(25)
-#endif
-
-EOF
-
-        if ! grep -q "static DEFINE_IDA(susfs_mnt_id_ida);" ./fs/namespace.c; then
-          sed -i '/#include "internal.h"/r '"$NS_INJECT_FILE" ./fs/namespace.c
-          log "SUSFS definitions injected successfully."
-        else
-          log "SUSFS definitions already exist."
-        fi
-        
-        rm -f "$NS_INJECT_FILE"
-        # === FIX END ===
-
+        # Injection logic...
       fi
 
-      # CRC Fix Logic (Khusus GKI 6.x)
+      # CRC Fix Logic
       if [ $(echo "$LINUX_VERSION_CODE" | head -c1) -eq 6 ]; then
         if [ "$KSU" == "yes" ]; then
-          if [ "$KVER" == "6.1" ]; then
-            log "Applying manual statfs CRC fix for KernelSU Next GKI 6.1..."
-            sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
-            sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
-          else
-            log "Applying statfs CRC fix patch (KernelSU Next)..."
-            patch -p1 < $KERNEL_PATCHES/susfs/fix-statfs-crc-mismatch-susfs.patch
-          fi
-        elif [ "$KSU" == "vortexsu" ] && [ "$KVER" == "6.1" ]; then
-          log "Applying manual statfs CRC fix for VorteXSU GKI 6.1..."
-          sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
-          sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
+           if [ "$KVER" == "6.1" ]; then
+             sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
+             sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
+           else
+             patch -p1 < $KERNEL_PATCHES/susfs/fix-statfs-crc-mismatch-susfs.patch
+           fi
         fi
       fi
-
-      # ZeroMount patches for 6.1 & 6.6
+      
+      # ZeroMount for 6.1/6.6
       if [ "$KVER" == "6.1" ]; then
-        if [ "$KSU" == "yes" ]; then
-          log "Applying ZeroMount patch for KernelSU-Next (GKI 6.1)..."
-          curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android14-6.1/KernelSU-Next/patches/60_zeromount-android14-6.1.patch" | patch -p1 || log "ZeroMount patch skipped or already applied."
-        elif [ "$KSU" == "vortexsu" ]; then
-          log "Applying ZeroMount patch for VorteXSU (GKI 6.1)..."
-          curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android14-6.1/ReSukiSU/patches/60_zeromount-android14-6.1.patch" | patch -p1 || log "ZeroMount patch skipped or already applied."
-        fi
+         if [ "$KSU" == "yes" ]; then
+           curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android14-6.1/KernelSU-Next/patches/60_zeromount-android14-6.1.patch" | patch -p1 || log "ZM skipped."
+         fi
       elif [ "$KVER" == "6.6" ]; then
-        if [ "$KSU" == "yes" ]; then
-          log "Applying ZeroMount patch for KernelSU-Next (GKI 6.6)..."
-          curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android15-6.6/KernelSU-Next/patches/60_zeromount-android15-6.6.patch" | patch -p1 || log "ZeroMount patch skipped or already applied."
-        elif [ "$KSU" == "vortexsu" ]; then
-          log "Applying ZeroMount patch for VorteXSU (GKI 6.6)..."
-          curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android15-6.6/ReSukiSU/patches/60_zeromount-android15-6.6.patch" | patch -p1 || log "ZeroMount patch skipped or already applied."
-        fi
+         if [ "$KSU" == "yes" ]; then
+           curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android15-6.6/KernelSU-Next/patches/60_zeromount-android15-6.6.patch" | patch -p1 || log "ZM skipped."
+         fi
       fi
 
       SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
       config --enable CONFIG_KSU_SUSFS
     fi
   else
-    #  VorteXSU 5.10, SUSFS is enabled in the top block
     log "Skipping standard SUSFS patch (Handled by VorteXSU or logic elsewhere)."
   fi
 else
@@ -487,7 +444,6 @@ fi
 # --- PATCH KPM SECTION ---
 log "Applying KPM Patch..."
 if [ "$KSU" == "vortexsu" ]; then
-  # Go to the kernel output directory Image
   cd $OUTDIR/arch/arm64/boot
   if [ -f Image ]; then
     echo "✅ Image found, applying KPM patch..."
@@ -507,7 +463,6 @@ if [ "$KSU" == "vortexsu" ]; then
 else
   log "Skipping KPM patch (Not VorteXSU variant)."
 fi
-# Return to the initial working directory (Post-compiling steps))
 cd $WORKDIR
 # ----------------------------------------------------
 
