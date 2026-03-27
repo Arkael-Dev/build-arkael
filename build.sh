@@ -206,7 +206,7 @@ if ksu_included; then
       
       # --- TAMBAHAN: PATCH ZEROMOUNT UNTUK KERNELSU-NEXT GKI 5.10 ---
       log "Applying ZeroMount patch for KernelSU-Next (GKI 5.10)..."
-      curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/main/android12-5.10/KernelSU-Next/patches/60_zeromount-android12-5.10.patch" | patch -p1 || log "ZeroMount patch skipped or already applied."
+      curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android12-5.10/KernelSU-Next/patches/60_zeromount-android12-5.10.patch" | patch -p1 || log "ZeroMount patch skipped or already applied."
       # ---------------------------------------------------------------
     fi
 
@@ -237,7 +237,7 @@ elif [ "$KSU" == "vortexsu" ]; then
     
     # --- TAMBAHAN: PATCH ZEROMOUNT UNTUK VORTEXSU GKI 5.10 ---
     log "Applying ZeroMount patch for VorteXSU (GKI 5.10)..."
-    curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/main/android12-5.10/ReSukiSU/patches/60_zeromount-android12-5.10.patch" | patch -p1 || log "ZeroMount patch skipped or already applied."
+    curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android12-5.10/ReSukiSU/patches/60_zeromount-android12-5.10.patch" | patch -p1 || log "ZeroMount patch skipped or already applied."
     # ---------------------------------------------------------
   else
     # Untuk 6.1 dan 6.6,hanya enable config-nya.
