@@ -39,7 +39,7 @@ elif [ "$KVER" == "5.10" ]; then
   KERNEL_BRANCH="android12-5.10-staging"
 fi
 DEFCONFIG_TO_MERGE=""
-GKI_RELEASES_REPO="https://github.com/Kingfinik98/gki-builder"
+GKI_RELEASES_REPO="https://github.com/Kingfinik98/build-vortex"
 #Change the clang by removing the (#) sign then apply
 #CLANG_URL="https://github.com/linastorvaldz/idk/releases/download/clang-r547379/clang.tgz"
 #CLANG_URL="https://github.com/LineageOS/android_prebuilts_clang/kernel/linux-x86_clang-r416183b/archive/refs/heads/lineage-20.0.tar.gz"
@@ -48,7 +48,7 @@ GKI_RELEASES_REPO="https://github.com/Kingfinik98/gki-builder"
 #CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/105aba85d97a53d364585ca755752dae054b49e8/clang-r584948b.tar.gz"
 #CLANG_URL="https://github.com/greenforce-project/greenforce_clang/releases/download/20260210/gf-clang-23.0.0-20260210.tar.gz"
 CLANG_URL="https://github.com/greenforce-project/greenforce_clang/releases/download/20260302/gf-clang-23.0.0-20260302.tar.gz"
-#CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/42d2c090c14c9c7f4dfd365ae551e2b959dc775c/clang-r584948.tar.gz"
+#CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/42d2c090c14c9c7f4dfd365ae551e2b959dc775c/clang-r584948b.tar.gz"
 #CLANG_URL="https://github.com/linastorvaldz/gki-builder/releases/download/clang-r487747c/clang-r487747c.tar.gz"
 #CLANG_URL="$(./clang.sh slim)"
 CLANG_BRANCH=""
@@ -189,41 +189,6 @@ if ksu_included; then
   cd KernelSU-Next
   patch -p1 < $KERNEL_PATCHES/ksu/ksun-add-more-managers-support.patch
   cd $OLDPWD
-  
-  # --- PATCH ZRAM FOR ALL GKI VERSIONS (Vanilla KernelSU-Next) ---
-  log "📥 Downloading & Applying Zram patches for GKI $KVER..."
-  TMP_ZRAM_PATCH="$WORKDIR/zram_patches"
-  git clone --depth=1 -b main https://github.com/Kingfinik98/Super-Builders "$TMP_ZRAM_PATCH"
-  
-  # Determine version specific patch directory
-  ZRAM_VER_DIR="$TMP_ZRAM_PATCH/zram/$KVER"
-
-  # Apply Version Specific Patches
-  if [ -d "$ZRAM_VER_DIR" ]; then
-    for p in "$ZRAM_VER_DIR"/*.patch; do
-      if [ -f "$p" ]; then
-        log "🔨 Applying ZRAM patch: $(basename "$p")"
-        patch -p1 -F3 < "$p" || log "Warning: ZRAM patch $(basename "$p") failed."
-      fi
-    done
-  else
-    log "Warning: ZRAM patch directory for $KVER not found."
-  fi
-
-  # ============================================================
-  # FIX: REVERT LZ4 HEADER TO STANDARD KERNEL VERSION
-  # The ZRAM patches modify include/linux/lz4.h to use optimized functions (LZ4_arm64_decompress_safe).
-  # Since we do NOT have the optimized implementation (skipped lz4 folder), we MUST revert the header
-  # to the standard one so the kernel uses the standard LZ4 library.
-  # ============================================================
-  log "Reverting include/linux/lz4.h to standard kernel version to prevent linker errors..."
-  git checkout include/linux/lz4.h
-  # Note: We also ensure we don't copy the optimized header from the patch repo.
-
-  # Cleanup
-  rm -rf "$TMP_ZRAM_PATCH"
-  # -------------------------------------------------------------
-
     # Fix SUSFS Uname Symbol Error for KernelSU Next & All_Manager
     log "Applying fix for undefined SUSFS symbols (KernelSU-Next)..."
     # Disable SUSFS Uname handling block in supercalls.c to use standard kernel spoofing
@@ -247,36 +212,6 @@ elif [ "$KSU" == "vortexsu" ]; then
   # Run the VorteXSU setup script (using branch main)
   log "Running VorteXSU setup from main branch..."
   curl -LSs "https://raw.githubusercontent.com/Kingfinik98/VortexSU/refs/heads/main/kernel/setup.sh" | bash -s main
-
-  # --- PATCH ZRAM FOR ALL GKI VERSIONS (VorteXSU) ---
-  log "📥 Downloading & Applying Zram patches for GKI $KVER (VorteXSU)..."
-  TMP_ZRAM_PATCH="$WORKDIR/zram_patches"
-  git clone --depth=1 -b main https://github.com/Kingfinik98/Super-Builders "$TMP_ZRAM_PATCH"
-  
-  # Determine version specific patch directory
-  ZRAM_VER_DIR="$TMP_ZRAM_PATCH/zram/$KVER"
-
-  # Apply Version Specific Patches
-  if [ -d "$ZRAM_VER_DIR" ]; then
-    for p in "$ZRAM_VER_DIR"/*.patch; do
-      if [ -f "$p" ]; then
-        log "🔨 Applying ZRAM patch: $(basename "$p")"
-        patch -p1 -F3 < "$p" || log "Warning: ZRAM patch $(basename "$p") failed."
-      fi
-    done
-  else
-    log "Warning: ZRAM patch directory for $KVER not found."
-  fi
-
-  # ============================================================
-  # FIX: REVERT LZ4 HEADER (Same as above)
-  # ============================================================
-  log "Reverting include/linux/lz4.h to standard kernel version..."
-  git checkout include/linux/lz4.h
-
-  rm -rf "$TMP_ZRAM_PATCH"
-  # -------------------------------------------------------------
-
   # PATCH SUSFS for GKI 5.10
   if [ "$KVER" == "5.10" ]; then
     log "Applying SUSFS patches for GKI 5.10 (VorteXSU Method)..."
@@ -349,7 +284,7 @@ extern bool susfs_is_boot_completed_triggered;
 extern bool susfs_is_sdcard_android_data_decrypted;
 
 static DEFINE_IDA(susfs_mnt_id_ida);
-static DEFINE_IDA(susfs_mnt_group_id_ida);
+static DEFINE_IDA(susfs_mnt_group_ida);
 
 #define DEFAULT_KSU_MNT_ID 100000
 #define DEFAULT_KSU_MNT_GROUP_ID 100000
