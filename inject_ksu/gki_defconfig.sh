@@ -106,16 +106,23 @@ CONFIG_TCP_CONG_BBR=y
 CONFIG_TCP_CONG_WESTWOOD=y
 CONFIG_IP6_NF_TARGET_HL=y
 CONFIG_IP6_NF_MATCH_HL=y
-# [zram]
+
+# --- [zram] LZ4 Compression Support ---
 CONFIG_ZSMALLOC=y
 CONFIG_ZRAM=y
 CONFIG_CRYPTO_LZO=y
 CONFIG_CRYPTO_LZ4=y
 CONFIG_CRYPTO_LZ4HC=y
-CONFIG_CRYPTO_LZ4K=y
-CONFIG_CRYPTO_LZ4KD=y
 CONFIG_CRYPTO_842=y
-CONFIG_ZRAM_DEF_COMP_LZ4KD=y
+CONFIG_ZRAM_DEF_COMP_LZ4=y
+
+# --- INCFS Support (untuk ARM64 LZ4 decompression) ---
+CONFIG_INCFS_FS=y
+CONFIG_INCFS_ZSTD=y
+
+# --- LZ4 Decompression Library ---
+CONFIG_LZ4_DECOMPRESS=y
+CONFIG_LZ4_COMPRESS=y
 EOF
 
 # --- Additional LTO & Compiler Optimization (5.10 ONLY) ---
@@ -133,5 +140,7 @@ CONFIG_HAS_LTO_CLANG=y
 CONFIG_LTO_CLANG_THIN=y
 EOF
 else
-  echo "⚙️ LTO Optimization skipped (For KVER 6.1 & 6.6))"
+  echo "⚙️ LTO Optimization skipped (For KVER 6.1 & 6.6)"
 fi
+
+echo "✅ Defconfig configuration completed successfully!"
