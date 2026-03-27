@@ -189,29 +189,26 @@ if ksu_included; then
   cd KernelSU-Next
   patch -p1 < $KERNEL_PATCHES/ksu/ksun-add-more-managers-support.patch
   cd $OLDPWD
-
-  # --- PATCH TAMBAHAN KERNELSU NEXT GKI 5.10 ---
+  
+  # --- PATCH TAMBAHAN KernelSU Next GKI 5.10 ---
   if [ "$KVER" == "5.10" ]; then
-    log "Menerapkan patch tambahan KernelSU-Next untuk GKI 5.10..."
-    TMP_SB_PATCHES="$WORKDIR/sb_ksu_patches"
-    git clone https://github.com/Kingfinik98/Super-Builders "$TMP_SB_PATCHES"
-    cd "$TMP_SB_PATCHES"
-    git checkout b41c45d4346635c9985585e41307486d72e4cd1e 2>/dev/null || log "Menggunakan branch default."
-    cd "$OLDPWD"
+    log "📥 Downloading & Applying additional patches for KernelSU-Next (GKI 5.10)..."
+    TMP_KSUN_PATCH="$WORKDIR/ksun_extra_patches"
+    git clone --depth=1 https://github.com/Kingfinik98/Super-Builders "$TMP_KSUN_PATCH"
     
-    cd KernelSU-Next
-    if [ -d "$TMP_SB_PATCHES/android12-5.10/KernelSU-Next/patches" ]; then
-      for p_file in "$TMP_SB_PATCHES/android12-5.10/KernelSU-Next/patches"/*.patch; do
-        if [ -f "$p_file" ]; then
-          log "Menerapkan patch: $(basename "$p_file")"
-          patch -p1 < "$p_file" || log "Patch $(basename "$p_file") gagal atau sudah diterapkan."
+    PATCH_DIR="$TMP_KSUN_PATCH/android12-5.10"
+    
+    if [ -d "$PATCH_DIR" ]; then
+      for p in "$PATCH_DIR"/*.patch; do
+        if [ -f "$p" ]; then
+          log "🔨 Applying patch: $(basename "$p")"
+          patch -p1 < "$p" || log "Warning: Patch $(basename "$p") failed or already applied."
         fi
       done
     else
-      log "Direktori patch tidak ditemukan."
+      log "Warning: Patch directory not found in cloned repo."
     fi
-    cd $OLDPWD
-    rm -rf "$TMP_SB_PATCHES"
+    rm -rf "$TMP_KSUN_PATCH"
   fi
   # ---------------------------------------------
 
@@ -310,7 +307,7 @@ extern bool susfs_is_boot_completed_triggered;
 extern bool susfs_is_sdcard_android_data_decrypted;
 
 static DEFINE_IDA(susfs_mnt_id_ida);
-static DEFINE_IDA(susfs_mnt_group_ida);
+static DEFINE_IDA(susfs_mnt_group_id_ida);
 
 #define DEFAULT_KSU_MNT_ID 100000
 #define DEFAULT_KSU_MNT_GROUP_ID 100000
