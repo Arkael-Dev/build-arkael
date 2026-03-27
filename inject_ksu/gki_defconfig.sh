@@ -107,7 +107,7 @@ CONFIG_TCP_CONG_WESTWOOD=y
 CONFIG_IP6_NF_TARGET_HL=y
 CONFIG_IP6_NF_MATCH_HL=y
 
-# --- [zram] LZ4 Compression Support ---
+# --- [zram] LZ4 Compression Support (FIXED) ---
 CONFIG_ZSMALLOC=y
 CONFIG_ZRAM=y
 CONFIG_CRYPTO_LZO=y
@@ -116,11 +116,11 @@ CONFIG_CRYPTO_LZ4HC=y
 CONFIG_CRYPTO_842=y
 CONFIG_ZRAM_DEF_COMP_LZ4=y
 
-# --- INCFS Support (untuk ARM64 LZ4 decompression) ---
+# --- INCFS Support (Fix Linker Error) ---
 CONFIG_INCFS_FS=y
 CONFIG_INCFS_ZSTD=y
 
-# --- LZ4 Decompression Library ---
+# --- LZ4 Library (Wajib biar simbol arm64 ketemu) ---
 CONFIG_LZ4_DECOMPRESS=y
 CONFIG_LZ4_COMPRESS=y
 EOF
