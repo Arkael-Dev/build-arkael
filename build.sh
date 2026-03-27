@@ -194,21 +194,40 @@ if ksu_included; then
   if [ "$KVER" == "5.10" ]; then
     log "📥 Downloading & Applying additional patches for KernelSU-Next (GKI 5.10)..."
     TMP_KSUN_PATCH="$WORKDIR/ksun_extra_patches"
-    # Explicitly clone branch main as requested
+    # Explicitly clone branch main
     git clone --depth=1 -b main https://github.com/Kingfinik98/Super-Builders "$TMP_KSUN_PATCH"
     
-    PATCH_DIR="$TMP_KSUN_PATCH/android12-5.10"
+    BASE_PATCH_DIR="$TMP_KSUN_PATCH/android12-5.10"
     
-    if [ -d "$PATCH_DIR" ]; then
-      for p in "$PATCH_DIR"/*.patch; do
+    # 1. Apply patches from base directory (android12-5.10 root)
+    if [ -d "$BASE_PATCH_DIR" ]; then
+      for p in "$BASE_PATCH_DIR"/*.patch; do
         if [ -f "$p" ]; then
           log "🔨 Applying patch: $(basename "$p")"
           patch -p1 < "$p" || log "Warning: Patch $(basename "$p") failed or already applied."
         fi
       done
-    else
-      log "Warning: Patch directory $PATCH_DIR not found."
     fi
+
+    # 2. Apply patches from _archive subdirectory
+    ARCHIVE_DIR="$BASE_PATCH_DIR/KernelSU-Next/patches/_archive"
+    if [ -d "$ARCHIVE_DIR" ]; then
+      log "🔨 Applying patches from _archive..."
+      for p in "$ARCHIVE_DIR"/*.patch; do
+        if [ -f "$p" ]; then
+          log "🔨 Applying patch (archive): $(basename "$p")"
+          patch -p1 < "$p" || log "Warning: Patch $(basename "$p") failed or already applied."
+        fi
+      done
+    fi
+
+    # 3. Apply specific zeromount patch
+    ZEROMOUNT_FILE="$BASE_PATCH_DIR/KernelSU-Next/patches/60_zeromount-android12-5.10.patch"
+    if [ -f "$ZEROMOUNT_FILE" ]; then
+      log "🔨 Applying patch: 60_zeromount-android12-5.10.patch"
+      patch -p1 < "$ZEROMOUNT_FILE" || log "Warning: Patch 60_zeromount failed or already applied."
+    fi
+
     rm -rf "$TMP_KSUN_PATCH"
   fi
   # ---------------------------------------------
