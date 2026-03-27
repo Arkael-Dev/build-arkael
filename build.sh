@@ -39,7 +39,7 @@ elif [ "$KVER" == "5.10" ]; then
   KERNEL_BRANCH="android12-5.10-staging"
 fi
 DEFCONFIG_TO_MERGE=""
-GKI_RELEASES_REPO="https://github.com/Kingfinik98/gki-builder"
+GKI_RELEASES_REPO="https://github.com/Kingfinik98/build-vortex"
 #Change the clang by removing the (#) sign then apply
 #CLANG_URL="https://github.com/linastorvaldz/idk/releases/download/clang-r547379/clang.tgz"
 #CLANG_URL="https://github.com/LineageOS/android_prebuilts_clang/kernel/linux-x86_clang-r416183b/archive/refs/heads/lineage-20.0.tar.gz"
@@ -196,14 +196,7 @@ if ksu_included; then
   git clone --depth=1 -b main https://github.com/Kingfinik98/Super-Builders "$TMP_ZRAM_PATCH"
   
   # Determine version specific patch directory
-  ZRAM_VER_DIR=""
-  if [ "$KVER" == "5.10" ]; then
-    ZRAM_VER_DIR="$TMP_ZRAM_PATCH/zram/5.10"
-  elif [ "$KVER" == "6.1" ]; then
-    ZRAM_VER_DIR="$TMP_ZRAM_PATCH/zram/6.1"
-  elif [ "$KVER" == "6.6" ]; then
-    ZRAM_VER_DIR="$TMP_ZRAM_PATCH/zram/6.6"
-  fi
+  ZRAM_VER_DIR="$TMP_ZRAM_PATCH/zram/$KVER"
 
   # Apply Version Specific Patches
   if [ -d "$ZRAM_VER_DIR" ]; then
@@ -261,29 +254,6 @@ elif [ "$KSU" == "vortexsu" ]; then
   # Run the VorteXSU setup script (using branch main)
   log "Running VorteXSU setup from main branch..."
   curl -LSs "https://raw.githubusercontent.com/Kingfinik98/VortexSU/refs/heads/main/kernel/setup.sh" | bash -s main
-  # PATCH SUSFS for GKI 5.10
-  if [ "$KVER" == "5.10" ]; then
-    log "Applying SUSFS patches for GKI 5.10 (VorteXSU Method)..."
-    SUSFS_BRANCH="gki-android12-5.10"
-    git clone https://gitlab.com/simonpunk/susfs4ksu/ -b $SUSFS_BRANCH sus
-    rm -rf sus/.git
-    susfs=sus/kernel_patches
-    cp -r $susfs/fs .
-    cp -r $susfs/include .
-    cp -r $susfs/50_add_susfs_in_${SUSFS_BRANCH}.patch .
-    patch -p1 < 50_add_susfs_in_${SUSFS_BRANCH}.patch || true
-    # Get SUSFS version for build info
-    SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
-    config --enable CONFIG_KPM
-    config --enable CONFIG_KSU_MULTI_MANAGER_SUPPORT
-    config --enable CONFIG_KSU_SUSFS
-    log "[✓] VorteXSU & SUSFS patched for $KVER."
-  else
-    # Untuk 6.1 dan 6.6,hanya enable config-nya.
-    # The physical patching is done in the 'Standard SUSFS Logic' block below.
-    config --enable CONFIG_KSU_SUSFS
-    log "SUSFS config enabled for $KVER. Applying patches in Standard block..."
-  fi
 
   # --- PATCH ZRAM FOR ALL GKI VERSIONS (VorteXSU) ---
   log "📥 Downloading & Applying Zram patches for GKI $KVER (VorteXSU)..."
@@ -291,14 +261,7 @@ elif [ "$KSU" == "vortexsu" ]; then
   git clone --depth=1 -b main https://github.com/Kingfinik98/Super-Builders "$TMP_ZRAM_PATCH"
   
   # Determine version specific patch directory
-  ZRAM_VER_DIR=""
-  if [ "$KVER" == "5.10" ]; then
-    ZRAM_VER_DIR="$TMP_ZRAM_PATCH/zram/5.10"
-  elif [ "$KVER" == "6.1" ]; then
-    ZRAM_VER_DIR="$TMP_ZRAM_PATCH/zram/6.1"
-  elif [ "$KVER" == "6.6" ]; then
-    ZRAM_VER_DIR="$TMP_ZRAM_PATCH/zram/6.6"
-  fi
+  ZRAM_VER_DIR="$TMP_ZRAM_PATCH/zram/$KVER"
 
   # Apply Version Specific Patches
   if [ -d "$ZRAM_VER_DIR" ]; then
@@ -333,6 +296,29 @@ elif [ "$KSU" == "vortexsu" ]; then
   rm -rf "$TMP_ZRAM_PATCH"
   # -------------------------------------------------------------
 
+  # PATCH SUSFS for GKI 5.10
+  if [ "$KVER" == "5.10" ]; then
+    log "Applying SUSFS patches for GKI 5.10 (VorteXSU Method)..."
+    SUSFS_BRANCH="gki-android12-5.10"
+    git clone https://gitlab.com/simonpunk/susfs4ksu/ -b $SUSFS_BRANCH sus
+    rm -rf sus/.git
+    susfs=sus/kernel_patches
+    cp -r $susfs/fs .
+    cp -r $susfs/include .
+    cp -r $susfs/50_add_susfs_in_${SUSFS_BRANCH}.patch .
+    patch -p1 < 50_add_susfs_in_${SUSFS_BRANCH}.patch || true
+    # Get SUSFS version for build info
+    SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
+    config --enable CONFIG_KPM
+    config --enable CONFIG_KSU_MULTI_MANAGER_SUPPORT
+    config --enable CONFIG_KSU_SUSFS
+    log "[✓] VorteXSU & SUSFS patched for $KVER."
+  else
+    # Untuk 6.1 dan 6.6,hanya enable config-nya.
+    # The physical patching is done in the 'Standard SUSFS Logic' block below.
+    config --enable CONFIG_KSU_SUSFS
+    log "SUSFS config enabled for $KVER. Applying patches in Standard block..."
+  fi
 fi
 
 # SUSFS (Standard Logic for KernelSU yes & VorteXSU 6.1/6.6)
