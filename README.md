@@ -109,7 +109,7 @@ Remove the (#) sign from the Clang text :CLANG_URL to replace clang
 https://github.com/Kingfinik98/AnyKernel3
 
 ### Source All Manager
-https://github.com/Kingfinik98/ReSukiSU
+https://github.com/Kingfinik98/VortexSU
 
 ---
 
