@@ -35,7 +35,7 @@ elif [ "$KSU_SUSFS" = "true" ]; then
   # LOGIC STANDARD FOR KSU NEXT, REGULAR, RISSU, RKSU
   echo "🔧 Mode: SuSFS Hook Enabled"
   
-  # PERBAIKAN: Menambahkan ZEROMOUNT, menghapus duplikat, dan merapikan urutan.
+  # PERBAIKAN: Menambahkan ZEROMOUNT, menghapus duplikat.
   cat >> $DEFCONFIG <<EOF
 # --- SuSFS Configuration (Cleaned) ---
 CONFIG_KSU_SUSFS=y
@@ -106,6 +106,16 @@ CONFIG_TCP_CONG_BBR=y
 CONFIG_TCP_CONG_WESTWOOD=y
 CONFIG_IP6_NF_TARGET_HL=y
 CONFIG_IP6_NF_MATCH_HL=y
+# [zram]
+CONFIG_ZSMALLOC=y
+CONFIG_ZRAM=y
+CONFIG_CRYPTO_LZO=y
+CONFIG_CRYPTO_LZ4=y
+CONFIG_CRYPTO_LZ4HC=y
+CONFIG_CRYPTO_LZ4K=y
+CONFIG_CRYPTO_LZ4KD=y
+CONFIG_CRYPTO_842=y
+CONFIG_ZRAM_DEF_COMP_LZ4KD=y
 EOF
 
 # --- Additional LTO & Compiler Optimization (5.10 ONLY) ---
