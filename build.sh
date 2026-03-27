@@ -189,21 +189,9 @@ if ksu_included; then
   cd KernelSU-Next
   patch -p1 < $KERNEL_PATCHES/ksu/ksun-add-more-managers-support.patch
   cd $OLDPWD
-    # Fix SUSFS Uname Symbol Error for KernelSU Next & All_Manager
-    log "Applying fix for undefined SUSFS symbols (KernelSU-Next)..."
-    # Disable SUSFS Uname handling block in supercalls.c to use standard kernel spoofing
-    # This fixes the linker error caused by missing functions in the current SUSFS patch
-    sed -i 's/#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME/#if 0 \/\* CONFIG_KSU_SUSFS_SPOOF_UNAME Disabled to fix build \*\//' drivers/kernelsu/supercalls.c
-    log "SUSFS symbol fix applied for KernelSU-Next."
 
-    # Fix duplicate symbol __stack_chk_guard for GKI 5.10
-    if [ "$KVER" == "5.10" ]; then
-      log "Applying fix for duplicate symbol __stack_chk_guard (GKI 5.10)..."
-      # Robust sed: Replace the whole line starting with #if and containing CONFIG_STACKPROTECTOR_PER_TASK
-      # This handles both the definition block and the assignment block
-      sed -i '/^#if.*CONFIG_STACKPROTECTOR_PER_TASK/c\#if 0 \/\/ Disabled to fix duplicate symbol' drivers/kernelsu/ksu.c
-      log "Stack protector fix applied."
-    fi
+  # CATATAN: Manual fixes (sed) untuk GKI 5.10 dihapus karena akan ditangani oleh Patch 70.
+  # Ini mencegah konflik antara manual fix dan Patch 70.
 
 # --- VorteXSU Setup Block ---
 elif [ "$KSU" == "vortexsu" ]; then
@@ -264,9 +252,13 @@ if susfs_included; then
       curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android12-5.10/KernelSU-Next/patches/51_enhanced_susfs-android12-5.10.patch" | patch -p1 || log "Patch 51 skipped or already applied."
 
       # 3. KSU Safety (70_) - Khusus KernelSU-Next
+      # PERBAIKAN: Patch 70 berisi path 'kernel/Kbuild' dll, padahal file KSU ada di 'drivers/kernelsu'
+      # Kita terapkan patch di dalam folder drivers/kernelsu dengan opsi -p2 (strip 'a/kernel/')
       if [ "$KSU" == "yes" ]; then
         log "Applying 70_ksu_safety-kernelsu-next..."
-        curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android12-5.10/KernelSU-Next/patches/70_ksu_safety-kernelsu-next-5.10.patch" | patch -p1 || log "Patch 70 skipped or already applied."
+        pushd drivers/kernelsu > /dev/null
+        curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android12-5.10/KernelSU-Next/patches/70_ksu_safety-kernelsu-next-5.10.patch" | patch -p2 || log "Patch 70 skipped or failed."
+        popd > /dev/null
       fi
 
       # 4. ZeroMount (60_)
