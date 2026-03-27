@@ -194,7 +194,8 @@ if ksu_included; then
   if [ "$KVER" == "5.10" ]; then
     log "📥 Downloading & Applying additional patches for KernelSU-Next (GKI 5.10)..."
     TMP_KSUN_PATCH="$WORKDIR/ksun_extra_patches"
-    git clone --depth=1 https://github.com/Kingfinik98/Super-Builders "$TMP_KSUN_PATCH"
+    # Explicitly clone branch main as requested
+    git clone --depth=1 -b main https://github.com/Kingfinik98/Super-Builders "$TMP_KSUN_PATCH"
     
     PATCH_DIR="$TMP_KSUN_PATCH/android12-5.10"
     
@@ -206,7 +207,7 @@ if ksu_included; then
         fi
       done
     else
-      log "Warning: Patch directory not found in cloned repo."
+      log "Warning: Patch directory $PATCH_DIR not found."
     fi
     rm -rf "$TMP_KSUN_PATCH"
   fi
