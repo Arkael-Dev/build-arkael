@@ -39,7 +39,7 @@ elif [ "$KVER" == "5.10" ]; then
   KERNEL_BRANCH="android12-5.10-staging"
 fi
 DEFCONFIG_TO_MERGE=""
-GKI_RELEASES_REPO="https://github.com/Kingfinik98/build-vortex"
+GKI_RELEASES_REPO="https://github.com/Kingfinik98/gki-builder"
 #Change the clang by removing the (#) sign then apply
 #CLANG_URL="https://github.com/linastorvaldz/idk/releases/download/clang-r547379/clang.tgz"
 #CLANG_URL="https://github.com/LineageOS/android_prebuilts_clang/kernel/linux-x86_clang-r416183b/archive/refs/heads/lineage-20.0.tar.gz"
@@ -203,31 +203,23 @@ if ksu_included; then
     for p in "$ZRAM_VER_DIR"/*.patch; do
       if [ -f "$p" ]; then
         log "🔨 Applying ZRAM patch: $(basename "$p")"
-        patch -p1 < "$p" || log "Warning: ZRAM patch $(basename "$p") failed."
+        patch -p1 -F3 < "$p" || log "Warning: ZRAM patch $(basename "$p") failed."
       fi
     done
   else
     log "Warning: ZRAM patch directory for $KVER not found."
   fi
 
-  # Apply LZ4 Patches
-  LZ4_PATCH_DIR="$TMP_ZRAM_PATCH/zram/lz4"
-  if [ -d "$LZ4_PATCH_DIR" ]; then
-    for p in "$LZ4_PATCH_DIR"/*.patch; do
-      if [ -f "$p" ]; then
-        log "🔨 Applying LZ4 patch: $(basename "$p")"
-        patch -p1 < "$p" || log "Warning: LZ4 patch $(basename "$p") failed."
-      fi
-    done
-  fi
+  # ============================================================
+  # FIX: SKIP LZ4 OPTIMIZATION TO PREVENT LINKER ERROR
+  # The custom lz4.h header expects optimized symbols (LZ4_arm64_decompress_safe)
+  # which are not present in the standard kernel source or if the patch failed.
+  # We use the standard kernel LZ4 library instead.
+  # ============================================================
+  log "⚠️ Skipping LZ4 optimization patches to prevent linker errors."
+  log "Using standard kernel LZ4 implementation."
 
-  # Copy LZ4 Header
-  LZ4_HEADER_SRC="$TMP_ZRAM_PATCH/zram/include/linux/lz4.h"
-  if [ -f "$LZ4_HEADER_SRC" ]; then
-    log "📄 Copying lz4.h header..."
-    cp "$LZ4_HEADER_SRC" "$KSRC/include/linux/lz4.h"
-  fi
-
+  # Cleanup
   rm -rf "$TMP_ZRAM_PATCH"
   # -------------------------------------------------------------
 
@@ -268,30 +260,18 @@ elif [ "$KSU" == "vortexsu" ]; then
     for p in "$ZRAM_VER_DIR"/*.patch; do
       if [ -f "$p" ]; then
         log "🔨 Applying ZRAM patch: $(basename "$p")"
-        patch -p1 < "$p" || log "Warning: ZRAM patch $(basename "$p") failed."
+        patch -p1 -F3 < "$p" || log "Warning: ZRAM patch $(basename "$p") failed."
       fi
     done
   else
     log "Warning: ZRAM patch directory for $KVER not found."
   fi
 
-  # Apply LZ4 Patches
-  LZ4_PATCH_DIR="$TMP_ZRAM_PATCH/zram/lz4"
-  if [ -d "$LZ4_PATCH_DIR" ]; then
-    for p in "$LZ4_PATCH_DIR"/*.patch; do
-      if [ -f "$p" ]; then
-        log "🔨 Applying LZ4 patch: $(basename "$p")"
-        patch -p1 < "$p" || log "Warning: LZ4 patch $(basename "$p") failed."
-      fi
-    done
-  fi
-
-  # Copy LZ4 Header
-  LZ4_HEADER_SRC="$TMP_ZRAM_PATCH/zram/include/linux/lz4.h"
-  if [ -f "$LZ4_HEADER_SRC" ]; then
-    log "📄 Copying lz4.h header..."
-    cp "$LZ4_HEADER_SRC" "$KSRC/include/linux/lz4.h"
-  fi
+  # ============================================================
+  # FIX: SKIP LZ4 OPTIMIZATION TO PREVENT LINKER ERROR
+  # ============================================================
+  log "⚠️ Skipping LZ4 optimization patches to prevent linker errors."
+  log "Using standard kernel LZ4 implementation."
 
   rm -rf "$TMP_ZRAM_PATCH"
   # -------------------------------------------------------------
