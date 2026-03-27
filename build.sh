@@ -190,37 +190,26 @@ if ksu_included; then
   patch -p1 < $KERNEL_PATCHES/ksu/ksun-add-more-managers-support.patch
   cd $OLDPWD
   
-  # --- PATCH TAMBAHAN KernelSU Next GKI 5.10 ---
+  # --- PATCH ZRAM KHUSUS GKI 5.10 ---
   if [ "$KVER" == "5.10" ]; then
-    log "📥 Downloading & Applying additional patches for KernelSU-Next (GKI 5.10)..."
-    TMP_KSUN_PATCH="$WORKDIR/ksun_extra_patches"
-    git clone --depth=1 -b main https://github.com/Kingfinik98/Super-Builders "$TMP_KSUN_PATCH"
+    log "📥 Downloading & Applying Zram patches for GKI 5.10..."
+    TMP_PATCH_DIR="$WORKDIR/extra_patches"
+    git clone --depth=1 -b main https://github.com/Kingfinik98/Super-Builders "$TMP_PATCH_DIR"
     
-    BASE_PATCH_DIR="$TMP_KSUN_PATCH/android12-5.10"
-    KSU_NEXT_PATCH_DIR="$BASE_PATCH_DIR/KernelSU-Next/patches"
+    ZRAM_PATCH_DIR="$TMP_PATCH_DIR/zram/5.10"
     
-    # 1. Apply 60_zeromount FIRST (Base requirement)
-    # Using flags: -F3 (fuzz factor 3) --no-backup-if-mismatch (no reject files)
-    if [ -f "$KSU_NEXT_PATCH_DIR/60_zeromount-android12-5.10.patch" ]; then
-      log "🔨 Applying patch: 60_zeromount-android12-5.10.patch"
-      patch -p1 -F3 --no-backup-if-mismatch < "$KSU_NEXT_PATCH_DIR/60_zeromount-android12-5.10.patch" || log "Warning: Patch 60_zeromount applied with offsets/fuzz."
-    fi
-
-    # 2. Apply 65_zeromount-adb-filter (Archive) via RAW URL
-    log "🔨 Applying patch (archive): 65_zeromount-adb-filter-android12-5.10.patch"
-    curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/refs/heads/main/android12-5.10/KernelSU-Next/patches/_archive/65_zeromount-adb-filter-android12-5.10.patch" | patch -p1 -F3 --no-backup-if-mismatch || log "Warning: Patch 65_zeromount applied with offsets/fuzz."
-
-    # 3. Apply other patches from base directory if any
-    if [ -d "$BASE_PATCH_DIR" ]; then
-      for p in "$BASE_PATCH_DIR"/*.patch; do
+    if [ -d "$ZRAM_PATCH_DIR" ]; then
+      for p in "$ZRAM_PATCH_DIR"/*.patch; do
         if [ -f "$p" ]; then
           log "🔨 Applying patch: $(basename "$p")"
           patch -p1 < "$p" || log "Warning: Patch $(basename "$p") failed or already applied."
         fi
       done
+    else
+      log "Warning: Zram patch directory not found."
     fi
 
-    rm -rf "$TMP_KSUN_PATCH"
+    rm -rf "$TMP_PATCH_DIR"
   fi
   # ---------------------------------------------
 
