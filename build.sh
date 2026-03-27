@@ -48,7 +48,7 @@ GKI_RELEASES_REPO="https://github.com/Kingfinik98/gki-builder"
 #CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/105aba85d97a53d364585ca755752dae054b49e8/clang-r584948b.tar.gz"
 #CLANG_URL="https://github.com/greenforce-project/greenforce_clang/releases/download/20260210/gf-clang-23.0.0-20260210.tar.gz"
 CLANG_URL="https://github.com/greenforce-project/greenforce_clang/releases/download/20260302/gf-clang-23.0.0-20260302.tar.gz"
-#CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/42d2c090c14c9c7f4dfd365ae551e2b959dc775c/clang-r584948b.tar.gz"
+#CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/42d2c090c14c9c7f4dfd365ae551e2b959dc775c/clang-r584948.tar.gz"
 #CLANG_URL="https://github.com/linastorvaldz/gki-builder/releases/download/clang-r487747c/clang-r487747c.tar.gz"
 #CLANG_URL="$(./clang.sh slim)"
 CLANG_BRANCH=""
@@ -203,6 +203,11 @@ if ksu_included; then
       # This handles both the definition block and the assignment block
       sed -i '/^#if.*CONFIG_STACKPROTECTOR_PER_TASK/c\#if 0 \/\/ Disabled to fix duplicate symbol' drivers/kernelsu/ksu.c
       log "Stack protector fix applied."
+      
+      # --- TAMBAHAN: PATCH ZEROMOUNT UNTUK KERNELSU-NEXT GKI 5.10 ---
+      log "Applying ZeroMount patch for KernelSU-Next (GKI 5.10)..."
+      curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/main/android12-5.10/KernelSU-Next/patches/60_zeromount-android12-5.10.patch" | patch -p1 || log "ZeroMount patch skipped or already applied."
+      # ---------------------------------------------------------------
     fi
 
 # --- VorteXSU Setup Block ---
@@ -229,6 +234,11 @@ elif [ "$KSU" == "vortexsu" ]; then
     config --enable CONFIG_KSU_MULTI_MANAGER_SUPPORT
     config --enable CONFIG_KSU_SUSFS
     log "[✓] VorteXSU & SUSFS patched for $KVER."
+    
+    # --- TAMBAHAN: PATCH ZEROMOUNT UNTUK VORTEXSU GKI 5.10 ---
+    log "Applying ZeroMount patch for VorteXSU (GKI 5.10)..."
+    curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Super-Builders/main/android12-5.10/ReSukiSU/patches/60_zeromount-android12-5.10.patch" | patch -p1 || log "ZeroMount patch skipped or already applied."
+    # ---------------------------------------------------------
   else
     # Untuk 6.1 dan 6.6,hanya enable config-nya.
     # The physical patching is done in the 'Standard SUSFS Logic' block below.
