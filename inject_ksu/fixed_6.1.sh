@@ -8,17 +8,17 @@ TARGET_FILE="drivers/bluetooth/btqca.h"
 if [ -f "$TARGET_FILE" ]; then
     # Check if already patched to avoid duplication
     if grep -q "QCA_WCN3988" "$TARGET_FILE"; then
-        echo "[INFO] Patch sudah diterapkan: QCA_WCN3988 sudah ada di $TARGET_FILE"
+        echo "[INFO] Patch has already been applied: QCA_WCN3988 already exists in $TARGET_FILE"
     else
-        echo "[FIX] Menambahkan definisi QCA_WCN3988 ke $TARGET_FILE..."
+        echo "[FIX] Adding QCA_WCN3988 definition to $TARGET_FILE..."
         
-        # Menyisipkan 'QCA_WCN3988,' setelah baris 'QCA_WCN3998,'
-        # Menggunakan tab untuk indentasi agar sesuai style kernel
+        # Insert 'QCA_WCN3988,' after the line 'QCA_WCN3998,'
+        # Using a tab for indentation to match kernel style
         sed -i '/QCA_WCN3998,/a\	QCA_WCN3988,' "$TARGET_FILE"
         
-        echo "[SUCCESS] Patch berhasil diterapkan."
+        echo "[SUCCESS] Patch successfully applied."
     fi
 else
-    echo "[ERROR] File $TARGET_FILE tidak ditemukan!"
+    echo "[ERROR] File $TARGET_FILE not found!"
     exit 1
 fi
