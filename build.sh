@@ -92,12 +92,27 @@ bash Inject_300hz.sh
 rm Inject_300hz.sh
 #--------------------------------------
 
-# --- PATCH WIFI SM8650 (GKI 6.1 ONLY) ---
+# --- PATCH WIFI SM8650 & FIX BTQCA (GKI 6.1 ONLY) ---
 if [ "$KVER" == "6.1" ]; then
   log "Applying WiFi SM8650 patch..."
   curl -LSs https://github.com/OnePlus-12-Development/android_kernel_qcom_sm8650/commit/3e0cb08.patch | patch -p1 --forward || log "WiFi SM8650 patch skipped or already applied."
+
+  # --- FIX BTQCA WCN3988 DEFINITION ---
+  log "Checking and fixing btqca.c WCN3988 definition..."
+  TARGET_FILE="drivers/bluetooth/btqca.h"
+  if [ -f "$TARGET_FILE" ]; then
+    if grep -q "QCA_WCN3988" "$TARGET_FILE"; then
+      log "[INFO] Patch sudah diterapkan: QCA_WCN3988 sudah ada."
+    else
+      sed -i '/QCA_WCN3998,/a\	QCA_WCN3988,' "$TARGET_FILE"
+      log "[SUCCESS] Patch btqca berhasil diterapkan."
+    fi
+  else
+    log "[WARNING] File $TARGET_FILE tidak ditemukan, skip patch."
+  fi
+  # ------------------------------------
 fi
-# ----------------------------------------
+# ---------------------------------------------------
 
 # --- ADD KSU INJECT SCRIPT ---
 log "Injecting custom KSU & SuSFS configs from GitHub..."
