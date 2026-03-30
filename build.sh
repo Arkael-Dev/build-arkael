@@ -114,21 +114,6 @@ if [ "$KVER" == "6.1" ]; then
 fi
 # ---------------------------------------------------
 
-# --- PATCH BBRv3 (GKI 6.1 ONLY) ---
-if [ "$KVER" == "6.1" ]; then
-  log "Applying BBRv3 patches"
-  patch -p1 --fuzz=3 < $KERNEL_PATCHES/bbrv3/bbrv3.patch
-fi
-# ------------------------------------
-
-# --- PATCH BBG (GKI 6.1 & 5.10) ---
-if [ "$KVER" == "6.1" ] || [ "$KVER" == "5.10" ]; then
-  log "BBG included"
-  wget -O- "https://github.com/vc-teahouse/Baseband-guard/raw/main/setup.sh" | bash
-  sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/selinux/selinux,baseband_guard/ } }' security/Kconfig
-fi
-# -----------------------------------------
-
 # --- ADD KSU INJECT SCRIPT ---
 log "Injecting custom KSU & SuSFS configs from GitHub..."
 export KSU
@@ -438,18 +423,6 @@ EOF
 ## Build GKI
 log "Generating config..."
 make ${MAKE_ARGS[@]} $KERNEL_DEFCONFIG
-
-# --- Force BBG into CONFIG_LSM (GKI 6.1 & 5.10) ---
-if [ "$KVER" == "6.1" ] || [ "$KVER" == "5.10" ]; then
-  log "Injecting baseband_guard into CONFIG_LSM..."
-  if grep -q "CONFIG_LSM=" $OUTDIR/.config; then
-    sed -i '/^CONFIG_LSM=/ { /baseband_guard/! s/"$/,baseband_guard"/ }' $OUTDIR/.config
-  else
-    echo 'CONFIG_LSM="lockdown,yama,loadpin,safesetid,integrity,selinux,smack,tomoyo,apparmor,bpf,baseband_guard"' >> $OUTDIR/.config
-  fi
-  make ${MAKE_ARGS[@]} olddefconfig
-fi
-# ---------------------------------------------------
 
 if [ "$DEFCONFIG_TO_MERGE" ]; then
   log "Merging configs..."
