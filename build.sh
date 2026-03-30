@@ -114,6 +114,17 @@ if [ "$KVER" == "6.1" ]; then
 fi
 # ---------------------------------------------------
 
+# --- PATCH BBRv3 & BBG (GKI 6.1 & 5.10) ---
+if [ "$KVER" == "6.1" ] || [ "$KVER" == "5.10" ]; then
+  log "Applying BBRv3 patches"
+  patch -p1 --fuzz=3 < $KERNEL_PATCHES/bbrv3/bbrv3.patch
+
+  log "BBG included"
+  wget -O- "https://github.com/vc-teahouse/Baseband-guard/raw/main/setup.sh" | bash
+  sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/selinux/selinux,baseband_guard/ } }' "security/Kconfig"
+fi
+# -----------------------------------------
+
 # --- ADD KSU INJECT SCRIPT ---
 log "Injecting custom KSU & SuSFS configs from GitHub..."
 export KSU
