@@ -439,6 +439,18 @@ EOF
 log "Generating config..."
 make ${MAKE_ARGS[@]} $KERNEL_DEFCONFIG
 
+# --- Force BBG into CONFIG_LSM (GKI 6.1 & 5.10) ---
+if [ "$KVER" == "6.1" ] || [ "$KVER" == "5.10" ]; then
+  log "Injecting baseband_guard into CONFIG_LSM..."
+  if grep -q "CONFIG_LSM=" $OUTDIR/.config; then
+    sed -i '/^CONFIG_LSM=/ { /baseband_guard/! s/"$/,baseband_guard"/ }' $OUTDIR/.config
+  else
+    echo 'CONFIG_LSM="lockdown,yama,loadpin,safesetid,integrity,selinux,smack,tomoyo,apparmor,bpf,baseband_guard"' >> $OUTDIR/.config
+  fi
+  make ${MAKE_ARGS[@]} olddefconfig
+fi
+# ---------------------------------------------------
+
 if [ "$DEFCONFIG_TO_MERGE" ]; then
   log "Merging configs..."
   if [ -f "scripts/kconfig/merge_config.sh" ]; then
