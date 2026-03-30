@@ -1,4 +1,4 @@
-name: Cleanup All Artifacts
+name: Cleanup Artifacts & Check Storage
 
 on:
   workflow_dispatch:
@@ -6,13 +6,99 @@ on:
     - cron: '0 0 * * *'  # Setiap hari jam 00:00 UTC
 
 jobs:
-  cleanup:
+  cleanup-and-check:
     runs-on: ubuntu-latest
     permissions:
       actions: write
+      contents: read
     steps:
-      - name: Delete all artifacts
+      # ============================================
+      # STEP 1: CEK STORAGE SEBELUM CLEANUP
+      # ============================================
+      - name: 📊 Check Storage BEFORE Cleanup
+        id: before
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "## 📊 STORAGE STATUS SEBELUM CLEANUP" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Get repository storage usage
+          STORAGE_RESPONSE=$(gh api \
+            repos/${{ github.repository }}/actions/cache/usage \
+            --jq '.active_caches_size_mb // 0' 2>/dev/null || echo "0")
+          
+          echo "| Metrik | Nilai |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Cache Size** | ${STORAGE_RESPONSE} MB |" >> $GITHUB_STEP_SUMMARY
+          
+          # Get artifact count
+          ARTIFACT_COUNT=$(gh api \
+            repos/${{ github.repository }}/actions/artifacts \
+            --jq '.total_count // 0' 2>/dev/null || echo "0")
+          
+          echo "| **Total Artifacts** | ${ARTIFACT_COUNT} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Set output for comparison
+          echo "artifact_count=${ARTIFACT_COUNT}" >> $GITHUB_OUTPUT
+
+      # ============================================
+      # STEP 2: HAPUS SEMUA ARTIFAKS
+      # ============================================
+      - name: 🗑️ Delete All Artifacts
         uses: c-hive/gha-remove-artifacts@v1
         with:
           age: '0 days'
           skip-recent: 0
+
+      # ============================================
+      # STEP 3: HAPUS SEMUA CACHE (OTOMATIS)
+      # ============================================
+      - name: 🧹 Delete All Caches
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          CACHE_IDS=$(gh api repos/${{ github.repository }}/actions/caches --jq '.active_caches[].id' 2>/dev/null)
+          if [ -n "$CACHE_IDS" ]; then
+            for ID in $CACHE_IDS; do
+              gh api --method DELETE repos/${{ github.repository }}/actions/caches/$ID --silent
+            done
+          fi
+
+      # ============================================
+      # STEP 4: CEK STORAGE SESUDAH CLEANUP
+      # ============================================
+      - name: ✅ Check Storage AFTER Cleanup
+        id: after
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ STORAGE STATUS SESUDAH CLEANUP" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Wait a moment for API to update
+          sleep 5
+          
+          # Check artifacts again
+          ARTIFACT_COUNT_AFTER=$(gh api \
+            repos/${{ github.repository }}/actions/artifacts \
+            --jq '.total_count // 0' 2>/dev/null || echo "0")
+          
+          # Get cache usage
+          CACHE_AFTER=$(gh api \
+            repos/${{ github.repository }}/actions/cache/usage \
+            --jq '.active_caches_size_mb // 0' 2>/dev/null || echo "0")
+          
+          echo "| Metrik | Sebelum | Sesudah | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|---------|---------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Artifacts** | ${{ steps.before.outputs.artifact_count }} | ${ARTIFACT_COUNT_AFTER} | 🟢 Kosong |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Cache** | - | ${CACHE_AFTER} MB | 🟢 Kosong |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### 🎉 STORAGE SUDAH BERSIH TOTAL!" >> $GITHUB_STEP_SUMMARY
+          echo "Semua artifacts dan cache berhasil dihapus secara otomatis." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*Last updated: $(date -u '+%Y-%m-%d %H:%M:%S UTC')*" >> $GITHUB_STEP_SUMMARY
