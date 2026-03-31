@@ -25,7 +25,7 @@ find /sys/devices/virtual/thermal -name temp -type f -exec chmod 000 {} + 2>/dev
 # ========== ZRAM ==========
 swapoff /dev/block/zram0 2>/dev/null
 echo "1" > /sys/block/zram0/reset 2>/dev/null
-echo "4096000000" > /sys/block/zram0/disksize 2>/dev/null
+echo "8096000000" > /sys/block/zram0/disksize 2>/dev/null
 echo "zstd" > /sys/block/zram0/comp_algorithm 2>/dev/null
 mkswap /dev/block/zram0 2>/dev/null
 swapon /dev/block/zram0 2>/dev/null
