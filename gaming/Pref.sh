@@ -1,19 +1,25 @@
 #!/system/bin/sh
-# VorteX Esport - Kernel Preferences
+# VorteX Esport - Kernel Preferences (Boot Optimized)
 
-# Wait until the boot is complete
-while [[ -z $(resetprop sys.boot_completed) ]]; do sleep 5; done
+# Export PATH agar semua binary (resetprop, mkswap, cmd, dll) bisa ditemukan saat boot
+export PATH="/system/bin:/system/xbin:/sbin:$PATH"
+
+# Tunggu sampai boot benar-benar selesai menggunakan getprop bawaan sistem
+until [ "$(getprop sys.boot_completed)" = "1" ]; do
+    sleep 5
+done
+
+# Beri jeda 5 detik setelah boot complete agar subsistem sepenuhnya stabilize
+sleep 5
 
 # ========== DISABLE THERMAL UNIVERSAL ==========
-sleep 30
 for thermal in $(resetprop | awk -F '[][]' '/thermal/ {print $2}'); do
-  if [[ $(resetprop $thermal) == running ]]; then
+  if [[ "$(resetprop $thermal)" == "running" ]]; then
     stop ${thermal/init.svc.} 2>/dev/null
-    sleep 10
+    sleep 2
     resetprop -n $thermal stopped 2>/dev/null
   fi
 done
-sleep 10
 find /sys/devices/virtual/thermal -name temp -type f -exec chmod 000 {} + 2>/dev/null
 
 # ========== ZRAM ==========
