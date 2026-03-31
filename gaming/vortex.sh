@@ -1,4 +1,4 @@
-#!/system/bin/sh
+#!/usr/bin/env bash
 # VorteX Esport - Kernel Preferences (Boot Optimized)
 
 # check binary
