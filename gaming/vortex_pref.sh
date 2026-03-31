@@ -1,15 +1,15 @@
 #!/system/bin/sh
 # VorteX Esport - Kernel Preferences (Boot Optimized)
 
-# Export PATH agar semua binary (resetprop, mkswap, cmd, dll) bisa ditemukan saat boot
+# check binary
 export PATH="/system/bin:/system/xbin:/sbin:$PATH"
 
-# Tunggu sampai boot benar-benar selesai menggunakan getprop bawaan sistem
+# wait 5 seconds
 until [ "$(getprop sys.boot_completed)" = "1" ]; do
     sleep 5
 done
 
-# Beri jeda 5 detik setelah boot complete agar subsistem sepenuhnya stabilize
+# give a 5 second pause during boot
 sleep 5
 
 # ========== DISABLE THERMAL UNIVERSAL ==========
