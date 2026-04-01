@@ -97,9 +97,11 @@ fi
 # --- INJECT VORTEX GPU TUNING (GKI 5.10 ONLY) ---
 if [ "$KVER" == "5.10" ]; then
   log "Injecting VorteX GPU Tuning patch..."
-  # Di-copy ke folder kernel/ agar lebih stabil dan tidak diabaikan root Makefile
-  cp "$KERNEL_PATCHES/vortex_gki.c" "$KSRC/kernel/vortex_gki.c"
-  grep -q "vortex_gki.o" "$KSRC/kernel/Makefile" || echo "obj-y += vortex_gki.o" >> "$KSRC/kernel/Makefile"
+  mkdir -p "$KSRC/drivers/misc"
+  cp "$KERNEL_PATCHES/vortex_gki.c" "$KSRC/drivers/misc/vortex_gki.c"
+  # Hapus dulu kalau ada baris lama/salah yang bikin duplikat atau ada spasi
+  sed -i '/vortex_gki/d' "$KSRC/drivers/misc/Makefile"
+  echo "obj-y += vortex_gki.o" >> "$KSRC/drivers/misc/Makefile"
 fi
 # ----------------------------------------------------
 
