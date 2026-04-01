@@ -10,7 +10,7 @@ elif [ "$KVER" == "6.1" ]; then
   RELEASE="v0.1"
 fi
 
-KERNEL_NAME="VorteX_Flux"
+KERNEL_NAME="VorteX_E-Sport"
 USER="VorteX"
 HOST="VorteX"
 TIMEZONE="Asia/Jakarta"
@@ -97,20 +97,8 @@ fi
 # --- INJECT VORTEX GPU TUNING (GKI 5.10 ONLY) ---
 if [ "$KVER" == "5.10" ]; then
   log "Injecting VorteX GPU Tuning patch..."
-  GPU_DIR="$KSRC/drivers/gpu/msm"
-  GPU_MAKEFILE="$GPU_DIR/Makefile"
-  
-  if [ -d "$GPU_DIR" ]; then
-    cp "$WORKDIR/vortex_gki.c" "$GPU_DIR/vortex_gki.c"
-    if ! grep -q "vortex_gki.o" "$GPU_MAKEFILE"; then
-      echo "obj-y += vortex_gki.o" >> "$GPU_MAKEFILE"
-      log "VorteX GPU Tuning injected into KGSL Makefile."
-    else
-      log "VorteX GPU Tuning already injected."
-    fi
-  else
-    log "WARNING: KGSL directory not found, skipping GPU patch."
-  fi
+  cp "$KERNEL_PATCHES/vortex_gki.c" "$KSRC/vortex_gki.c"
+  grep -q "vortex_gki.o" "$KSRC/Makefile" || echo "obj-y += vortex_gki.o" >> "$KSRC/Makefile"
 fi
 # ----------------------------------------------------
 
