@@ -8,7 +8,7 @@ echo "⚙️ Added KSU & SuSFS configuration"
 # Base KSU Config & Dependencies
 cat >> $DEFCONFIG <<EOF
 # ===============================================
-# Konfigurasi KernelSU Base
+# KernelSU Base Configuration
 CONFIG_KSU=y
 CONFIG_KPM=y
 CONFIG_KSU_MULTI_MANAGER_SUPPORT=y
@@ -89,6 +89,16 @@ CONFIG_CPU_FREQ=y
 CONFIG_SWAP=y
 CONFIG_CPU_FREQ_GOV_SCHEDUTIL=y
 CONFIG_CPU_FREQ_GOV_ONDEMAND=y
+EOF
+
+# --- VorteX Adreno GPU Patch Dependencies (GKI 5.10) ---
+echo "⚙️ Adding VorteX Adreno GPU Dependencies"
+cat >> $DEFCONFIG <<EOF
+# --- VorteX Adreno GPU Patch Support ---
+# Must be enabled so the /sys/class/kgsl/kgsl-3d0/ node exists during boot
+CONFIG_MSM_KGSL=y
+# Must be enabled so the LMK minfree node can be written by vortex_gki.c
+CONFIG_ANDROID_LOW_MEMORY_KILLER=y
 EOF
 
 # --- Additional LTO & Compiler Optimization (5.10 ONLY) ---
