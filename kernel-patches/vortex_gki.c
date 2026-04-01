@@ -23,7 +23,7 @@ extern struct net init_net;
 
 extern int panic_timeout;
 extern int panic_on_oops;
-extern int panic_on_rcu_stall;
+// extern int panic_on_rcu_stall; -> DIHAPUS: Tidak ada di GKI 5.10
 extern int panic_on_warn;
 extern int console_loglevel;
 extern enum sched_tunable_scaling sysctl_sched_tunable_scaling;
@@ -34,7 +34,7 @@ static void vortex_set_tcp_congestion(const char *name) {
     rcu_read_lock();
     ops = tcp_ca_find(name);
     if (ops && try_module_get(ops->owner)) {
-        // FIX: Ganti pemanggilan fungsi agar sesuai signature GKI 5.10 (butuh &init_net dan name)
+        // FIX: Sesuai signature GKI 5.10 (butuh &init_net dan name)
         tcp_set_default_congestion_control(&init_net, name);
         pr_info("[VorteX] TCP Congestion set to %s\n", name);
         module_put(ops->owner);
@@ -50,7 +50,7 @@ static int __init vortex_direct_init(void) {
     // Panic & Printk
     panic_timeout = 0;
     panic_on_oops = 0;
-    panic_on_rcu_stall = 0;
+    // panic_on_rcu_stall = 0; -> DIHAPUS: Tidak ada di GKI 5.10
     panic_on_warn = 0;
     console_loglevel = CONSOLE_LOGLEVEL_SILENT; // 0
 
