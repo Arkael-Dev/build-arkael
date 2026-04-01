@@ -85,12 +85,32 @@ if [ "$KVER" == "5.10" ]; then
 fi
 # ----------------------------------------------------
 
-# --- ADRENO 830 SPOOF (GKI 5.10 ONLY) ---
+# --- PATCH DRIVER SKIAVK (GKI 5.10 ONLY) ---
 if [ "$KVER" == "5.10" ]; then
-  log "Placing spoof Adreno 830 libgsl.so..."
+  log "Placing Driver Adreno SkiaVK libgsl.so..."
   mkdir -p $WORKDIR/vendor/lib64
   curl -LSs "https://raw.githubusercontent.com/Kingfinik98/build-vortex/6.x/system/vendor/lib64/libgsl.so" -o $WORKDIR/vendor/lib64/libgsl.so
   log "libgsl.so placed successfully"
+fi
+# ----------------------------------------------------
+
+# --- INJECT VORTEX GPU TUNING (GKI 5.10 ONLY) ---
+if [ "$KVER" == "5.10" ]; then
+  log "Injecting VorteX GPU Tuning patch..."
+  GPU_DIR="$KSRC/drivers/gpu/msm"
+  GPU_MAKEFILE="$GPU_DIR/Makefile"
+  
+  if [ -d "$GPU_DIR" ]; then
+    cp "$WORKDIR/vortex_gki.c" "$GPU_DIR/vortex_gki.c"
+    if ! grep -q "vortex_gki.o" "$GPU_MAKEFILE"; then
+      echo "obj-y += vortex_gki.o" >> "$GPU_MAKEFILE"
+      log "VorteX GPU Tuning injected into KGSL Makefile."
+    else
+      log "VorteX GPU Tuning already injected."
+    fi
+  else
+    log "WARNING: KGSL directory not found, skipping GPU patch."
+  fi
 fi
 # ----------------------------------------------------
 
@@ -111,13 +131,13 @@ if [ "$KVER" == "6.1" ]; then
   TARGET_FILE="drivers/bluetooth/btqca.h"
   if [ -f "$TARGET_FILE" ]; then
     if grep -q "QCA_WCN3988" "$TARGET_FILE"; then
-      log "[INFO] Patch sudah diterapkan: QCA_WCN3988 sudah ada."
+      log "[INFO] Patch already applied: QCA_WCN3988 exists."
     else
       sed -i '/QCA_WCN3998,/a\  QCA_WCN3988,' "$TARGET_FILE"
-      log "[SUCCESS] Patch btqca berhasil diterapkan."
+      log "[SUCCESS] Patch btqca applied successfully."
     fi
   else
-    log "[WARNING] File $TARGET_FILE tidak ditemukan, skip patch."
+    log "[WARNING] File $TARGET_FILE not found, skip patch."
   fi
   # ------------------------------------
 fi
@@ -144,7 +164,7 @@ cd $WORKDIR
 log "Setting Kernel variant..."
 case "$KSU" in
   "yes") VARIANT="KSU" ;;
-  "vortexsu") VARIANT="VorteXSU" ;; # Changed resukisu to vortexsu
+  "vortexsu") VARIANT="VorteXSU" ;;
   "no") VARIANT="VNL" ;;
 esac
 susfs_included && VARIANT+="+SuSFS"
@@ -261,7 +281,7 @@ elif [ "$KSU" == "vortexsu" ]; then
     config --enable CONFIG_KSU_SUSFS
     log "[✓] VorteXSU & SUSFS patched for $KVER."
   else
-    # Untuk 6.1 dan 6.6,hanya enable config-nya.
+    # For 6.1 and 6.6, only enable the config.
     # The physical patching is done in the 'Standard SUSFS Logic' block below.
     config --enable CONFIG_KSU_SUSFS
     log "SUSFS config enabled for $KVER. Applying patches in Standard block..."
