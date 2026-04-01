@@ -115,20 +115,6 @@ CONFIG_HAS_LTO_CLANG=y
 # CONFIG_LTO_CLANG_FULL is not set
 CONFIG_LTO_CLANG_THIN=y
 EOF
-
-  # --- INJECT vortex_gki.c TO KERNEL MAKEFILE (GKI 5.10 ONLY) ---
-  echo "⚙️ Injecting VorteX GPU Patch into Kernel Source..."
-  if [ -f "$KERNEL_PATCHES/vortex_gki.c" ]; then
-    cp "$KERNEL_PATCHES/vortex_gki.c" "$KSRC/vortex_gki.c"
-    # Prevent duplicate entries if script runs multiple times
-    if ! grep -q "vortex_gki.o" "$KSRC/Makefile"; then
-      echo "obj-y += vortex_gki.o" >> "$KSRC/Makefile"
-    fi
-    echo "⚙️ VorteX GPU Patch injected successfully."
-  else
-    echo "⚠️ WARNING: vortex_gki.c not found in kernel-patches, skipping."
-  fi
-
 else
-  echo "⚙️ LTO & GPU Injection skipped (For KVER 6.1 & 6.6))"
+  echo "⚙️ LTO Optimization skipped (For KVER 6.1 & 6.6)"
 fi
