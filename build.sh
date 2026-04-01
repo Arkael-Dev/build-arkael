@@ -99,11 +99,6 @@ if [ "$KVER" == "5.10" ]; then
   log "Injecting VorteX GPU Tuning patch..."
   mkdir -p "$KSRC/drivers/misc"
   cp "$KERNEL_PATCHES/vortex_gki.c" "$KSRC/drivers/misc/vortex_gki.c"
-  
-  # FIX: Ganti linux/panic.h menjadi linux/kernel.h untuk kompatibilitas GKI 5.10
-  sed -i 's/#include <linux\/panic.h>/#include <linux\/kernel.h>/g' "$KSRC/drivers/misc/vortex_gki.c"
-  
-  # Hapus dulu kalau ada baris lama/salah yang bikin duplikat atau ada spasi
   sed -i '/vortex_gki/d' "$KSRC/drivers/misc/Makefile"
   echo "obj-y += vortex_gki.o" >> "$KSRC/drivers/misc/Makefile"
 fi
