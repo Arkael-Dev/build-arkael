@@ -94,11 +94,11 @@ static int vortex_sysfs_thread(void *data) {
     vortex_write_sysfs("/sys/module/lowmemorykiller/parameters/minfree", "2560,5120,11520,25600,35840,38400");
 
     // --- I/O TUNING (Anti-stutter during loading) ---
-    vortex_write_sysfs("/sys/block/sda/queue/scheduler", "deadline");
+    vortex_write_sysfs("/sys/block/sda/queue/scheduler", "mq-deadline");
     vortex_write_sysfs("/sys/block/sda/queue/read_ahead_kb", "128");
     vortex_write_sysfs("/sys/block/sda/queue/iostats", "0");
     
-    vortex_write_sysfs("/sys/block/dm-0/queue/scheduler", "deadline");
+    vortex_write_sysfs("/sys/block/dm-0/queue/scheduler", "mq-deadline");
     vortex_write_sysfs("/sys/block/dm-0/queue/read_ahead_kb", "128");
     vortex_write_sysfs("/sys/block/dm-0/queue/iostats", "0");
 
