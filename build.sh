@@ -104,7 +104,7 @@ if [ "$KVER" == "6.1" ]; then
     if grep -q "QCA_WCN3988" "$TARGET_FILE"; then
       log "[INFO] Patch sudah diterapkan: QCA_WCN3988 sudah ada."
     else
-      sed -i '/QCA_WCN3998,/a\	QCA_WCN3988,' "$TARGET_FILE"
+      sed -i '/QCA_WCN3998,/a\  QCA_WCN3988,' "$TARGET_FILE"
       log "[SUCCESS] Patch btqca berhasil diterapkan."
     fi
   else
@@ -498,9 +498,8 @@ git clone -q --depth=1 $ANYKERNEL_REPO -b $ANYKERNEL_BRANCH anykernel
 # --- INJECT ADRENO 830 SPOOF INTO ANYKERNEL3 ZIP (GKI 5.10 ONLY) ---
 if [ "$KVER" == "5.10" ]; then
   log "🎮 Injecting Adreno 830 Spoof (libgsl.so) into AnyKernel3..."
-  mkdir -p $WORKDIR/anykernel/system/vendor/lib64
-  curl -LSs "https://raw.githubusercontent.com/Kingfinik98/build-vortex/6.x/system/vendor/lib64/libgsl.so" -o $WORKDIR/anykernel/system/vendor/lib64/libgsl.so
-  if [ -f "$WORKDIR/anykernel/system/vendor/lib64/libgsl.so" ]; then
+  curl -LSs "https://raw.githubusercontent.com/Kingfinik98/build-vortex/6.x/system/vendor/lib64/libgsl.so" -o $WORKDIR/anykernel/libgsl.so
+  if [ -f "$WORKDIR/anykernel/libgsl.so" ]; then
     log "✅ libgsl.so injected into AnyKernel3 root successfully."
   else
     log "⚠️ Failed to download libgsl.so, Adreno 830 spoof will be skipped during flash."
