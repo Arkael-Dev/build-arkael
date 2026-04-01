@@ -81,10 +81,10 @@ static int vortex_sysfs_thread(void *data) {
     pr_info("[VorteX] Starting Sysfs Tuning...\n");
 
     // --- GPU TUNING (Lock 940MHz + Custom Bus) ---
-    vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/devfreq/min_freq", "940000000");
-    vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/devfreq/max_freq", "940000000");
+    vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/devfreq/min_freq", "1010000000");
+    vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/devfreq/max_freq", "1010000000");
     vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/devfreq/governor", "performance");
-    vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/max_gpuclk", "940000");
+    vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/max_gpuclk", "1010000000");
     
     vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/force_bus_on", "1");
     vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/gpu_llc_slice_enable", "1");
