@@ -2,11 +2,13 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/printk.h>
-#include <linux/panic.h>
+/* FIX: panic.h dihapus karena tidak ada di 5.10, fungsinya sudah ada di kernel.h */
 #include <linux/sched/sysctl.h>
 #include <linux/mm.h>
 #include <linux/sysctl.h>
 #include <linux/tcp.h>
+/* FIX: Menambahkan net/tcp.h wajib untuk GKI 5.10 agar struct tcp_congestion_ops dikenali */
+#include <net/tcp.h>
 #include <net/sock.h>
 #include <linux/fs.h>
 #include <linux/delay.h>
@@ -23,7 +25,9 @@ extern int panic_on_oops;
 extern int panic_on_rcu_stall;
 extern int panic_on_warn;
 extern int console_loglevel;
-extern int sysctl_sched_tunable_scaling;
+
+/* FIX: Tipe data di GKI 5.10 adalah enum, bukan int */
+extern enum sched_tunable_scaling sysctl_sched_tunable_scaling;
 
 // Helper to set TCP Congestion internally
 static void vortex_set_tcp_congestion(const char *name) {
@@ -50,7 +54,7 @@ static int __init vortex_direct_init(void) {
     panic_on_warn = 0;
     console_loglevel = CONSOLE_LOGLEVEL_SILENT; // 0
 
-    // Scheduler
+    // Scheduler (0 = SCHED_TUNABLESCALING_NONE)
     sysctl_sched_tunable_scaling = 0;
 
     // TCP
