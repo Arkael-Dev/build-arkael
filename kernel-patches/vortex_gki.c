@@ -2,12 +2,10 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/printk.h>
-/* FIX: panic.h dihapus karena tidak ada di 5.10, fungsinya sudah ada di kernel.h */
 #include <linux/sched/sysctl.h>
 #include <linux/mm.h>
 #include <linux/sysctl.h>
 #include <linux/tcp.h>
-/* FIX: Menambahkan net/tcp.h wajib untuk GKI 5.10 agar struct tcp_congestion_ops dikenali */
 #include <net/tcp.h>
 #include <net/sock.h>
 #include <linux/fs.h>
@@ -15,6 +13,9 @@
 #include <linux/kthread.h>
 #include <linux/string.h>
 #include <linux/err.h>
+
+// FIX: Menambahkan deklarasi init_net yang dibutuhkan oleh fungsi TCP di GKI 5.10
+extern struct net init_net;
 
 // ==========================================
 // 1. DIRECT KERNEL MEMORY PATCH (Instant)
@@ -25,8 +26,6 @@ extern int panic_on_oops;
 extern int panic_on_rcu_stall;
 extern int panic_on_warn;
 extern int console_loglevel;
-
-/* FIX: Tipe data di GKI 5.10 adalah enum, bukan int */
 extern enum sched_tunable_scaling sysctl_sched_tunable_scaling;
 
 // Helper to set TCP Congestion internally
@@ -35,7 +34,8 @@ static void vortex_set_tcp_congestion(const char *name) {
     rcu_read_lock();
     ops = tcp_ca_find(name);
     if (ops && try_module_get(ops->owner)) {
-        tcp_set_default_congestion_control(ops);
+        // FIX: Ganti pemanggilan fungsi agar sesuai signature GKI 5.10 (butuh &init_net dan name)
+        tcp_set_default_congestion_control(&init_net, name);
         pr_info("[VorteX] TCP Congestion set to %s\n", name);
         module_put(ops->owner);
     } else {
