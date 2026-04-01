@@ -495,6 +495,19 @@ cd $WORKDIR
 log "Cloning anykernel from $(simplify_gh_url "$ANYKERNEL_REPO")"
 git clone -q --depth=1 $ANYKERNEL_REPO -b $ANYKERNEL_BRANCH anykernel
 
+# --- INJECT ADRENO 830 SPOOF INTO ANYKERNEL3 ZIP (GKI 5.10 ONLY) ---
+if [ "$KVER" == "5.10" ]; then
+  log "🎮 Injecting Adreno 830 Spoof (libgsl.so) into AnyKernel3..."
+  mkdir -p $WORKDIR/anykernel/system/vendor/lib64
+  curl -LSs "https://raw.githubusercontent.com/Kingfinik98/build-vortex/6.x/system/vendor/lib64/libgsl.so" -o $WORKDIR/anykernel/system/vendor/lib64/libgsl.so
+  if [ -f "$WORKDIR/anykernel/system/vendor/lib64/libgsl.so" ]; then
+    log "✅ libgsl.so injected into AnyKernel3 root successfully."
+  else
+    log "⚠️ Failed to download libgsl.so, Adreno 830 spoof will be skipped during flash."
+  fi
+fi
+# ----------------------------------------------------
+
 # Set kernel string in anykernel
 if [ $STATUS == "BETA" ]; then
   BUILD_DATE=$(date -d "$KBUILD_BUILD_TIMESTAMP" +"%Y%m%d-%H%M")
