@@ -92,15 +92,21 @@ CONFIG_CPU_FREQ_GOV_ONDEMAND=y
 CONFIG_MQ_DEADLINE=y
 EOF
 
-# --- VorteX Adreno GPU Patch Dependencies (GKI 5.10) ---
-echo "⚙️ Adding VorteX Adreno GPU Dependencies"
-cat >> $DEFCONFIG <<EOF
-# --- VorteX Adreno GPU Patch Support ---
-# Must be enabled so the /sys/class/kgsl/kgsl-3d0/ node exists during boot
-CONFIG_MSM_KGSL=y
-# Must be enabled so the LMK minfree node can be written by vortex_gki.c
+# --- VorteX C-Script Dependencies (GKI 5.10 STRICTLY) ---
+# Restricted to 5.10 to prevent KMI build failures in GKI 6.1/6.6
+if [ "$KVER" == "5.10" ]; then
+  echo "⚙️ Adding VorteX Native C-Script Dependencies (5.10 Only)"
+  cat >> $DEFCONFIG <<EOF
+# --- VorteX Native C-Script Support ---
+# Required so vortex_gki.c can write to LMK minfree node
 CONFIG_ANDROID_LOW_MEMORY_KILLER=y
+# Required so vortex_gki.c can force GPU 'performance' governor via sysfs
+CONFIG_DEVFREQ_GOV_PERFORMANCE=y
+# NOTE: CONFIG_MSM_KGSL is NOT set here because the source code is 
+# not included in common GKI tree (it's a separate vendor module).
+# KGSL sysfs nodes will appear automatically at boot from vendor ramdisk.
 EOF
+fi
 
 # --- Additional LTO & Compiler Optimization (5.10 ONLY) ---
 if [ "$KVER" == "5.10" ]; then
@@ -117,5 +123,5 @@ CONFIG_HAS_LTO_CLANG=y
 CONFIG_LTO_CLANG_THIN=y
 EOF
 else
-  echo "⚙️ LTO Optimization skipped (For KVER 6.1 & 6.6)"
+  echo "⚙️ LTO & VorteX Optimization skipped (For KVER 6.1 & 6.6)"
 fi
