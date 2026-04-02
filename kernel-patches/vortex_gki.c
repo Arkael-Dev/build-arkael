@@ -122,7 +122,16 @@ static int vortex_sysfs_thread(void *data) {
     // --- 1. TCP ---
     vortex_set_tcp_congestion("westwood");
 
-    // --- 2. DYNAMIC I/O SCHEDULER (Smart Scan) ---
+    // --- 2. CPU GOVERNOR (Universal for Snapdragon & MediaTek GKI) ---
+    pr_info("[VorteX] Forcing CPU Governor to performance...\n");
+    for (i = 0; i <= 15; i++) {
+        snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpufreq/policy%d/scaling_governor", i);
+        if (vortex_write_sysfs(path, "performance")) {
+            pr_info("[VorteX] CPU: Policy %d set to performance\n", i);
+        }
+    }
+
+    // --- 3. DYNAMIC I/O SCHEDULER (Smart Scan) ---
     pr_info("[VorteX] Scanning block devices for I/O tuning...\n");
     // Scan physical partitions (sda - sdz)
     for (i = 'a'; i <= 'z'; i++) {
@@ -147,7 +156,7 @@ static int vortex_sysfs_thread(void *data) {
         vortex_write_sysfs(path, "0");
     }
 
-    // --- 3. GPU TUNING (Read actual hardware limits first) ---
+    // --- 4. GPU TUNING (Read actual hardware limits first) ---
     if (vortex_read_sysfs("/sys/class/kgsl/kgsl-3d0/devfreq/max_freq", max_freq_val, sizeof(max_freq_val))) {
         pr_info("[VorteX] GPU: Detected hardware max frequency: %s Hz\n", max_freq_val);
         
@@ -173,7 +182,7 @@ static int vortex_sysfs_thread(void *data) {
         pr_warn("[VorteX] GPU: KGSL node not found. Is this a non-Qualcomm device or KGSL disabled?\n");
     }
 
-    // --- 4. LMK MINFREE ---
+    // --- 5. LMK MINFREE ---
     if (vortex_write_sysfs("/sys/module/lowmemorykiller/parameters/minfree", "2560,5120,11520,25600,35840,38400")) {
         pr_info("[VorteX] LMK: Minfree values updated successfully\n");
     } else {
