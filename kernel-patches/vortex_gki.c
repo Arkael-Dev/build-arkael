@@ -216,4 +216,4 @@ late_initcall(vortex_sysfs_init);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("VorteX Esport");
 MODULE_DESCRIPTION("GKI 5.10 Ultra-Safe Kernel Patch");
-// Signed-off-by: kingfinik98@gmail.com
+// Signed-off-by: kingfinix98@gmail.com
