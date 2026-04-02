@@ -450,6 +450,20 @@ EOF
 log "Generating config..."
 make ${MAKE_ARGS[@]} $KERNEL_DEFCONFIG
 
+# --- VORTEX DEPENDENCIES (GKI 5.10 ONLY) ---
+# Must be enabled for vortex_gki.c to work optimally without crashing
+# Restricted to 5.10 to prevent strict KMI violations in GKI 6.1/6.6
+if [ "$KVER" == "5.10" ]; then
+  log "Enabling VorteX kernel dependencies..."
+  config --enable CONFIG_TCP_CONG_WESTWOOD
+  config --enable CONFIG_MQ_DEADLINE
+  config --enable CONFIG_ANDROID_LOW_MEMORY_KILLER
+  # KGSL is usually enabled by default in Qualcomm defconfig,
+  # but we ensure the devfreq flag is active so the GPU sysfs nodes appear:
+  config --enable CONFIG_DEVFREQ_GOV_PERFORMANCE
+fi
+# ----------------------------------------------------
+
 if [ "$DEFCONFIG_TO_MERGE" ]; then
   log "Merging configs..."
   if [ -f "scripts/kconfig/merge_config.sh" ]; then
