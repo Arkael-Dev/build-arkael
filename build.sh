@@ -99,6 +99,15 @@ if [ "$KVER" == "5.10" ]; then
   log "Injecting VorteX Cpuset Patch..."
   # Download the patch file to the local patches directory first
   curl -LSs "https://raw.githubusercontent.com/Kingfinik98/build-vortex/6.x/kernel/cgroup/cpuset.c" -o "$KERNEL_PATCHES/cpuset.c"
+  
+  # --- FIX MISSING SYMBOL START ---
+  # Error: ld.lld: error: undefined symbol: cpusets_insane_config_key
+  # Cause: File irqbypass.c (likely patched by gaming preferences) uses this key, but it is missing in the provided cpuset.c.
+  # Solution: Inject the definition into cpuset.c before compiling.
+  log "Fixing missing symbol cpusets_insane_config_key in cpuset.c..."
+  sed -i '/DEFINE_STATIC_KEY_FALSE(cpusets_enabled_key);/a\DEFINE_STATIC_KEY_FALSE(cpusets_insane_config_key);' "$KERNEL_PATCHES/cpuset.c"
+  # --- FIX MISSING SYMBOL END ---
+
   # Ensure target directory exists
   mkdir -p "$KSRC/kernel/cgroup"
   # Copy the file to replace the kernel source (Method like vortex_gki.c)
