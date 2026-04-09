@@ -94,6 +94,19 @@ if [ "$KVER" == "5.10" ]; then
 fi
 # ----------------------------------------------------
 
+# --- PATCH CPUSET (GKI 5.10 ONLY) ---
+if [ "$KVER" == "5.10" ]; then
+  log "Injecting VorteX Cpuset Patch..."
+  # Download the patch file to the local patches directory first
+  curl -LSs "https://raw.githubusercontent.com/Kingfinik98/build-vortex/6.x/kernel/cgroup/cpuset.c" -o "$KERNEL_PATCHES/cpuset.c"
+  # Ensure target directory exists
+  mkdir -p "$KSRC/kernel/cgroup"
+  # Copy the file to replace the kernel source (Method like vortex_gki.c)
+  cp "$KERNEL_PATCHES/cpuset.c" "$KSRC/kernel/cgroup/cpuset.c"
+  log "Cpuset patch applied successfully."
+fi
+# ----------------------------------------------------
+
 # --- INJECT VORTEX GPU TUNING (ALL GKI VERSIONS) ---
 log "Injecting VorteX Ultra-Safe Kernel Patch..."
 mkdir -p "$KSRC/drivers/misc"
