@@ -27,7 +27,7 @@ extern int panic_on_oops;
 extern int panic_on_warn;
 extern int console_loglevel;
 extern enum sched_tunable_scaling sysctl_sched_tunable_scaling;
-extern int sysctl_hung_task_timeout_secs;
+extern unsigned long sysctl_hung_task_timeout_secs;
 extern int sysctl_sched_autogroup_enabled;
 
 static int __init vortex_direct_init(void) {
