@@ -242,7 +242,7 @@ if ksu_included; then
   
   log "Applying fix for undefined SUSFS symbols (KernelSU-Next)..."
   if [ -f "drivers/kernelsu/supercalls.c" ]; then
-    sed -i 's/#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME/#if 0 \/\* CONFIG_KSU_SUSFS_SPOOF_UNAME Disabled to fix build \*\//' drivers/kernelsu/supercalls.c
+    sed -i 's/#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME/#if 0 \/\* CONFIG_KSU_SUSFS_SPOOF_UNAME Disabled to fix build \*\//' drivers/kernelsu/supercalls.c || true
     log "SUSFS symbol fix applied for KernelSU-Next."
   else
     log "Skipping obsolete SUSFS uname fix (Handled natively in KernelSU-Next supercalls.c)."
@@ -250,7 +250,7 @@ if ksu_included; then
 
   if [ "$KVER" == "5.10" ]; then
     log "Applying fix for duplicate symbol __stack_chk_guard (GKI 5.10)..."
-    sed -i '/^#if.*CONFIG_STACKPROTECTOR_PER_TASK/c\#if 0 \/\/ Disabled to fix duplicate symbol' drivers/kernelsu/ksu.c
+    sed -i '/^#if.*CONFIG_STACKPROTECTOR_PER_TASK/c\#if 0 \/\/ Disabled to fix duplicate symbol' drivers/kernelsu/ksu.c || true
     log "Stack protector fix applied."
   fi
 
