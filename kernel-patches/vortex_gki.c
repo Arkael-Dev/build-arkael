@@ -123,11 +123,11 @@ static int vortex_sysfs_thread(void *data) {
     vortex_set_tcp_congestion("westwood");
 
     // --- 2. CPU GOVERNOR (Universal for Snapdragon & MediaTek GKI) ---
-    pr_info("[VorteX] Forcing CPU Governor to performance...\n");
+    pr_info("[VorteX] Forcing CPU Governor to schedutil...\n");
     for (i = 0; i <= 15; i++) {
         snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpufreq/policy%d/scaling_governor", i);
-        if (vortex_write_sysfs(path, "performance")) {
-            pr_info("[VorteX] CPU: Policy %d set to performance\n", i);
+        if (vortex_write_sysfs(path, "schedutil")) {
+            pr_info("[VorteX] CPU: Policy %d set to schedutil\n", i);
         }
     }
 
@@ -166,8 +166,8 @@ static int vortex_sysfs_thread(void *data) {
         }
         vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/max_gpuclk", max_freq_val);
         
-        if (vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/devfreq/governor", "performance")) {
-            pr_info("[VorteX] GPU: Governor set to performance\n");
+        if (vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/devfreq/governor", "schedutil")) {
+            pr_info("[VorteX] GPU: Governor set to schedutil\n");
         } else {
             // Fallback logic if "performance" was rejected by thermal config
             vortex_read_sysfs("/sys/class/kgsl/kgsl-3d0/devfreq/governor", current_gov, sizeof(current_gov));
