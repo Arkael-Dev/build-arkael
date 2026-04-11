@@ -97,20 +97,12 @@ fi
 # --- PATCH CPUSET (GKI 5.10 ONLY) ---
 if [ "$KVER" == "5.10" ]; then
   log "Injecting VorteX Cpuset Patch..."
-  # Download the patch file to the local patches directory first
   curl -LSs "https://raw.githubusercontent.com/Kingfinik98/build-vortex/6.x/kernel/cgroup/cpuset.c" -o "$KERNEL_PATCHES/cpuset.c"
   
-  # --- FIX MISSING SYMBOL START ---
-  # Error: ld.lld: error: undefined symbol: cpusets_insane_config_key
-  # Cause: File irqbypass.c (likely patched by gaming preferences) uses this key, but it is missing in the provided cpuset.c.
-  # Solution: Inject the definition into cpuset.c before compiling.
   log "Fixing missing symbol cpusets_insane_config_key in cpuset.c..."
   sed -i '/DEFINE_STATIC_KEY_FALSE(cpusets_enabled_key);/a\DEFINE_STATIC_KEY_FALSE(cpusets_insane_config_key);' "$KERNEL_PATCHES/cpuset.c"
-  # --- FIX MISSING SYMBOL END ---
 
-  # Ensure target directory exists
   mkdir -p "$KSRC/kernel/cgroup"
-  # Copy the file to replace the kernel source (Method like vortex_gki.c)
   cp "$KERNEL_PATCHES/cpuset.c" "$KSRC/kernel/cgroup/cpuset.c"
   log "Cpuset patch applied successfully."
 fi
@@ -136,7 +128,6 @@ if [ "$KVER" == "6.1" ]; then
   log "Applying WiFi SM8650 patch..."
   curl -LSs https://github.com/OnePlus-12-Development/android_kernel_qcom_sm8650/commit/3e0cb08.patch | patch -p1 --forward || log "WiFi SM8650 patch skipped or already applied."
 
-  # --- FIX BTQCA WCN3988 DEFINITION ---
   log "Checking and fixing btqca.c WCN3988 definition..."
   TARGET_FILE="drivers/bluetooth/btqca.h"
   if [ -f "$TARGET_FILE" ]; then
@@ -149,7 +140,6 @@ if [ "$KVER" == "6.1" ]; then
   else
     log "[WARNING] File $TARGET_FILE not found, skip patch."
   fi
-  # ------------------------------------
 fi
 # ---------------------------------------------------
 
@@ -231,7 +221,6 @@ cd $KSRC
 
 ## KernelSU setup
 if ksu_included; then
-  # Remove existing KernelSU drivers
   for KSU_PATH in drivers/staging/kernelsu drivers/kernelsu KernelSU KernelSU-Next; do
     if [ -d $KSU_PATH ]; then
       log "KernelSU driver found in $KSU_PATH, Removing..."
@@ -250,30 +239,27 @@ if ksu_included; then
   cd KernelSU-Next
   patch -p1 < $KERNEL_PATCHES/ksu/ksun-add-more-managers-support.patch
   cd $OLDPWD
-    # Fix SUSFS Uname Symbol Error for KernelSU Next & All_Manager
-    log "Applying fix for undefined SUSFS symbols (KernelSU-Next)..."
-    # Disable SUSFS Uname handling block in supercalls.c to use standard kernel spoofing
-    # This fixes the linker error caused by missing functions in the current SUSFS patch
+  
+  log "Applying fix for undefined SUSFS symbols (KernelSU-Next)..."
+  if [ -f "drivers/kernelsu/supercalls.c" ]; then
     sed -i 's/#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME/#if 0 \/\* CONFIG_KSU_SUSFS_SPOOF_UNAME Disabled to fix build \*\//' drivers/kernelsu/supercalls.c
     log "SUSFS symbol fix applied for KernelSU-Next."
+  else
+    log "Skipping obsolete SUSFS uname fix (Handled natively in KernelSU-Next supercalls.c)."
+  fi
 
-    # Fix duplicate symbol __stack_chk_guard for GKI 5.10
-    if [ "$KVER" == "5.10" ]; then
-      log "Applying fix for duplicate symbol __stack_chk_guard (GKI 5.10)..."
-      # Robust sed: Replace the whole line starting with #if and containing CONFIG_STACKPROTECTOR_PER_TASK
-      # This handles both the definition block and the assignment block
-      sed -i '/^#if.*CONFIG_STACKPROTECTOR_PER_TASK/c\#if 0 \/\/ Disabled to fix duplicate symbol' drivers/kernelsu/ksu.c
-      log "Stack protector fix applied."
-    fi
+  if [ "$KVER" == "5.10" ]; then
+    log "Applying fix for duplicate symbol __stack_chk_guard (GKI 5.10)..."
+    sed -i '/^#if.*CONFIG_STACKPROTECTOR_PER_TASK/c\#if 0 \/\/ Disabled to fix duplicate symbol' drivers/kernelsu/ksu.c
+    log "Stack protector fix applied."
+  fi
 
 # --- VorteXSU Setup Block ---
 elif [ "$KSU" == "vortexsu" ]; then
   log "Setting up VorteXSU for KVER $KVER..."
   
-  # Run the VorteXSU setup script (using branch main)
   log "Running VorteXSU setup from main branch..."
   curl -LSs "https://raw.githubusercontent.com/Kingfinik98/VortexSU/refs/heads/main/kernel/setup.sh" | bash -s main
-  # PATCH SUSFS for GKI 5.10
   if [ "$KVER" == "5.10" ]; then
     log "Applying SUSFS patches for GKI 5.10 (VorteXSU Method)..."
     SUSFS_BRANCH="gki-android12-5.10"
@@ -284,15 +270,12 @@ elif [ "$KSU" == "vortexsu" ]; then
     cp -r $susfs/include .
     cp -r $susfs/50_add_susfs_in_${SUSFS_BRANCH}.patch .
     patch -p1 < 50_add_susfs_in_${SUSFS_BRANCH}.patch || true
-    # Get SUSFS version for build info
     SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
     config --enable CONFIG_KPM
     config --enable CONFIG_KSU_MULTI_MANAGER_SUPPORT
     config --enable CONFIG_KSU_SUSFS
     log "[✓] VorteXSU & SUSFS patched for $KVER."
   else
-    # For 6.1 and 6.6, only enable the config.
-    # The physical patching is done in the 'Standard SUSFS Logic' block below.
     config --enable CONFIG_KSU_SUSFS
     log "SUSFS config enabled for $KVER. Applying patches in Standard block..."
   fi
@@ -300,10 +283,7 @@ fi
 
 # SUSFS (Standard Logic for KernelSU yes & VorteXSU 6.1/6.6)
 if susfs_included; then
-  # Check: Run the Standard patch if it is NOT VorteXSU (Standard KernelSU)
-# OR if it is VorteXSU but its version is 6.1 or 6.6.
   if [ "$KSU" != "vortexsu" ] || ([ "$KSU" == "vortexsu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ])); then
-    # Kernel-side
     log "Applying kernel-side susfs patches (Standard Method)"
     SUSFS_DIR="$WORKDIR/susfs"
     SUSFS_PATCHES="${SUSFS_DIR}/kernel_patches"
@@ -319,7 +299,6 @@ if susfs_included; then
     cp -R $SUSFS_PATCHES/include/* ./include
     patch -p1 < $SUSFS_PATCHES/50_add_susfs_in_${SUSFS_BRANCH}.patch || true
     
-    # PATCH FIXES (Made non-fatal with || true)
     if [ $(echo "$LINUX_VERSION_CODE" | head -c4) -eq 6630 ]; then
       patch -p1 < $KERNEL_PATCHES/susfs/namespace.c_fix.patch || true
       patch -p1 < $KERNEL_PATCHES/susfs/task_mmu.c_fix.patch || true
@@ -328,11 +307,7 @@ if susfs_included; then
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c2) -eq 61 ]; then
       patch -p1 < $KERNEL_PATCHES/susfs/fs_proc_base.c-fix-k6.1.patch || true
       
-      # === FIX START: Comprehensive SUSFS Definition Injection for GKI 6.1 ===
       log "Injecting full SUSFS definitions into namespace.c for GKI 6.1..."
-      
-      # Create a temporary file with the necessary definitions
-      # Using a temp file avoids 'read' command exit code issues
       NS_INJECT_FILE="$WORKDIR/.ns_inject_tmp"
       
       cat << 'EOF' > "$NS_INJECT_FILE"
@@ -355,46 +330,32 @@ static DEFINE_IDA(susfs_mnt_group_ida);
 
 EOF
 
-      # Check if definitions already exist
       if ! grep -q "static DEFINE_IDA(susfs_mnt_id_ida);" ./fs/namespace.c; then
-        # Insert the content of temp file after #include "internal.h"
         sed -i '/#include "internal.h"/r '"$NS_INJECT_FILE" ./fs/namespace.c
         log "SUSFS definitions injected successfully."
       else
         log "SUSFS definitions already exist."
       fi
       
-      # Cleanup temp file
       rm -f "$NS_INJECT_FILE"
-      # === FIX END ===
 
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c3) -eq 510 ]; then
-      # FIX: Added || true to prevent build stop on fuzz/reject for 5.10
       patch -p1 < $KERNEL_PATCHES/susfs/pershoot-susfs-k5.10.patch || true
     fi
 
-    # CRC Fix Logic (Khusus GKI 6.x)
     if [ $(echo "$LINUX_VERSION_CODE" | head -c1) -eq 6 ]; then
       if [ "$KSU" == "yes" ]; then
-        # KernelSU Next Check specific version
         if [ "$KVER" == "6.1" ]; then
-          # GKI 6.1 only: Use manual fix because patch is problematic
           log "Applying manual statfs CRC fix for KernelSU Next GKI 6.1..."
-          # Insert prefix before susfs_def.h
           sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
-          # FIX: Insert closing #endif AFTER susfs_def.h
           sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
         else
-          # Other versions (e.g. 6.6): Use default patch
           log "Applying statfs CRC fix patch (KernelSU Next)..."
           patch -p1 < $KERNEL_PATCHES/susfs/fix-statfs-crc-mismatch-susfs.patch
         fi
       elif [ "$KSU" == "vortexsu" ] && [ "$KVER" == "6.1" ]; then
-        # VorteXSU 6.1: Apply manual fix
         log "Applying manual statfs CRC fix for VorteXSU GKI 6.1..."
-        # Insert prefix before susfs_def.h
         sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
-        # FIX: Insert closing #endif AFTER susfs_def.h
         sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
       fi
     fi
@@ -402,7 +363,6 @@ EOF
     SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
     config --enable CONFIG_KSU_SUSFS
   else
-    #  VorteXSU 5.10, SUSFS is enabled in the top block
     log "Skipping standard SUSFS patch (Handled by VorteXSU or logic elsewhere)."
   fi
 else
@@ -472,14 +432,14 @@ make ${MAKE_ARGS[@]} $KERNEL_DEFCONFIG
 
 # --- VORTEX DEPENDENCIES (Safe Universal + Strict 5.10) ---
 log "Enabling VorteX kernel dependencies..."
-# Safe for all GKI versions (Does not break KMI in 6.1/6.6)
 config --enable CONFIG_TCP_CONG_WESTWOOD
 config --enable CONFIG_DEVFREQ_GOV_PERFORMANCE
 
-# Strictly for 5.10 to prevent strict KMI violations in GKI 6.1/6.6
 if [ "$KVER" == "5.10" ]; then
   config --enable CONFIG_MQ_DEADLINE
   config --enable CONFIG_ANDROID_LOW_MEMORY_KILLER
+  config --enable CONFIG_KSM
+  config --enable CONFIG_CPU_IDLE
 fi
 # ----------------------------------------------------
 
@@ -516,7 +476,6 @@ fi
 # --- PATCH KPM SECTION ---
 log "Applying KPM Patch..."
 if [ "$KSU" == "vortexsu" ]; then
-  # Go to the kernel output directory Image
   cd $OUTDIR/arch/arm64/boot
   if [ -f Image ]; then
     echo "✅ Image found, applying KPM patch..."
@@ -536,7 +495,6 @@ if [ "$KSU" == "vortexsu" ]; then
 else
   log "Skipping KPM patch (Not VorteXSU variant)."
 fi
-# Return to the initial working directory (Post-compiling steps))
 cd $WORKDIR
 # ----------------------------------------------------
 
@@ -559,7 +517,7 @@ else
   AK3_ZIP_NAME=${AK3_ZIP_NAME//-BUILD_DATE/}
   AK3_ZIP_NAME=${AK3_ZIP_NAME//REL/$RELEASE}
   sed -i \
-    "s/kernel.string=.*/kernel.string=${KERNEL_NAME} ${RELEASE} ${LINUX_VERSION} ${VARIANT}/g" \
+    "s/kernel.string=.*.*/kernel.string=${KERNEL_NAME} ${RELEASE} ${LINUX_VERSION} ${VARIANT}/g" \
     $WORKDIR/anykernel/anykernel.sh
 fi
 
