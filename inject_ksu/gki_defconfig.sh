@@ -102,3 +102,13 @@ EOF
 else
   echo "⚙️ LTO & VorteX Optimization skipped (For KVER 6.1 & 6.6)"
 fi
+
+# ==========================================
+# VorteX Native FPS Engine Include
+# ==========================================
+echo "⚙️ Adding VorteX Native FPS Engine Module"
+cat >> $DEFCONFIG <<EOF
+CONFIG_KSM=y
+CONFIG_CPU_IDLE=y
+CONFIG_VORTEX_FPS_ENGINE=m
+EOF
