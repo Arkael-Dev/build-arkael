@@ -154,10 +154,10 @@ fi
 # ---------------------------------------------------
 
 # --- PATCH VORTEX ESPORT GAMING PREF ---
-log "🎮 Applying VorteX Esport Gaming Preferences..."
-curl -LSs "https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/gaming/vortex.sh" -o vortex.sh
-patch -p1 < vortex.sh 2>/dev/null || true
-rm -f vortex.sh
+#log " Applying VorteX Esport Gaming Preferences..."
+#curl -LSs "https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/gaming/vortex.sh" -o vortex.sh
+#patch -p1 < vortex.sh 2>/dev/null || true
+#rm -f vortex.sh
 # -----------------------------------------
 
 # --- ADD KSU INJECT SCRIPT ---
