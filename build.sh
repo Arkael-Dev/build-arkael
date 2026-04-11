@@ -250,8 +250,12 @@ if ksu_included; then
 
   if [ "$KVER" == "5.10" ]; then
     log "Applying fix for duplicate symbol __stack_chk_guard (GKI 5.10)..."
-    sed -i '/^#if.*CONFIG_STACKPROTECTOR_PER_TASK/c\#if 0 \/\/ Disabled to fix duplicate symbol' drivers/kernelsu/ksu.c || true
-    log "Stack protector fix applied."
+    if [ -f "drivers/kernelsu/ksu.c" ]; then
+      sed -i '/^#if.*CONFIG_STACKPROTECTOR_PER_TASK/c\#if 0 \/\/ Disabled to fix duplicate symbol' drivers/kernelsu/ksu.c || true
+      log "Stack protector fix applied."
+    else
+      log "Skipping obsolete stack protector fix (File not found in KernelSU-Next)."
+    fi
   fi
 
 # --- VorteXSU Setup Block ---
