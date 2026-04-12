@@ -49,7 +49,7 @@ GKI_RELEASES_REPO="https://github.com/Kingfinik98/build-vortex"
 CLANG_URL="https://github.com/greenforce-project/greenforce_clang/releases/download/20260410/gf-clang-22.1.4-20260410.tar.gz"
 #CLANG_URL="https://github.com/greenforce-project/greenforce_clang/releases/download/20260302/gf-clang-23.0.0-20260302.tar.gz"
 #CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/42d2c090c14c9c7f4dfd365ae551e2b959dc775c/clang-r584948b.tar.gz"
-#CLANG_URL="https://github.com/linastorvaldz/gki-builder/releases/download/clang-r487747c/clang-r487747c.tar.gz"
+#CLANG_URL="https://github.com/linastorvaldz/gki-builder/releases/download/clang-r487747c/clang-r487477c.tar.gz"
 #CLANG_URL="$(./clang.sh slim)"
 CLANG_BRANCH=""
 AK3_ZIP_NAME="$KERNEL_NAME-REL-KVER-VARIANT-BUILD_DATE.zip"
@@ -160,7 +160,7 @@ if [ "$KVER" == "5.10" ]; then
   wget -qO inject.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/gki_defconfig.sh
   bash inject.sh
   rm inject.sh
-else
+elif [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   wget -qO inject.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/gki-deconfig-6.1.sh
   bash inject.sh
   rm inject.sh
@@ -352,7 +352,7 @@ EOF
       rm -f "$NS_INJECT_FILE"
 
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c3) -eq 510 ]; then
-      patch -p1 < $KERNEL_PATCHES/susfs/pershoot-susfs-k5.10.patch || true
+      patch -p1 < $KERNEL_PATCHES/Susfs/pershoot-susfs-k5.10.patch || true
     fi
 
     if [ $(echo "$LINUX_VERSION_CODE" | head -c1) -eq 6 ]; then
@@ -363,7 +363,7 @@ EOF
           sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
         else
           log "Applying statfs CRC fix patch (KernelSU Next)..."
-          patch -p1 < $KERNEL_PATCHES/susfs/fix-statfs-crc-mismatch-susfs.patch
+          patch -p1 < $KERNEL_PATCHES/Susfs/fix-statfs-crc-mismatch-susfs.patch
         fi
       elif [ "$KSU" == "vortexsu" ] && [ "$KVER" == "6.1" ]; then
         log "Applying manual statfs CRC fix for VorteXSU GKI 6.1..."
@@ -372,7 +372,7 @@ EOF
       fi
     fi
 
-    SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
+    SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d ' ' -f3 | sed 's/"//g')
     config --enable CONFIG_KSU_SUSFS
   else
     log "Skipping standard SUSFS patch (Handled by VorteXSU or logic elsewhere)."
@@ -528,7 +528,7 @@ else
   AK3_ZIP_NAME=${AK3_ZIP_NAME//-BUILD_DATE/}
   AK3_ZIP_NAME=${AK3_ZIP_NAME//REL/$RELEASE}
   sed -i \
-    "s/kernel.string=.*.*/kernel.string=${KERNEL_NAME} ${RELEASE} ${LINUX_VERSION} ${VorteX ${VARIANT}/g" \
+    "s/kernel.string=.*.*/kernel.string=${KERNEL_NAME} ${RELEASE} ${LINUX_VERSION} ${VorteX} ${VARIANT}/g" \
     $WORKDIR/anykernel/anykernel.sh
 fi
 
