@@ -342,7 +342,25 @@ static void vortex_tune_storage(void) {
 }
 
 // ==========================================
-// 3J. REFRESH RATE LOCK (Best Effort)
+// 3J. UNIVERSAL THERMAL DISABLE
+// ==========================================
+
+static void vortex_thermal_disable(void) {
+    char path[128];
+    int i;
+
+    pr_info("[VorteX] THERMAL: Disabling kernel thermal zones...\n");
+
+    for (i = 0; i <= 15; i++) {
+        snprintf(path, sizeof(path), "/sys/class/thermal/thermal_zone%d/mode", i);
+        if (vortex_write_sysfs(path, "disabled")) {
+            pr_info("[VorteX] THERMAL: Zone %d disabled\n", i);
+        }
+    }
+}
+
+// ==========================================
+// 3K. REFRESH RATE LOCK (Best Effort)
 // ==========================================
 
 static void vortex_fps_refresh_lock(void) {
@@ -356,21 +374,7 @@ static void vortex_fps_refresh_lock(void) {
 
     vortex_write_sysfs("/sys/class/backlight/panel0/dimming_state", "0");
 
-    vortex_write_sysfs("/sys/class/drm/card0-HDMI-A-1/max_refresh_rate", "0");
-
-    pr_info("[VorteX] FPS: Refresh stabilization applied (best-effort)\n");
-    pr_warn("[VorteX] ============================================\n");
-    pr_warn("[VorteX] FPS: FOR GUARANTEED 120Hz/144Hz LOCK,\n");
-    pr_warn("[VorteX] FPS: RUN THESE IN TERMINAL/ADB ROOT:\n");
-    pr_warn("[VorteX] FPS:\n");
-    pr_warn("[VorteX] FPS:   settings put system peak_refresh_rate 120\n");
-    pr_warn("[VorteX] FPS:   settings put system min_refresh_rate 120\n");
-    pr_warn("[VorteX] FPS:   (change 120 to 144 if device supports)\n");
-    pr_warn("[VorteX] FPS:\n");
-    pr_warn("[VorteX] FPS: ALSO disable these in Developer Options:\n");
-    pr_warn("[VorteX] FPS:   - Smart resolution / Auto refresh\n");
-    pr_warn("[VorteX] FPS:   - Smooth Display (let app decide = OFF)\n");
-    pr_warn("[VorteX] FPS: ============================================\n");
+    pr_info("[VorteX] FPS: Refresh stabilization applied\n");
 }
 
 // ==========================================
@@ -394,6 +398,7 @@ static int vortex_sysfs_thread(void *data) {
     vortex_fps_ksm_off();
     vortex_fps_timer_rcu();
     vortex_fps_idle_restrict();
+    vortex_thermal_disable();
     vortex_fps_scheduler();
     vortex_tune_zram();
     vortex_tune_storage();
