@@ -420,8 +420,8 @@ static int vortex_sysfs_thread(void *data) {
     pr_info("[VorteX] I/O: Scanning block devices...\n");
     for (i = 'a'; i <= 'z'; i++) {
         snprintf(path, sizeof(path), "/sys/block/sd%c/queue/scheduler", i);
-        if (vortex_write_sysfs(path, "mq-deadline")) {
-            pr_info("[VorteX] I/O: sd%c → mq-deadline\n", i);
+        if (vortex_write_sysfs(path, "adios")) {
+            pr_info("[VorteX] I/O: sd%c → adios\n", i);
         }
         snprintf(path, sizeof(path), "/sys/block/sd%c/queue/read_ahead_kb", i);
         vortex_write_sysfs(path, "128");
@@ -434,8 +434,8 @@ static int vortex_sysfs_thread(void *data) {
     }
     for (i = 0; i <= 15; i++) {
         snprintf(path, sizeof(path), "/sys/block/dm-%d/queue/scheduler", i);
-        if (vortex_write_sysfs(path, "mq-deadline")) {
-            pr_info("[VorteX] I/O: dm-%d → mq-deadline\n", i);
+        if (vortex_write_sysfs(path, "adios")) {
+            pr_info("[VorteX] I/O: dm-%d → adios\n", i);
         }
         snprintf(path, sizeof(path), "/sys/block/dm-%d/queue/read_ahead_kb", i);
         vortex_write_sysfs(path, "128");
