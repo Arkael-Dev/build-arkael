@@ -83,7 +83,7 @@ echo "westwood" > /proc/sys/net/ipv4/tcp_congestion_control 2>/dev/null
 # ========== LMK & I/O ==========
 echo "2560,5120,11520,25600,35840,38400" > /sys/module/lowmemorykiller/parameters/minfree 2>/dev/null
 for queue in /sys/block/mmcblk*/queue; do
-  echo "deadline" > "$queue/scheduler" 2>/dev/null
+  echo "adios" > "$queue/scheduler" 2>/dev/null
   echo "0" > "$queue/add_random" 2>/dev/null
   echo "0" > "$queue/iostats" 2>/dev/null
   echo "128" > "$queue/read_ahead_kb" 2>/dev/null
