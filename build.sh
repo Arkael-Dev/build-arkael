@@ -445,9 +445,9 @@ make ${MAKE_ARGS[@]} $KERNEL_DEFCONFIG
 # --- VORTEX DEPENDENCIES (Safe Universal + Strict 5.10) ---
 log "Enabling VorteX kernel dependencies..."
 config --enable CONFIG_TCP_CONG_WESTWOOD
-config --enable CONFIG_DEVFREQ_GOV_PERFORMANCE
+config --enable CONFIG_DEVFREQ_GOV_SCHEDUTIL
 
-if [ "$KVER" == "5.10" ]; then
+if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   config --enable CONFIG_ANDROID_LOW_MEMORY_KILLER
   config --enable CONFIG_KSM
   config --enable CONFIG_CPU_IDLE
