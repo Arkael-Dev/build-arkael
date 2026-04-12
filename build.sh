@@ -108,12 +108,14 @@ if [ "$KVER" == "5.10" ]; then
 fi
 # ----------------------------------------------------
 
-# --- INJECT VORTEX GPU TUNING (ALL GKI VERSIONS) ---
-log "Injecting VorteX Ultra-Safe Kernel Patch..."
-mkdir -p "$KSRC/drivers/misc"
-cp "$KERNEL_PATCHES/vortex_gki.c" "$KSRC/drivers/misc/vortex_gki.c"
-sed -i '/vortex_gki/d' "$KSRC/drivers/misc/Makefile"
-echo "obj-y += vortex_gki.o" >> "$KSRC/drivers/misc/Makefile"
+# --- INJECT VORTEX GPU TUNING (GKI 5.10 ONLY) ---
+if [ "$KVER" == "5.10" ]; then
+  log "Injecting VorteX Ultra-Safe Kernel Patch..."
+  mkdir -p "$KSRC/drivers/misc"
+  cp "$KERNEL_PATCHES/vortex_gki.c" "$KSRC/drivers/misc/vortex_gki.c"
+  sed -i '/vortex_gki/d' "$KSRC/drivers/misc/Makefile"
+  echo "obj-y += vortex_gki.o" >> "$KSRC/drivers/misc/Makefile"
+fi
 # ----------------------------------------------------
 
 # --- PATCH inject.sh ---
@@ -154,9 +156,15 @@ fi
 log "Injecting custom KSU & SuSFS configs from GitHub..."
 export KSU
 export KSU_SUSFS
-wget -qO inject.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/gki_defconfig.sh
-bash inject.sh
-rm inject.sh
+if [ "$KVER" == "5.10" ]; then
+  wget -qO inject.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/gki_defconfig.sh
+  bash inject.sh
+  rm inject.sh
+else
+  wget -qO inject.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/gki-deconfig-6.1.sh
+  bash inject.sh
+  rm inject.sh
+fi
 # --------------------------------------
 cd $WORKDIR
 
@@ -305,9 +313,9 @@ if susfs_included; then
     
     if [ $(echo "$LINUX_VERSION_CODE" | head -c4) -eq 6630 ]; then
       patch -p1 < $KERNEL_PATCHES/susfs/namespace.c_fix.patch || true
-      patch -p1 < $KERNEL_PATCHES/susfs/task_mmu.c_fix.patch || true
+      patch -p1 < $KERNEL_PATCHES/Susfs/task_mmu.c_fix.patch || true
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c4) -eq 6658 ]; then
-      patch -p1 < $KERNEL_PATCHES/susfs/task_mmu.c_fix-k6.6.58.patch || true
+      patch -p1 < $KERNEL_PATCHES/Susfs/task_mmu.c_fix-k6.6.58.patch || true
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c2) -eq 61 ]; then
       patch -p1 < $KERNEL_PATCHES/susfs/fs_proc_base.c-fix-k6.1.patch || true
       
@@ -440,7 +448,6 @@ config --enable CONFIG_TCP_CONG_WESTWOOD
 config --enable CONFIG_DEVFREQ_GOV_PERFORMANCE
 
 if [ "$KVER" == "5.10" ]; then
-  config --enable CONFIG_MQ_DEADLINE
   config --enable CONFIG_ANDROID_LOW_MEMORY_KILLER
   config --enable CONFIG_KSM
   config --enable CONFIG_CPU_IDLE
@@ -521,7 +528,7 @@ else
   AK3_ZIP_NAME=${AK3_ZIP_NAME//-BUILD_DATE/}
   AK3_ZIP_NAME=${AK3_ZIP_NAME//REL/$RELEASE}
   sed -i \
-    "s/kernel.string=.*.*/kernel.string=${KERNEL_NAME} ${RELEASE} ${LINUX_VERSION} ${VARIANT}/g" \
+    "s/kernel.string=.*.*/kernel.string=${KERNEL_NAME} ${RELEASE} ${LINUX_VERSION} ${VorteX ${VARIANT}/g" \
     $WORKDIR/anykernel/anykernel.sh
 fi
 
@@ -551,7 +558,7 @@ if [ $STATUS == "BETA" ]; then
   upload_file "$WORKDIR/$AK3_ZIP_NAME" "$text"
   upload_file "$WORKDIR/build.log"
 else
-  send_msg "✅ Build Succeeded for $VARIANT variant."
+  send_msg "✅ Build Succeeded for $VorteX ${VARIANT} variant."
 fi
 
 exit 0
