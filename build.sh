@@ -116,21 +116,12 @@ if [ "$KVER" == "5.10" ]; then
   sed -i '/vortex_gki/d' "$KSRC/drivers/misc/Makefile"
   echo "obj-y += vortex_gki.o" >> "$KSRC/drivers/misc/Makefile"
 fi
-# ----------------------------------------------------
+# ----------------------------------------------------.
 
 # --- PATCH inject.sh ---
 log "Applying inject.sh patch..."
 wget -qO Inject_300hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/Inject_300hz.sh
 bash Inject_300hz.sh
-
-# FIX: Restore sync_blockdev export if stripped by inject.sh (GKI 6.1 ONLY)
-if [ "$KVER" == "6.1" ]; then
-  if ! grep -q "EXPORT_SYMBOL(sync_blockdev);" $KSRC/fs/buffer.c; then
-    log "Fixing missing EXPORT_SYMBOL(sync_blockdev) in fs/buffer.c..."
-    sed -i '/^void sync_blockdev(/,/^}/{s/^}/\nEXPORT_SYMBOL(sync_blockdev);\n}/}' $KSRC/fs/buffer.c
-  fi
-fi
-
 rm Inject_300hz.sh
 #--------------------------------------
 
