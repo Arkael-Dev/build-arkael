@@ -453,6 +453,13 @@ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   config --enable CONFIG_CPU_IDLE
 fi
 # ----------------------------------------------------
+# --- ADIOS SAFETY NET (FIX BOOTLOOP GKI 6.1 & 6.6) ---
+if [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
+  log "Safety Check: Forcing disable ADIOS on GKI $KVER to prevent bootloop..."
+  config --disable CONFIG_MQ_IOSCHED_ADIOS
+  config --disable CONFIG_MQ_IOSCHED_DEFAULT_ADIOS
+fi
+# ----------------------------------------------------
 
 if [ "$DEFCONFIG_TO_MERGE" ]; then
   log "Merging configs..."
