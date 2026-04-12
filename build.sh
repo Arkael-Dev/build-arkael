@@ -95,17 +95,17 @@ fi
 # ----------------------------------------------------
 
 # --- PATCH CPUSET (GKI 5.10 ONLY) ---
-if [ "$KVER" == "5.10" ]; then
-  log "Injecting VorteX Cpuset Patch..."
-  curl -LSs "https://raw.githubusercontent.com/Kingfinik98/build-vortex/6.x/kernel/cgroup/cpuset.c" -o "$KERNEL_PATCHES/cpuset.c"
+#if [ "$KVER" == "5.10" ]; then
+  #log "Injecting VorteX Cpuset Patch..."
+  #curl -LSs "https://raw.githubusercontent.com/Kingfinik98/build-vortex/6.x/kernel/cgroup/cpuset.c" -o "$KERNEL_PATCHES/cpuset.c"
   
-  log "Fixing missing symbol cpusets_insane_config_key in cpuset.c..."
-  sed -i '/DEFINE_STATIC_KEY_FALSE(cpusets_enabled_key);/a\DEFINE_STATIC_KEY_FALSE(cpusets_insane_config_key);' "$KERNEL_PATCHES/cpuset.c"
+  #log "Fixing missing symbol cpusets_insane_config_key in cpuset.c..."
+  #sed -i '/DEFINE_STATIC_KEY_FALSE(cpusets_enabled_key);/a\DEFINE_STATIC_KEY_FALSE(cpusets_insane_config_key);' "$KERNEL_PATCHES/cpuset.c"
 
-  mkdir -p "$KSRC/kernel/cgroup"
-  cp "$KERNEL_PATCHES/cpuset.c" "$KSRC/kernel/cgroup/cpuset.c"
-  log "Cpuset patch applied successfully."
-fi
+  #mkdir -p "$KSRC/kernel/cgroup"
+  #cp "$KERNEL_PATCHES/cpuset.c" "$KSRC/kernel/cgroup/cpuset.c"
+  #log "Cpuset patch applied successfully."
+#fi
 # ----------------------------------------------------
 
 # --- INJECT VORTEX GPU TUNING (GKI 5.10 ONLY) ---
