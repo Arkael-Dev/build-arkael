@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+#DCONFIG BY kingfinix98@gmail.com
 
 DEFCONFIG="arch/arm64/configs/gki_defconfig"
 
