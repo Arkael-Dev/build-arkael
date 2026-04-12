@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+# GKI DECONFIG 6.1 & 6.6
 # Define target defconfig location
 DEFCONFIG="arch/arm64/configs/gki_defconfig"
 
