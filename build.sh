@@ -30,7 +30,7 @@ if [ "$KVER" == "6.6" ]; then
   ANYKERNEL_BRANCH="master"
   KERNEL_BRANCH="android15-6.6-staging"
 elif [ "$KVER" == "6.1" ]; then
-  KERNEL_REPO="https://github.com/ramabondanp/android_kernel_common-6.1.git"
+  KERNEL_REPO="https://github.com/Kingfinik98/vortex-kernel-common-android14-6.1.git"
   ANYKERNEL_BRANCH="master"
   KERNEL_BRANCH="android14-6.1-staging"
 elif [ "$KVER" == "5.10" ]; then
