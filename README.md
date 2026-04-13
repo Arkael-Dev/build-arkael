@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://readme-typing-svg.herokuapp.com?color=00F7FF&center=true&vCenter=true&lines=VorteX+GKI+Kernel;Performance+%2B+Stability;Real+Kernel+Developer;No+Repack+Allowed+%F0%9F%94%A5">
+</p>
+
 # 🚨 WARNING — READ BEFORE FORKING
 
 This repository is actively monitored.
@@ -9,129 +13,138 @@ False claims of authorship can and will be exposed.
 
 ---
 
-## License & Attribution
+## ⚖️ License & Attribution
 
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 
 This project is licensed under the **GNU General Public License v2.0 (GPL-2.0)**.  
 Read full license here: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 
-Original Author: Kingfinik98  
+**Original Author & Maintainer:** Kingfinik98  
 Do not remove credit under GPLv2 compliance.
+
+---
 
 ### 🔒 Mandatory Rules (GPLv2 Compliance)
 
-In accordance with GPLv2:
 - You are allowed to use, modify, and redistribute this project.
 - You must retain the original copyright notice.
 - You must provide proper credit to the original author.
 - You must disclose source code when redistributing.
 
-### ❌ Strictly Prohibited
-- Claiming this project as your own work
-- Removing or hiding original author credit
-- Re-uploading this repository without clear attribution
-- Renaming the project to disguise origin
+---
 
-Any violation of these terms may result in:
-- Repository takedown request (DMCA)
-- Public exposure of plagiarism
-- Permanent loss of credibility in the development community
+### ❌ Strictly Prohibited
+
+- Claiming this project as your own work  
+- Removing or hiding original author credit  
+- Re-uploading this repository without clear attribution  
+- Renaming the project to disguise origin  
+
+Violations may result in:
+- DMCA takedown request  
+- Public exposure of plagiarism  
+- Permanent loss of credibility  
 
 ---
 
 ## 🔍 Authorship Proof
 
 This repository contains:
-- Original commit history
-- Custom scripts and workflow design
-- Long-term maintenance and bug fixing records
+- Original commit history  
+- Custom scripts and workflow design  
+- Long-term maintenance and fixes  
 
 Commit history **cannot be forged**.
 
 ---
 
-## A Note on Open Source & Contribution
+## 🧠 Open Source Ethics
 
-To those who call themselves “kernel developers” but only fork, copy, and re-edit scripts without meaningful contribution:
+Open source is not just about code — it's about **integrity**.
 
-Open source under the GPL license allows usage, modification, and redistribution.  
-However, ethics and integrity should always come first.
+Taking someone else's work, making minor edits, and claiming it as original  
+is not development — it is **repackaging**.
 
-Taking someone else's script, making minor changes, and claiming it as original hard work is not skill — it is simply copy-paste with new packaging.
+Real kernel development involves:
+- Debugging bootloops  
+- Fixing build errors  
+- Writing and adapting patches  
+- Maintaining stability  
+- Long-term commit consistency  
 
-In the kernel world, real quality is reflected in:
-- The ability to fix bugs
-- Resolving complex build conflicts
-- Writing and adapting patches manually
-- Debugging bootloops
-- Consistent and meaningful commit history
-
-Not in renaming a repository or rewriting a README.
-
-Original work will always stand out.  
-So will copy-paste projects.
-
-I do not seek recognition.  
-Commit history never lies.
+Original work stands out. Always.
 
 ---
 
-## Fork & Credit Notice
+## ⚙️ Build Info
 
-Build Gki Android 12.5.10 Android 14 6.1 Android 15.6.6
+Supported:
+- Android 12.5 / 5.10  
+- Android 14 / 6.1  
+- Android 15 / 6.6  
 
-If you fork this repository, you MUST provide clear and visible credit to the original source.
+### 🔧 Toolchain
 
-Fixing bugs and maintaining this kernel build requires significant time and effort.  
-Do **not** claim that you are the author of the GitHub Actions / YML scripts or this kernel build.
+- GKI 5.10 → clang 12 / 19 / 20 / 22  
+- GKI 6.1 / 6.6 → clang 19 / 21 / 22  
 
-It is forbidden to claim other people's work.
-
----
-
-### ⚙️ Build Notes
-
-Read:  
-- For GKI 5.10 use clang 12,19,20,22  
-- For GKI 6.1 and 6.6 use clang 19, 21, 22  
-
-Remove the (#) sign from the Clang text :CLANG_URL to replace clang 
+> Remove (#) from CLANG_URL to change toolchain
 
 ---
 
-### Bug Fixes
-- Fixed and maintained by **Kingfinik98**
+## 🛠️ Components
 
----
-
-### AnyKernel
+### 🔩 AnyKernel
 https://github.com/Kingfinik98/AnyKernel3
 
-### Source All Manager
+### 🧠 VortexSU Manager
 https://github.com/Kingfinik98/VortexSU
 
 ---
 
-## Credits : fork 
-https://github.com/linastorvaldz
+## 🧾 Credits
 
-- Thanks to several kernel community developers for conceptual references and ideas.
-- All implementations in this repository were written and adapted specifically for this kernel build (not copied directly from any source).
+- https://github.com/linastorvaldz  
 
-Please respect upstream developers and always give proper credit when forking or reusing any source.
+Special thanks:
+- @iambouttacum  
+- @ramabondanp  
+- @kaminarich  
 
----
-
-### Special Thanks
-- **[@iambouttacum](https://github.com/linastorvaldz)** — conceptual inspiration and development references  
-- **[@ramabondanp](https://github.com/ramabondanp)** — conceptual inspiration and development references  
-- **[@kaminarich](https://github.com/kaminarich)** — conceptual inspiration and development references
+For conceptual ideas and references.
 
 ---
 
-## Maintainer
+## 🚀 Maintainer Stats
 
-![Kingfinik98's GitHub stats](https://github-readme-stats-one-bicep.vercel.app/api?username=Kingfinik98&show_icons=true&include_all_commits=true)
+<p align="center">
+  <img src="https://github-readme-stats.vercel.app/api?username=Kingfinik98&show_icons=true&include_all_commits=true&count_private=true&theme=tokyonight&hide_border=true&border_radius=10"/>
+</p>
+
+<p align="center">
+  <img src="https://github-readme-streak-stats.herokuapp.com/?user=Kingfinik98&theme=tokyonight&hide_border=true"/>
+</p>
+
+<p align="center">
+  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=Kingfinik98&layout=compact&theme=tokyonight&hide_border=true"/>
+</p>
+
+<p align="center">
+  <img src="https://komarev.com/ghpvc/?username=Kingfinik98&color=blueviolet&style=flat-square"/>
+</p>
+
+---
+
+## 📢 Community
 
 [![Telegram](https://img.shields.io/badge/Telegram-VorteX%20GKI-2AABEFF?logo=telegram&logoColor=white)](https://t.me/vortexgki)
+
+---
+
+## 🧬 Signature
+
+VorteX-Kernel | KF98 | Original Work
+
+If you see this elsewhere without proper credit,  
+you are looking at a rebranded copy.
