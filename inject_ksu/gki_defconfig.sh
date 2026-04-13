@@ -1,9 +1,3 @@
-/*!
- * © 2024-2026 Kingfinik98 (VorteX_E-Sport). All Rights Reserved.
- * Original Author: Kingfinik98
- * Original Repository: https://github.com/Kingfinik98/build-vortex
- */
-
 #!/usr/bin/env bash
 #DCONFIG BY kingfinix98@gmail.com
 
