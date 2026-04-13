@@ -357,7 +357,7 @@ static void vortex_thermal_gaming_profile(void) {
     pr_info("[VorteX] THERMAL: Applying Smart Gaming Profile...\n");
 
     // Attempt sconfig (will silently fail if locked by SELinux)
-    vortex_write_sysfs("/sys/class/thermal/thermal_message/sconfig", "0");
+    vortex_write_sysfs("/sys/class/thermal/thermal_message/sconfig", "9");
     vortex_write_sysfs("/sys/class/thermal/thermal_message/sconfig_param", "0");
 
     // Attempt MSM Thermal off (for Qualcomm)
