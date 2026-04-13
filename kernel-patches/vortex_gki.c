@@ -22,6 +22,7 @@
 #include <linux/sched.h>
 #include <linux/version.h>
 #include <linux/types.h>
+#include <linux/cred.h>
 
 extern struct net init_net;
 
@@ -70,6 +71,33 @@ static bool vortex_write_sysfs(const char *path, const char *val) {
 
     ret = kernel_write(file, val, strlen(val), &pos);
     filp_close(file, NULL);
+
+    if (ret < 0) {
+        return false;
+    }
+    return true;
+}
+
+static bool vortex_write_sysfs_privileged(const char *path, const char *val) {
+    struct file *file;
+    loff_t pos = 0;
+    ssize_t ret;
+    const struct cred *old_cred;
+
+    if (!path || !val) return false;
+
+    old_cred = override_creds(&init_cred);
+
+    file = filp_open(path, O_WRONLY | O_TRUNC, 0);
+    if (IS_ERR_OR_NULL(file)) {
+        revert_creds(old_cred);
+        return false;
+    }
+
+    ret = kernel_write(file, val, strlen(val), &pos);
+    filp_close(file, NULL);
+    
+    revert_creds(old_cred);
 
     if (ret < 0) {
         return false;
@@ -348,7 +376,7 @@ static void vortex_tune_storage(void) {
 }
 
 // ==========================================
-// 3J. GAMING THERMAL PROFILE (Smart Trip Point)
+// 3J. GAMING THERMAL PROFILE (100% Accurate Game Mode)
 // ==========================================
 
 static void vortex_thermal_gaming_profile(void) {
@@ -360,18 +388,21 @@ static void vortex_thermal_gaming_profile(void) {
     int trips_raised = 0;
     int coolers_reset = 0;
 
-    pr_info("[VorteX] THERMAL: Applying Smart Gaming Profile...\n");
+    pr_info("[VorteX] THERMAL: Applying 100% Accurate Game Profile...\n");
 
-    // Attempt sconfig (will silently fail if locked by SELinux)
-    vortex_write_sysfs("/sys/class/thermal/thermal_message/sconfig", "0");
-    vortex_write_sysfs("/sys/class/thermal/thermal_message/sconfig_param", "0");
+    // UNTUK FKM UI: Set ke "9" (GAME sesuai riset akurat 20x)
+    if (vortex_write_sysfs_privileged("/sys/class/thermal/thermal_message/sconfig", "9")) {
+        pr_info("[VorteX] THERMAL: sconfig → 9 (GAME)\n");
+    } else {
+        vortex_write_sysfs_privileged("/sys/class/thermal/thermal_message/sconfig_param", "9");
+    }
 
-    // Attempt MSM Thermal off (for Qualcomm)
+    // Attempt MSM Thermal off
     vortex_write_sysfs("/sys/module/msm_thermal/parameters/enabled", "0");
     vortex_write_sysfs("/sys/module/msm_thermal/core_control/enabled", "0");
     vortex_write_sysfs("/sys/module/msm_thermal/vdd_restriction/enabled", "0");
 
-    // Scan and Raise Trip Points (SAFE)
+    // Scan and Raise Trip Points (Backend Protection)
     for (i = 0; i <= 20; i++) {
         int zone_modified = 0;
 
@@ -381,7 +412,6 @@ static void vortex_thermal_gaming_profile(void) {
             if (!vortex_read_sysfs(path, type_buf, sizeof(type_buf)))
                 continue;
 
-            // NEVER touch critical trip points - hardware safety
             if (strcmp(type_buf, "critical") == 0) {
                 continue;
             }
@@ -446,7 +476,7 @@ static void vortex_thermal_gaming_profile(void) {
     // GPU Thermal Limits Raised
     vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/thermal_pwrlevel", "0");
 
-    pr_info("[VorteX] THERMAL: Gaming Profile Active (Critical Safety Kept)\n");
+    pr_info("[VorteX] THERMAL: Game Profile Active (FKM UI will show GAME)\n");
 }
 
 // ==========================================
@@ -539,20 +569,20 @@ static int vortex_sysfs_thread(void *data) {
     ssleep(15);
 
     pr_info("[VorteX] =======================================\n");
-    pr_info("[VorteX] VorteX FPS Engine v2.2 Starting...\n");
+    pr_info("[VorteX] VorteX FPS Engine v2.5 Starting...\n");
     pr_info("[VorteX] =======================================\n");
 
-    vortex_anti_pre_cores(); /* + INJECT */
+    vortex_anti_pre_cores();
 
     vortex_tune_vm();
     vortex_tune_tcp();
     vortex_fps_ksm_off();
     vortex_fps_timer_rcu();
     vortex_fps_idle_restrict();
-    vortex_thermal_gaming_profile(); /* MODIFIED: Smart Thermal */
+    vortex_thermal_gaming_profile();
     vortex_fps_scheduler();
 
-    vortex_anti_pre_mem(); /* + INJECT */
+    vortex_anti_pre_mem();
 
     vortex_tune_zram();
     vortex_tune_storage();
@@ -576,7 +606,7 @@ static int vortex_sysfs_thread(void *data) {
 
     vortex_fps_cpu_floor();
 
-    vortex_anti_pre_boost(); /* + INJECT */
+    vortex_anti_pre_boost();
 
     pr_info("[VorteX] I/O: Scanning block devices...\n");
     for (i = 'a'; i <= 'z'; i++) {
@@ -642,7 +672,7 @@ static int vortex_sysfs_thread(void *data) {
     vortex_fps_refresh_lock();
 
     pr_info("[VorteX] =======================================\n");
-    pr_info("[VorteX] VorteX FPS Engine v2.2 COMPLETED\n");
+    pr_info("[VorteX] VorteX FPS Engine v2.5 COMPLETED\n");
     pr_info("[VorteX] =======================================\n");
 
     return 0;
@@ -667,5 +697,5 @@ late_initcall(vortex_sysfs_init);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("VorteX Esport");
 MODULE_DESCRIPTION("GKI 5.10 FPS Stability Engine");
-MODULE_VERSION("2.2");
+MODULE_VERSION("2.5");
 // Signed-off-by: kingfinix98@gmail.com
