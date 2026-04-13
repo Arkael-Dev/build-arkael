@@ -1,9 +1,13 @@
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:00F7FF,100:0051FF&height=200&section=header&text=VorteX%20GKI%20Kernel&fontSize=40&fontColor=ffffff&animation=fadeIn"/>
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:FF0000,100:FFFFFF&height=200&section=header&text=VorteX%20GKI%20Kernel&fontSize=40&fontColor=000000&animation=twinkling"/>
 </p>
 
 <p align="center">
-  <img src="https://readme-typing-svg.herokuapp.com?color=00F7FF&center=true&vCenter=true&size=22&width=500&lines=VorteX+GKI+Kernel;Performance+%2B+Stability;Real+Kernel+Developer;No+Repack+Allowed+🔥">
+  <img src="https://readme-typing-svg.herokuapp.com?color=FF0000&center=true&vCenter=true&size=22&width=500&lines=VorteX+GKI+Kernel;Optimized+for+Performance;Real+Kernel+Developer;No+Repack+Allowed+🔥"/>
+</p>
+
+<p align="center">
+  <img src="https://flagcdn.com/w320/id.png" height="80"/>
 </p>
 
 ---
@@ -45,11 +49,6 @@ Read full license: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 - Re-upload without attribution  
 - Renaming to hide origin  
 
-Violations may result in:
-- DMCA takedown  
-- Public exposure  
-- Loss of credibility  
-
 ---
 
 ## 🔍 Authorship Proof
@@ -69,12 +68,6 @@ Open source is about **integrity**, not just code.
 Copying work, making minor edits, and claiming it as original  
 is not development — it is **repackaging**.
 
-Real kernel development:
-- Debugging bootloops  
-- Fixing build errors  
-- Writing patches  
-- Maintaining stability  
-
 ---
 
 ## ⚙️ Build Info
@@ -92,17 +85,15 @@ Real kernel development:
 
 ## 🛠️ Components
 
-🔩 AnyKernel  
-https://github.com/Kingfinik98/AnyKernel3  
+[![GitHub](https://img.shields.io/badge/GitHub-AnyKernel3-181717?logo=github&logoColor=white)](https://github.com/Kingfinik98/AnyKernel3)
 
-🧠 VortexSU Manager  
-https://github.com/Kingfinik98/VortexSU  
+[![GitHub](https://img.shields.io/badge/GitHub-VortexSU-181717?logo=github&logoColor=white)](https://github.com/Kingfinik98/VortexSU)
+
+[![GitHub](https://img.shields.io/badge/GitHub-Base%20Source-181717?logo=github&logoColor=white)](https://github.com/linastorvaldz)
 
 ---
 
 ## 🧾 Credits
-
-https://github.com/linastorvaldz  
 
 Special thanks:
 - @iambouttacum  
@@ -147,5 +138,5 @@ it is a **rebranded copy**.
 ---
 
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0051FF,100:00F7FF&height=120&section=footer"/>
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:FF0000,100:FFFFFF&height=120&section=footer"/>
 </p>
