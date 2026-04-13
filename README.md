@@ -101,7 +101,7 @@ Remove the (#) sign from the Clang text :CLANG_URL to replace clang
 ---
 
 ### Bug Fixes
-- Fixed and maintained by **[@BoltXNext](https://github.com/Kingfinik98)**
+- Fixed and maintained by **Kingfinik98**
 
 ---
 
@@ -132,4 +132,6 @@ Please respect upstream developers and always give proper credit when forking or
 
 ## Maintainer
 
-![Kingfinik98's GitHub stats](https://github-readme-stats-one-bice.vercel.app/api?username=Kingfinik98&show_icons=true&include_all_commits=true)
+![Kingfinik98's GitHub stats](https://github-readme-stats-one-bicep.vercel.app/api?username=Kingfinik98&show_icons=true&include_all_commits=true)
+
+[![Telegram](https://img.shields.io/badge/Telegram-VorteX%20GKI-2AABEFF?logo=telegram&logoColor=white)](https://t.me/vortexgki)
