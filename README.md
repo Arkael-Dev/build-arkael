@@ -1,9 +1,9 @@
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=venom&color=0:00F7FF,100:0051FF&height=200&section=header&text=VorteX%20GKI%20Kernel&fontSize=40&fontColor=ffffff&animation=fadeIn"/>
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:00F7FF,100:0051FF&height=180&section=header&text=VorteX%20GKI%20Kernel&fontSize=35&fontColor=ffffff&animation=fadeIn&fontAlignY=35"/>
 </p>
 
 <p align="center">
-  <img src="https://readme-typing-svg.herokuapp.com?color=00F7FF&center=true&vCenter=true&size=22&width=500&lines=VorteX+GKI+Kernel;Performance+%2B+Stability;Real+Kernel+Developer;Clean+%26+Optimized+Build"/>
+  <img src="https://readme-typing-svg.herokuapp.com?color=00F7FF&center=true&vCenter=true&size=20&width=420&lines=Performance+%2B+Stability;Clean+%26+Optimized+Kernel;Real+Kernel+Developer"/>
 </p>
 
 ---
@@ -24,7 +24,7 @@ False claims of authorship can and will be exposed.
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 
 This project is licensed under the **GNU General Public License v2.0 (GPL-2.0)**  
-Read full license: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
+Read full license: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html  
 
 **Original Author & Maintainer:** Kingfinik98  
 
@@ -89,22 +89,11 @@ is not development — it is **repackaging**.
 
 ---
 
-## 🐧 Environment / Build Base
+## 🐧 Build Environment
 
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 
 [![Arch Linux](https://img.shields.io/badge/Arch%20Linux-1793D1?logo=arch-linux&logoColor=white)](https://archlinux.org)
-
----
-
-## 🐉 VorteX Identity (Optional)
-
-<!-- Upload your dragon logo and replace link below -->
-<!-- Example:
-<p align="center">
-  <img src="https://your-link/dragon.png" height="120"/>
-</p>
--->
 
 ---
 
@@ -120,15 +109,15 @@ Special thanks:
 ## 🚀 Maintainer Stats
 
 <p align="center">
-  <img height="170em" src="https://github-readme-stats-sigma-five.vercel.app/api?username=Kingfinik98&show_icons=true&include_all_commits=true&count_private=true&theme=tokyonight&hide_border=true"/>
+  <img height="165em" src="https://github-readme-stats-sigma-five.vercel.app/api?username=Kingfinik98&show_icons=true&include_all_commits=true&count_private=true&theme=tokyonight&hide_border=true"/>
 </p>
 
 <p align="center">
-  <img height="170em" src="https://streak-stats.demolab.com?user=Kingfinik98&theme=tokyonight&hide_border=true"/>
+  <img height="165em" src="https://streak-stats.demolab.com?user=Kingfinik98&theme=tokyonight&hide_border=true"/>
 </p>
 
 <p align="center">
-  <img height="170em" src="https://github-readme-stats-sigma-five.vercel.app/api/top-langs/?username=Kingfinik98&layout=compact&theme=tokyonight&hide_border=true"/>
+  <img height="165em" src="https://github-readme-stats-sigma-five.vercel.app/api/top-langs/?username=Kingfinik98&layout=compact&theme=tokyonight&hide_border=true"/>
 </p>
 
 <p align="center">
@@ -153,5 +142,5 @@ it is a **rebranded copy**.
 ---
 
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=venom&color=0:0051FF,100:00F7FF&height=120&section=footer"/>
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0051FF,100:00F7FF&height=100&section=footer"/>
 </p>
