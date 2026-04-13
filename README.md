@@ -89,6 +89,25 @@ is not development — it is **repackaging**.
 
 ---
 
+## 🐧 Environment / Build Base
+
+[![Ubuntu](https://img.shields.io/badge/Ubuntu-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
+
+[![Arch Linux](https://img.shields.io/badge/Arch%20Linux-1793D1?logo=arch-linux&logoColor=white)](https://archlinux.org)
+
+---
+
+## 🐉 VorteX Identity (Optional)
+
+<!-- Upload your dragon logo and replace link below -->
+<!-- Example:
+<p align="center">
+  <img src="https://your-link/dragon.png" height="120"/>
+</p>
+-->
+
+---
+
 ## 🧾 Credits
 
 Special thanks:
