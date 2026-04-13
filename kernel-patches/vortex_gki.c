@@ -342,21 +342,105 @@ static void vortex_tune_storage(void) {
 }
 
 // ==========================================
-// 3J. UNIVERSAL THERMAL DISABLE
+// 3J. GAMING THERMAL PROFILE (Smart Trip Point)
 // ==========================================
 
-static void vortex_thermal_disable(void) {
-    char path[128];
-    int i;
+static void vortex_thermal_gaming_profile(void) {
+    char path[256];
+    char temp_buf[32] = {0};
+    char type_buf[32] = {0};
+    int i, j;
+    int zones_patched = 0;
+    int trips_raised = 0;
+    int coolers_reset = 0;
 
-    pr_info("[VorteX] THERMAL: Disabling kernel thermal zones...\n");
+    pr_info("[VorteX] THERMAL: Applying Smart Gaming Profile...\n");
 
-    for (i = 0; i <= 15; i++) {
-        snprintf(path, sizeof(path), "/sys/class/thermal/thermal_zone%d/mode", i);
-        if (vortex_write_sysfs(path, "disabled")) {
-            pr_info("[VorteX] THERMAL: Zone %d disabled\n", i);
+    // Attempt sconfig (will silently fail if locked by SELinux)
+    vortex_write_sysfs("/sys/class/thermal/thermal_message/sconfig", "0");
+    vortex_write_sysfs("/sys/class/thermal/thermal_message/sconfig_param", "0");
+
+    // Attempt MSM Thermal off (for Qualcomm)
+    vortex_write_sysfs("/sys/module/msm_thermal/parameters/enabled", "0");
+    vortex_write_sysfs("/sys/module/msm_thermal/core_control/enabled", "0");
+    vortex_write_sysfs("/sys/module/msm_thermal/vdd_restriction/enabled", "0");
+
+    // Scan and Raise Trip Points (SAFE)
+    for (i = 0; i <= 20; i++) {
+        int zone_modified = 0;
+
+        for (j = 0; j <= 5; j++) {
+            snprintf(path, sizeof(path),
+                     "/sys/class/thermal/thermal_zone%d/trip_point_%d_type", i, j);
+            if (!vortex_read_sysfs(path, type_buf, sizeof(type_buf)))
+                continue;
+
+            // NEVER touch critical trip points - hardware safety
+            if (strcmp(type_buf, "critical") == 0) {
+                continue;
+            }
+
+            snprintf(path, sizeof(path),
+                     "/sys/class/thermal/thermal_zone%d/trip_point_%d_temp", i, j);
+            if (!vortex_read_sysfs(path, temp_buf, sizeof(temp_buf)))
+                continue;
+
+            long val = simple_strtol(temp_buf, NULL, 10);
+            if (val <= 0) continue;
+
+            long new_val = val;
+            
+            if (strcmp(type_buf, "passive") == 0) {
+                new_val = val + 12000;
+                if (new_val > 78000) new_val = 78000;
+            } else if (strcmp(type_buf, "active") == 0) {
+                new_val = val + 10000;
+                if (new_val > 75000) new_val = 75000;
+            } else {
+                new_val = val + 8000;
+                if (new_val > 72000) new_val = 72000;
+            }
+
+            if (new_val > val) {
+                char str[32];
+                snprintf(str, sizeof(str), "%ld", new_val);
+
+                if (vortex_write_sysfs(path, str)) {
+                    trips_raised++;
+                    zone_modified = 1;
+                }
+            }
+        }
+        if (zone_modified) zones_patched++;
+    }
+
+    if (trips_raised > 0) {
+        pr_info("[VorteX] THERMAL: Raised %d trip points across %d zones\n", trips_raised, zones_patched);
+    }
+
+    // Neutralize Cooling Devices
+    for (i = 0; i <= 30; i++) {
+        char cur_state[16] = {0};
+        snprintf(path, sizeof(path), "/sys/class/thermal/cooling_device%d/cur_state", i);
+        
+        if (vortex_read_sysfs(path, cur_state, sizeof(cur_state))) {
+            long cur = simple_strtol(cur_state, NULL, 10);
+            if (cur != 0) {
+                if (vortex_write_sysfs(path, "0")) coolers_reset++;
+            }
+        } else {
+            if (vortex_write_sysfs(path, "0")) coolers_reset++;
         }
     }
+
+    if (coolers_reset > 0) {
+        pr_info("[VorteX] THERMAL: %d cooling devices neutralized\n", coolers_reset);
+    }
+
+    // GPU Thermal Limits Raised
+    vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/thermal_pwrlevel", "0");
+
+    pr_info("[VorteX] THERMAL: Gaming Profile Active (Critical Safety Kept)\n");
 }
 
 // ==========================================
@@ -367,14 +451,73 @@ static void vortex_fps_refresh_lock(void) {
     pr_info("[VorteX] FPS: Attempting refresh rate stabilization...\n");
 
     vortex_write_sysfs("/sys/module/msm_drm/parameters/mdss_fb0_fps", "0");
-
     vortex_write_sysfs("/sys/class/drm/card0/device/power/auto_latency_hint", "0");
-
     vortex_write_sysfs("/sys/class/panel/refresh_rate", "0");
-
     vortex_write_sysfs("/sys/class/backlight/panel0/dimming_state", "0");
 
     pr_info("[VorteX] FPS: Refresh stabilization applied\n");
+}
+
+// ==========================================
+// 3L. ANTI-PREMDROP: FORCE CORES ONLINE
+// ==========================================
+
+static void vortex_anti_pre_cores(void) {
+    char path[128];
+    int i;
+
+    pr_info("[VorteX] ANTI-PREMDROP: Forcing all cores online...\n");
+
+    for (i = 0; i <= 7; i++) {
+        snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpu%d/online", i);
+        if (vortex_write_sysfs(path, "1")) {
+            pr_info("[VorteX] ANTI-PREMDROP: CPU%d forced online\n", i);
+        }
+    }
+
+    vortex_write_sysfs("/sys/devices/system/cpu/cpuhotplug/disable", "1");
+    vortex_write_sysfs("/sys/module/msm_thermal/core_control/enabled", "0");
+    vortex_write_sysfs("/sys/module/msm_hotplug/enabled", "0");
+
+    pr_info("[VorteX] ANTI-PREMDROP: Cores locked\n");
+}
+
+// ==========================================
+// 3M. ANTI-PREMDROP: THP & OVERHEAD KILLER
+// ==========================================
+
+static void vortex_anti_pre_mem(void) {
+    pr_info("[VorteX] ANTI-PREMDROP: Patching memory overhead...\n");
+
+    vortex_write_sysfs("/sys/kernel/mm/transparent_hugepage/enabled", "always");
+    vortex_write_sysfs("/sys/kernel/mm/transparent_hugepage/defrag", "always");
+    vortex_write_sysfs("/proc/sys/kernel/numa_balancing", "0");
+    vortex_write_sysfs("/proc/sys/kernel/sched_schedstats", "0");
+    vortex_write_sysfs("/proc/sys/kernel/sched_rt_runtime_us", "-1");
+
+    pr_info("[VorteX] ANTI-PREMDROP: Memory overhead patched\n");
+}
+
+// ==========================================
+// 3N. ANTI-PREMDROP: SCHED & INPUT BOOST
+// ==========================================
+
+static void vortex_anti_pre_boost(void) {
+    char max_freq[32] = {0};
+
+    pr_info("[VorteX] ANTI-PREMDROP: Applying scheduler boost...\n");
+
+    vortex_write_sysfs("/proc/sys/kernel/sched_boost", "1");
+    vortex_write_sysfs("/sys/devices/system/cpu/sched_boost", "1");
+    vortex_write_sysfs("/proc/sys/kernel/sched_prefer_idle", "1");
+
+    if (vortex_read_sysfs("/sys/devices/system/cpu/cpufreq/policy4/scaling_max_freq", max_freq, sizeof(max_freq))) {
+        vortex_write_sysfs("/sys/module/cpu_boost/input_boost_freq", max_freq);
+        vortex_write_sysfs("/sys/module/cpu_boost/input_boost_ms", "500");
+        pr_info("[VorteX] ANTI-PREMDROP: Touch boost = %s\n", max_freq);
+    }
+
+    pr_info("[VorteX] ANTI-PREMDROP: Scheduler & Touch boosted\n");
 }
 
 // ==========================================
@@ -390,16 +533,21 @@ static int vortex_sysfs_thread(void *data) {
     ssleep(15);
 
     pr_info("[VorteX] =======================================\n");
-    pr_info("[VorteX] VorteX FPS Engine Starting...\n");
+    pr_info("[VorteX] VorteX FPS Engine v2.2 Starting...\n");
     pr_info("[VorteX] =======================================\n");
+
+    vortex_anti_pre_cores(); /* + INJECT */
 
     vortex_tune_vm();
     vortex_tune_tcp();
     vortex_fps_ksm_off();
     vortex_fps_timer_rcu();
     vortex_fps_idle_restrict();
-    vortex_thermal_disable();
+    vortex_thermal_gaming_profile(); /* MODIFIED: Smart Thermal */
     vortex_fps_scheduler();
+
+    vortex_anti_pre_mem(); /* + INJECT */
+
     vortex_tune_zram();
     vortex_tune_storage();
 
@@ -421,6 +569,8 @@ static int vortex_sysfs_thread(void *data) {
     pr_info("[VorteX] CPU: up_rate=500us, down_rate=40ms (FPS optimized)\n");
 
     vortex_fps_cpu_floor();
+
+    vortex_anti_pre_boost(); /* + INJECT */
 
     pr_info("[VorteX] I/O: Scanning block devices...\n");
     for (i = 'a'; i <= 'z'; i++) {
@@ -486,7 +636,7 @@ static int vortex_sysfs_thread(void *data) {
     vortex_fps_refresh_lock();
 
     pr_info("[VorteX] =======================================\n");
-    pr_info("[VorteX] VorteX FPS Engine COMPLETED\n");
+    pr_info("[VorteX] VorteX FPS Engine v2.2 COMPLETED\n");
     pr_info("[VorteX] =======================================\n");
 
     return 0;
@@ -511,5 +661,5 @@ late_initcall(vortex_sysfs_init);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("VorteX Esport");
 MODULE_DESCRIPTION("GKI 5.10 FPS Stability Engine");
-MODULE_VERSION("2.0");
+MODULE_VERSION("2.2");
 // Signed-off-by: kingfinix98@gmail.com
