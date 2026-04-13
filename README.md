@@ -1,6 +1,12 @@
 <p align="center">
-  <img src="https://readme-typing-svg.herokuapp.com?color=00F7FF&center=true&vCenter=true&lines=VorteX+GKI+Kernel;Performance+%2B+Stability;Real+Kernel+Developer;No+Repack+Allowed+%F0%9F%94%A5">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:00F7FF,100:0051FF&height=200&section=header&text=VorteX%20GKI%20Kernel&fontSize=40&fontColor=ffffff&animation=fadeIn"/>
 </p>
+
+<p align="center">
+  <img src="https://readme-typing-svg.herokuapp.com?color=00F7FF&center=true&vCenter=true&size=22&width=500&lines=VorteX+GKI+Kernel;Performance+%2B+Stability;Real+Kernel+Developer;No+Repack+Allowed+🔥">
+</p>
+
+---
 
 # 🚨 WARNING — READ BEFORE FORKING
 
@@ -17,43 +23,40 @@ False claims of authorship can and will be exposed.
 
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 
-This project is licensed under the **GNU General Public License v2.0 (GPL-2.0)**.  
-Read full license here: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
+This project is licensed under the **GNU General Public License v2.0 (GPL-2.0)**  
+Read full license: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 
 **Original Author & Maintainer:** Kingfinik98  
-Do not remove credit under GPLv2 compliance.
 
 ---
 
 ### 🔒 Mandatory Rules (GPLv2 Compliance)
 
-- You are allowed to use, modify, and redistribute this project.
-- You must retain the original copyright notice.
-- You must provide proper credit to the original author.
-- You must disclose source code when redistributing.
+- Retain original copyright  
+- Provide proper credit  
+- Disclose source when redistributing  
 
 ---
 
 ### ❌ Strictly Prohibited
 
-- Claiming this project as your own work  
-- Removing or hiding original author credit  
-- Re-uploading this repository without clear attribution  
-- Renaming the project to disguise origin  
+- Claiming this project as your own  
+- Removing author credit  
+- Re-upload without attribution  
+- Renaming to hide origin  
 
 Violations may result in:
-- DMCA takedown request  
-- Public exposure of plagiarism  
-- Permanent loss of credibility  
+- DMCA takedown  
+- Public exposure  
+- Loss of credibility  
 
 ---
 
 ## 🔍 Authorship Proof
 
-This repository contains:
 - Original commit history  
-- Custom scripts and workflow design  
-- Long-term maintenance and fixes  
+- Custom scripts & workflow  
+- Long-term maintenance  
 
 Commit history **cannot be forged**.
 
@@ -61,73 +64,65 @@ Commit history **cannot be forged**.
 
 ## 🧠 Open Source Ethics
 
-Open source is not just about code — it's about **integrity**.
+Open source is about **integrity**, not just code.
 
-Taking someone else's work, making minor edits, and claiming it as original  
+Copying work, making minor edits, and claiming it as original  
 is not development — it is **repackaging**.
 
-Real kernel development involves:
+Real kernel development:
 - Debugging bootloops  
 - Fixing build errors  
-- Writing and adapting patches  
+- Writing patches  
 - Maintaining stability  
-- Long-term commit consistency  
-
-Original work stands out. Always.
 
 ---
 
 ## ⚙️ Build Info
 
-Supported:
 - Android 12.5 / 5.10  
 - Android 14 / 6.1  
 - Android 15 / 6.6  
 
 ### 🔧 Toolchain
 
-- GKI 5.10 → clang 12 / 19 / 20 / 22  
-- GKI 6.1 / 6.6 → clang 19 / 21 / 22  
-
-> Remove (#) from CLANG_URL to change toolchain
+- 5.10 → clang 12 / 19 / 20 / 22  
+- 6.1 / 6.6 → clang 19 / 21 / 22  
 
 ---
 
 ## 🛠️ Components
 
-### 🔩 AnyKernel
-https://github.com/Kingfinik98/AnyKernel3
+🔩 AnyKernel  
+https://github.com/Kingfinik98/AnyKernel3  
 
-### 🧠 VortexSU Manager
-https://github.com/Kingfinik98/VortexSU
+🧠 VortexSU Manager  
+https://github.com/Kingfinik98/VortexSU  
 
 ---
 
 ## 🧾 Credits
 
-- https://github.com/linastorvaldz  
+https://github.com/linastorvaldz  
 
 Special thanks:
 - @iambouttacum  
 - @ramabondanp  
 - @kaminarich  
 
-For conceptual ideas and references.
-
 ---
 
 ## 🚀 Maintainer Stats
 
 <p align="center">
-  <img src="https://github-readme-stats.vercel.app/api?username=Kingfinik98&show_icons=true&include_all_commits=true&count_private=true&theme=tokyonight&hide_border=true&border_radius=10"/>
+  <img height="170em" src="https://github-readme-stats-sigma-five.vercel.app/api?username=Kingfinik98&show_icons=true&include_all_commits=true&count_private=true&theme=tokyonight&hide_border=true"/>
 </p>
 
 <p align="center">
-  <img src="https://github-readme-streak-stats.herokuapp.com/?user=Kingfinik98&theme=tokyonight&hide_border=true"/>
+  <img height="170em" src="https://streak-stats.demolab.com?user=Kingfinik98&theme=tokyonight&hide_border=true"/>
 </p>
 
 <p align="center">
-  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=Kingfinik98&layout=compact&theme=tokyonight&hide_border=true"/>
+  <img height="170em" src="https://github-readme-stats-sigma-five.vercel.app/api/top-langs/?username=Kingfinik98&layout=compact&theme=tokyonight&hide_border=true"/>
 </p>
 
 <p align="center">
@@ -144,7 +139,13 @@ For conceptual ideas and references.
 
 ## 🧬 Signature
 
-VorteX-Kernel | KF98 | Original Work
+VorteX-Kernel | KF98 | Original Work  
 
 If you see this elsewhere without proper credit,  
-you are looking at a rebranded copy.
+it is a **rebranded copy**.
+
+---
+
+<p align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0051FF,100:00F7FF&height=120&section=footer"/>
+</p>
