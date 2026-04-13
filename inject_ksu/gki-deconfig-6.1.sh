@@ -4,118 +4,121 @@
  * Original Repository: https://github.com/Kingfinik98/build-vortex
  * Modifying or claiming this as your own (e.g., Generic Zixine) is prohibited.
  */
-
 #!/usr/bin/env bash
-# GKI DECONFIG 6.1 & 6.6
-# Define target defconfig location
-DEFCONFIG="arch/arm64/configs/gki_defconfig"
 
+# =========================================
+# 🔧 SET & CLEAN CONFIG HELPERS
+# =========================================
+DEFCONFIG_FILE="arch/arm64/configs/gki_defconfig"
+
+clean_config() {
+  sed -i "/^$1/d" $DEFCONFIG_FILE
+}
+
+set_config() {
+  clean_config "$1"
+  echo "$1" >> $DEFCONFIG_FILE
+}
+
+# =========================================
+# 🔑 ADD KERNELSU BASE & DEPENDENCIES
+# =========================================
 echo "⚙️ Added KSU & SuSFS configuration"
 
-# Base KSU Config & Dependencies
-cat >> $DEFCONFIG <<EOF
-# ===============================================
-# Konfigurasi KernelSU Base
-CONFIG_KSU=y
-CONFIG_KPM=y
-CONFIG_KSU_MULTI_MANAGER_SUPPORT=y
-# Kprobes is a hard dependency for KSU-Next
-CONFIG_KPROBES=y
-CONFIG_KPROBE_EVENTS=y
-EOF
+set_config "CONFIG_KSU=y"
+set_config "CONFIG_KPM=y"
+set_config "CONFIG_KSU_MULTI_MANAGER_SUPPORT=y"
+set_config "CONFIG_KPROBES=y"
+set_config "CONFIG_KPROBE_EVENTS=y"
 
-# Hook method selection logic based on KSU env
+# =========================================
+# 🛡️ ADD HOOK & SUSFS SUPPORT
+# =========================================
 if [ "$KSU" == "SukiSU" ]; then
-    # SUKISU SPECIAL HANDLING
-    if [ "$KSU_SUSFS" = "true" ]; then
-        echo "🔧 Mode: SukiSU + SuSFS Enabled"
-        cat >> $DEFCONFIG <<EOF
-# --- SuSFS Configuration for SukiSU ---
-CONFIG_KSU_SUSFS=y
-# Let SukiSU handle the hook & mount details internally.
-EOF
-    else
-        echo "🔧 Mode: SukiSU Standard (No SuSFS)"
-    fi
-
+  if [ "$KSU_SUSFS" = "true" ]; then
+    echo "🔧 Mode: SukiSU + SuSFS Enabled"
+    set_config "CONFIG_KSU_SUSFS=y"
+  else
+    echo "🔧 Mode: SukiSU Standard (No SuSFS)"
+  fi
 elif [ "$KSU_SUSFS" = "true" ]; then
-  # LOGIC STANDARD FOR KSU NEXT, REGULAR, RISSU, RKSU
   echo "🔧 Mode: SuSFS Hook Enabled"
-  cat >> $DEFCONFIG <<EOF
-# --- SuSFS Configuration ---
-CONFIG_KSU_SUSFS=y
-CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y
-CONFIG_KSU_SUSFS_SUS_PATH=y
-CONFIG_KSU_SUSFS_SUS_MOUNT=y
-CONFIG_KSU_SUSFS_SUS_KSTAT_SPOOF_GENERIC=y
-CONFIG_KSU_SUSFS_SUS_KSTAT=y
-CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y
-CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y
-CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSTAT=y
-CONFIG_KSU_SUSFS_SUS_OVERLAYFS=n
-CONFIG_KSU_SUSFS_TRY_UMOUNT=n
-CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=n
-# CONFIG_KSU_SUSFS_SPOOF_UNAME is not set
-CONFIG_KSU_SUSFS_ENABLE_LOG=y
-CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
-CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
-CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
-CONFIG_KSU_MANUAL_HOOK=n
-CONFIG_KSU_HAS_MANUAL_HOOK=n
-EOF
-
+  set_config "CONFIG_KSU_SUSFS=y"
+  set_config "CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y"
+  set_config "CONFIG_KSU_SUSFS_SUS_PATH=y"
+  set_config "CONFIG_KSU_SUSFS_SUS_MOUNT=y"
+  set_config "CONFIG_KSU_SUSFS_SUS_KSTAT_SPOOF_GENERIC=y"
+  set_config "CONFIG_KSU_SUSFS_SUS_KSTAT=y"
+  set_config "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y"
+  set_config "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y"
+  set_config "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSTAT=y"
+  set_config "CONFIG_KSU_SUSFS_SUS_OVERLAYFS=n"
+  set_config "CONFIG_KSU_SUSFS_TRY_UMOUNT=n"
+  set_config "CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=n"
+  set_config "CONFIG_KSU_SUSFS_ENABLE_LOG=y"
+  set_config "CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y"
+  set_config "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y"
+  set_config "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y"
+  set_config "CONFIG_KSU_MANUAL_HOOK=n"
+  set_config "CONFIG_KSU_HAS_MANUAL_HOOK=n"
 else
-  # Standard Logic Without Susfs kprobes mode
   echo "🔧 Mode: Kprobes Hook Standard"
-  cat >> $DEFCONFIG <<EOF
-# --- Kprobes Hook Method ---
-# Disable SuSFS and Manual Hook
-CONFIG_KSU_SUSFS=n
-CONFIG_KSU_SUSFS_SUS_SU=n
-CONFIG_KSU_MANUAL_HOOK=n
-CONFIG_KSU_HAS_MANUAL_HOOK=n
-CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=n
-CONFIG_KSU_SYSCALL_HOOK=n
-EOF
+  set_config "CONFIG_KSU_SUSFS=n"
+  set_config "CONFIG_KSU_SUSFS_SUS_SU=n"
+  set_config "CONFIG_KSU_MANUAL_HOOK=n"
+  set_config "CONFIG_KSU_HAS_MANUAL_HOOK=n"
+  set_config "CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=n"
+  set_config "CONFIG_KSU_SYSCALL_HOOK=n"
 fi
 
-# --- Universal Performance Tuning Addition ---
+# =========================================
+# ⚡ BOOST PERFORMANCE
+# =========================================
 echo "⚙️ Adding Universal Performance Tuning"
-cat >> $DEFCONFIG <<EOF
-# --- Universal Performance Tuning ---
-# TIMER CONFIGURATION
-CONFIG_HZ=300
-CONFIG_HZ_300=y
-# TMPFS FEATURES
-CONFIG_TMPFS_XATTR=y
-CONFIG_TMPFS_POSIX_ACL=y
-# NETWORK OPTIMIZATION
-CONFIG_IP_NF_TARGET_TTL=y
-CONFIG_NET_SCH_FQ=y
-CONFIG_NET_SCH_CAKE=y
-# TCP CONGESTION CONTROL (FIX BOOTLOOP - BBR AS DEFAULT)
-CONFIG_TCP_CONG_ADVANCED=y
-CONFIG_TCP_CONG_BBR=y
-CONFIG_TCP_CONG_WESTWOOD=y
-CONFIG_DEFAULT_BBR=y
-# I/O SCHEDULERS (Kyber Default, ADIOS Aktif)
-CONFIG_MQ_IOSCHED_KYBER=y
-CONFIG_DEFAULT_KYBER=y
-CONFIG_MQ_IOSCHED_DEADLINE=y
-CONFIG_MQ_IOSCHED_ADIOS=y
-CONFIG_IOSCHED_CPQ=y
-# FILESYSTEM OPTIMIZATION
-CONFIG_F2FS_FS_COMPRESSION=y
-# MEMORY MANAGEMENT
-CONFIG_LRU_GEN=y
-CONFIG_LRU_GEN_ENABLED=y
-CONFIG_SWAP=y
-CONFIG_ZRAM=y
-CONFIG_ZRAM_DEF_COMP_LZ4=y
-CONFIG_ZRAM_WRITEBACK=y
-CONFIG_ZRAM_MEMORY_TRACKING=y
-# CPU FREQUENCY SCALING
-CONFIG_CPU_FREQ=y
-CONFIG_CPU_FREQ_GOV_SCHEDUTIL=y
-CONFIG_CPU_FREQ_GOV_ONDEMAND=y
-EOF
+
+set_config "CONFIG_CPU_FREQ=y"
+set_config "CONFIG_CPU_FREQ_GOV_SCHEDUTIL=y"
+set_config "CONFIG_CPU_FREQ_GOV_ONDEMAND=y"
+
+# Better I/O & filesystem performance
+set_config "CONFIG_SWAP=y"
+set_config "CONFIG_BLK_DEV_ZRAM=y"
+set_config "CONFIG_ZRAM_DEF_COMP_LZ4=y"
+set_config "CONFIG_ZRAM_WRITEBACK=y"
+set_config "CONFIG_ZRAM_MEMORY_TRACKING=y"
+
+# I/O Scheduler — Kyber for UFS 4.0
+set_config "CONFIG_MQ_IOSCHED_KYBER=y"
+set_config "CONFIG_DEFAULT_KYBER=y"
+
+# F2FS optimizations
+set_config "CONFIG_F2FS_FS=y"
+set_config "CONFIG_F2FS_FS_XATTR=y"
+set_config "CONFIG_F2FS_FS_POSIX_ACL=y"
+set_config "CONFIG_F2FS_FS_COMPRESSION=y"
+
+# Memory management improvements
+set_config "CONFIG_LRU_GEN=y"
+set_config "CONFIG_LRU_GEN_ENABLED=y"
+
+# Networking extras
+set_config "CONFIG_IP_NF_TARGET_TTL=y"
+set_config "CONFIG_NET_SCH_FQ=y"
+set_config "CONFIG_NET_SCH_CAKE=y"
+set_config "CONFIG_TCP_CONG_ADVANCED=y"
+set_config "CONFIG_DEFAULT_BBR=y"
+set_config "CONFIG_TCP_CONG_BBR=y"
+set_config "CONFIG_TCP_CONG_WESTWOOD=y"
+set_config "CONFIG_IP6_NF_TARGET_HL=y"
+set_config "CONFIG_IP6_NF_MATCH_HL=y"
+
+# =========================================
+# 🚫 REMOVE DEBUG FLAGS
+# =========================================
+echo "Disable useless debugging configs for performance and resources"
+
+set_config "CONFIG_UBSAN=n"
+set_config "CONFIG_PAGE_OWNER=n"
+set_config "CONFIG_RCU_TRACE=n"
+set_config "CONFIG_SECTION_MISMATCH_WARN_ONLY=y"
+# CONFIG_SCHED_DEBUG dinonaktifkan sementara — causing kernel panic
