@@ -14,7 +14,17 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
+#include <linux/slab.h>
+#include <linux/sched/clock.h>
 #include <linux/sched/cpufreq.h>
+#include <linux/workqueue.h>
+
+/* Fallback for strict GKI 5.10 environments where these macros are stripped from headers */
+#ifndef CPUFREQ_GOV_START
+#define CPUFREQ_GOV_START  1
+#define CPUFREQ_GOV_STOP   2
+#define CPUFREQ_GOV_LIMITS 3
+#endif
 
 /* VortexCore Heuristic Parameters */
 static unsigned int target_load_big = 80;
@@ -35,9 +45,9 @@ struct vortex_cpu_info {
 static DEFINE_PER_CPU(struct vortex_cpu_info, vortex_info);
 
 /* ========================================================================
- * VORTEXCORE v2 CORE LOGIC (Modern API)
+ * VORTEXCORE v2 CORE LOGIC (Shared logic)
  * ======================================================================== */
-static void vortex_update_cpu(struct cpufreq_policy *policy)
+static void vortex_eval_freq(struct cpufreq_policy *policy)
 {
     struct vortex_cpu_info *info = &per_cpu(vortex_info, policy->cpu);
     u64 now, idle_time, delta_wall, delta_idle;
@@ -48,7 +58,6 @@ static void vortex_update_cpu(struct cpufreq_policy *policy)
     now = local_clock();
     idle_time = get_cpu_idle_time(policy->cpu, &delta_wall, 0);
 
-    /* Initialize on first call */
     if (info->prev_cpu_wall == 0) {
         info->prev_cpu_wall = now;
         info->prev_cpu_idle = idle_time;
@@ -67,11 +76,11 @@ static void vortex_update_cpu(struct cpufreq_policy *policy)
     else
         load = div64_u64(100 * (delta_wall - delta_idle), delta_wall);
 
-    /* 6. CPU Topology Awareness (Safe heuristic for modules) */
+    /* 6. CPU Topology Awareness */
     bool is_big = (policy->cpuinfo.max_freq > (policy->cpuinfo.min_freq * 2));
     unsigned int dyn_target_load = is_big ? target_load_big : target_load_little;
 
-    /* 5. Thermal Awareness: Strictly respect dynamic thermal ceiling */
+    /* 5. Thermal Awareness */
     unsigned int thermal_max = policy->max;
 
     /* VortexCore Decision Matrix */
@@ -81,10 +90,9 @@ static void vortex_update_cpu(struct cpufreq_policy *policy)
         unsigned int freq_adj = thermal_max * load / 100;
         freq_target = max(freq_adj, current_freq);
     } else {
-        /* 4. Non-Linear Adaptive Ramp-Down (Exponential-like decay) */
+        /* 4. Non-Linear Adaptive Ramp-Down */
         if (current_freq > policy->min) {
             unsigned int freq_diff = current_freq - policy->min;
-            /* Decay by 10% of the difference, with a minimum step */
             unsigned int decay_step = max(policy->min / 100, freq_diff / 10);
             
             if (current_freq > policy->min + decay_step)
@@ -96,33 +104,68 @@ static void vortex_update_cpu(struct cpufreq_policy *policy)
         }
     }
 
-    /* 3. Safer Frequency Scaling: Only update if target actually changes to reduce jitter */
+    /* 3. Safer Frequency Scaling (Jitter reduction) */
     if (freq_target != info->target_freq) {
         info->target_freq = freq_target;
         __cpufreq_driver_target(policy, freq_target, CPUFREQ_RELATION_L);
     }
 }
 
-static unsigned int vortex_speed(struct cpufreq_policy *policy)
+/* ========================================================================
+ * LEGACY API WRAPPER (For GKI 5.10 strict environments)
+ * ======================================================================== */
+struct vortex_policy_info {
+    struct delayed_work work;
+    struct cpufreq_policy *policy;
+};
+
+static void vortex_work_handler(struct work_struct *work)
 {
-    struct vortex_cpu_info *info = &per_cpu(vortex_info, policy->cpu);
-    return info->target_freq;
+    struct vortex_policy_info *vpinfo = container_of(work, struct vortex_policy_info, work.work);
+    vortex_eval_freq(vpinfo->policy);
+    schedule_delayed_work_on(vpinfo->policy->cpu, &vpinfo->work, msecs_to_jiffies(10));
 }
 
-static void vortex_limits(struct cpufreq_policy *policy)
+static int vortex_governor(struct cpufreq_policy *policy, unsigned int event)
 {
-    /* Thermal subsystem directly manipulates policy->max. 
-     * We ensure our governor gracefully adheres to the new limits
-     * by strictly using policy->max in the update_cpu logic.
-     */
+    struct vortex_policy_info *vpinfo;
+    unsigned int cpu;
+
+    switch (event) {
+    case CPUFREQ_GOV_START:
+        if (!policy->governor_data) {
+            vpinfo = kzalloc(sizeof(*vpinfo), GFP_KERNEL);
+            if (!vpinfo)
+                return -ENOMEM;
+            vpinfo->policy = policy;
+            INIT_DEFERRABLE_WORK(&vpinfo->work, vortex_work_handler);
+            policy->governor_data = vpinfo;
+        }
+        for_each_cpu(cpu, policy->cpus) {
+            struct vortex_cpu_info *info = &per_cpu(vortex_info, cpu);
+            info->prev_cpu_idle = get_cpu_idle_time(cpu, &info->prev_cpu_wall, 0);
+            info->target_freq = policy->cur;
+        }
+        schedule_delayed_work_on(policy->cpu, &vpinfo->work, msecs_to_jiffies(10));
+        break;
+    case CPUFREQ_GOV_STOP:
+        vpinfo = policy->governor_data;
+        if (vpinfo) {
+            cancel_delayed_work_sync(&vpinfo->work);
+            kfree(vpinfo);
+            policy->governor_data = NULL;
+        }
+        break;
+    case CPUFREQ_GOV_LIMITS:
+        break;
+    }
+    return 0;
 }
 
 static struct cpufreq_governor vortex_gov = {
     .name = "vortexcore",
     .owner = THIS_MODULE,
-    .update_cpu = vortex_update_cpu,
-    .limits = vortex_limits,
-    .speed = vortex_speed,
+    .governor = vortex_governor,
 };
 
 static int __init vortex_init(void)
