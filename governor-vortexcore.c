@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * VortexCore CPU Governor v3.1 (Gaming Stability Fix)
+ * VortexCore CPU Governor v3.2 (Anti Parachute Fix)
  * Engineered for GKI 5.10 (Hybrid API)
- * Features: Adaptive Sampling, Proactive Thermal, Refined big.LITTLE
+ * Features: Adaptive Sampling, Proactive Thermal, Refined big.LITTLE, Max Hold
  * Author: Kingfinik98
  */
 
@@ -30,6 +30,7 @@ struct vortex_cpu_info {
     unsigned int target_freq;
     unsigned int thermal_counter;
     unsigned int next_delay_ms;
+    unsigned int max_hold_counter; /* NEW: Anti Parachute State */
 };
 
 static DEFINE_PER_CPU(struct vortex_cpu_info, vortex_info);
@@ -40,7 +41,7 @@ struct vortex_policy_info {
 };
 
 /* ========================================================================
- * VORTEXCORE v3.1 CORE LOGIC
+ * VORTEXCORE v3.2 CORE LOGIC
  * ======================================================================== */
 static void vortex_eval_freq(struct cpufreq_policy *policy)
 {
@@ -70,28 +71,36 @@ static void vortex_eval_freq(struct cpufreq_policy *policy)
     else
         load = div64_u64(100 * (delta_wall - delta_idle), delta_wall);
 
-    /* 4. Refined big.LITTLE Awareness */
+    /* 4. Refined big.LITTLE Awareness (UNCHANGED) */
     bool is_big = (policy->cpuinfo.max_freq > (policy->cpuinfo.min_freq * 2));
     unsigned int dyn_target_load = is_big ? target_load_big : target_load_little;
 
-    /* Decision Matrix */
+    /* Decision Matrix (STRUCTURE UNCHANGED) */
     if (load >= fast_ramp_up_load) {
         freq_target = thermal_max;
+        if (info->max_hold_counter < 5)
+            info->max_hold_counter++; /* Activate max hold */
     } else if (load > dyn_target_load) {
         unsigned int freq_adj = thermal_max * load / 100;
         freq_target = max(freq_adj, current_freq);
     } else {
-        if (current_freq > policy->min) {
-            unsigned int freq_diff = current_freq - policy->min;
-            /* FIX 1: Less aggressive ramp-down (Changed /10 to /20 = 5% decay) */
-            unsigned int decay_step = max(policy->min / 100, freq_diff / 20);
-            freq_target = (current_freq > policy->min + decay_step) ? current_freq - decay_step : policy->min;
+        /* NEW FEATURE: Max Frequency Hold (Anti Terjun Payung) */
+        if (info->max_hold_counter > 0) {
+            freq_target = current_freq; /* Hold frequency, block decay */
+            info->max_hold_counter--;
         } else {
-            freq_target = policy->min;
+            /* V3.1 Decay Logic (UNCHANGED: freq_diff / 20) */
+            if (current_freq > policy->min) {
+                unsigned int freq_diff = current_freq - policy->min;
+                unsigned int decay_step = max(policy->min / 100, freq_diff / 20);
+                freq_target = (current_freq > policy->min + decay_step) ? current_freq - decay_step : policy->min;
+            } else {
+                freq_target = policy->min;
+            }
         }
     }
 
-    /* FIX 3: Proactive Thermal (Increased threshold from 10 to 20) */
+    /* Proactive Thermal (UNCHANGED: > 20) */
     if (freq_target >= thermal_max) {
         info->thermal_counter++;
         if (info->thermal_counter > 20) {
@@ -102,19 +111,19 @@ static void vortex_eval_freq(struct cpufreq_policy *policy)
             info->thermal_counter--;
     }
 
-    /* Safer Frequency Call (Strict Jitter Prevention) */
+    /* Jitter Prevention (UNCHANGED) */
     if (freq_target != info->target_freq) {
         info->target_freq = freq_target;
         __cpufreq_driver_target(policy, freq_target, CPUFREQ_RELATION_L);
     }
 
-    /* FIX 2: Faster ramp-up response (Max delay reduced from 40ms to 20ms) */
+    /* Adaptive Sampling (UNCHANGED: 10ms/20ms) */
     if (load >= fast_ramp_up_load || load > dyn_target_load) {
-        info->next_delay_ms = 10; /* 10ms for gaming/load */
+        info->next_delay_ms = 10;
     } else if (current_freq == policy->min) {
-        info->next_delay_ms = 20; /* Fixed: was 40ms, now 20ms for faster spike response */
+        info->next_delay_ms = 20;
     } else {
-        info->next_delay_ms = 20; /* 20ms for daily use */
+        info->next_delay_ms = 20;
     }
 }
 
@@ -129,7 +138,7 @@ static void vortex_work_handler(struct work_struct *work)
 }
 
 /* ========================================================================
- * GKI 5.10 HYBRID API STRUCT (Strictly matched)
+ * GKI 5.10 HYBRID API STRUCT (Strictly UNCHANGED)
  * ======================================================================== */
 static int vortex_init(struct cpufreq_policy *policy)
 {
@@ -160,6 +169,7 @@ static int vortex_start(struct cpufreq_policy *policy)
         info->prev_cpu_idle = get_cpu_idle_time(cpu, &info->prev_cpu_wall, 0);
         info->target_freq = policy->cur;
         info->thermal_counter = 0;
+        info->max_hold_counter = 0; /* Init hold state */
         info->next_delay_ms = 20;
     }
     schedule_delayed_work_on(policy->cpu, &((struct vortex_policy_info *)policy->governor_data)->work, msecs_to_jiffies(20));
@@ -200,5 +210,5 @@ module_init(vortex_module_init);
 module_exit(vortex_module_exit);
 
 MODULE_AUTHOR("Kingfinik98");
-MODULE_DESCRIPTION("VortexCore v3.1 - Gaming Stability Fix");
+MODULE_DESCRIPTION("VortexCore v3.2 - Anti Parachute Max Hold");
 MODULE_LICENSE("GPL");
