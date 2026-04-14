@@ -84,7 +84,7 @@ static void vortex_eval_freq(struct cpufreq_policy *policy)
         unsigned int freq_adj = thermal_max * load / 100;
         freq_target = max(freq_adj, current_freq);
     } else {
-        /* NEW FEATURE: Max Frequency Hold (Anti Terjun Payung) */
+        /* NEW FEATURE: Max Frequency Hold (Anti-Parachuting) */
         if (info->max_hold_counter > 0) {
             freq_target = current_freq; /* Hold frequency, block decay */
             info->max_hold_counter--;
