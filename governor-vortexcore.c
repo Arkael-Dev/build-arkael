@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * VortexCore CPU Governor v2
+ * VortexCore CPU Governor v3 (Final Polish)
  * Engineered for GKI 5.10 (Hybrid API)
+ * Features: Adaptive Sampling, Proactive Thermal, Refined big.LITTLE
  * Author: Kingfinik98
  */
 
@@ -15,6 +16,7 @@
 #include <linux/sched/cpufreq.h>
 #include <linux/workqueue.h>
 
+/* VortexCore Heuristic Parameters */
 static unsigned int target_load_big = 80;
 module_param_named(target_load_big, target_load_big, uint, 0644);
 static unsigned int target_load_little = 90;
@@ -26,6 +28,8 @@ struct vortex_cpu_info {
     u64 prev_cpu_idle;
     u64 prev_cpu_wall;
     unsigned int target_freq;
+    unsigned int thermal_counter;
+    unsigned int next_delay_ms;
 };
 
 static DEFINE_PER_CPU(struct vortex_cpu_info, vortex_info);
@@ -35,11 +39,15 @@ struct vortex_policy_info {
     struct cpufreq_policy *policy;
 };
 
+/* ========================================================================
+ * VORTEXCORE v3 CORE LOGIC
+ * ======================================================================== */
 static void vortex_eval_freq(struct cpufreq_policy *policy)
 {
     struct vortex_cpu_info *info = &per_cpu(vortex_info, policy->cpu);
     u64 now, idle_time, delta_wall, delta_idle;
     unsigned int load, freq_target, current_freq = policy->cur;
+    unsigned int thermal_max = policy->max;
 
     now = local_clock();
     idle_time = get_cpu_idle_time(policy->cpu, &delta_wall, 0);
@@ -48,6 +56,7 @@ static void vortex_eval_freq(struct cpufreq_policy *policy)
         info->prev_cpu_wall = now;
         info->prev_cpu_idle = idle_time;
         info->target_freq = current_freq;
+        info->next_delay_ms = 20;
         return;
     }
 
@@ -61,10 +70,11 @@ static void vortex_eval_freq(struct cpufreq_policy *policy)
     else
         load = div64_u64(100 * (delta_wall - delta_idle), delta_wall);
 
+    /* 4. Refined big.LITTLE Awareness */
     bool is_big = (policy->cpuinfo.max_freq > (policy->cpuinfo.min_freq * 2));
     unsigned int dyn_target_load = is_big ? target_load_big : target_load_little;
-    unsigned int thermal_max = policy->max;
 
+    /* Decision Matrix */
     if (load >= fast_ramp_up_load) {
         freq_target = thermal_max;
     } else if (load > dyn_target_load) {
@@ -80,19 +90,46 @@ static void vortex_eval_freq(struct cpufreq_policy *policy)
         }
     }
 
+    /* 3. Proactive Thermal Awareness */
+    if (freq_target >= thermal_max) {
+        info->thermal_counter++;
+        if (info->thermal_counter > 10) {
+            freq_target = (thermal_max * 95) / 100;
+        }
+    } else {
+        if (info->thermal_counter > 0)
+            info->thermal_counter--;
+    }
+
+    /* 1. Safer Frequency Call (Strict Jitter Prevention) */
     if (freq_target != info->target_freq) {
         info->target_freq = freq_target;
         __cpufreq_driver_target(policy, freq_target, CPUFREQ_RELATION_L);
+    }
+
+    /* 2. Adaptive Sampling Rate */
+    if (load >= fast_ramp_up_load || load > dyn_target_load) {
+        info->next_delay_ms = 10; /* 10ms for gaming/load */
+    } else if (current_freq == policy->min) {
+        info->next_delay_ms = 40; /* 40ms for deep idle */
+    } else {
+        info->next_delay_ms = 20; /* 20ms for daily use */
     }
 }
 
 static void vortex_work_handler(struct work_struct *work)
 {
     struct vortex_policy_info *vpinfo = container_of(work, struct vortex_policy_info, work.work);
-    vortex_eval_freq(vpinfo->policy);
-    schedule_delayed_work_on(vpinfo->policy->cpu, &vpinfo->work, msecs_to_jiffies(10));
+    struct cpufreq_policy *policy = vpinfo->policy;
+    struct vortex_cpu_info *info = &per_cpu(vortex_info, policy->cpu);
+
+    vortex_eval_freq(policy);
+    schedule_delayed_work_on(policy->cpu, &vpinfo->work, msecs_to_jiffies(info->next_delay_ms));
 }
 
+/* ========================================================================
+ * GKI 5.10 HYBRID API STRUCT (Strictly matched)
+ * ======================================================================== */
 static int vortex_init(struct cpufreq_policy *policy)
 {
     struct vortex_policy_info *vpinfo = kzalloc(sizeof(*vpinfo), GFP_KERNEL);
@@ -121,8 +158,10 @@ static int vortex_start(struct cpufreq_policy *policy)
         struct vortex_cpu_info *info = &per_cpu(vortex_info, cpu);
         info->prev_cpu_idle = get_cpu_idle_time(cpu, &info->prev_cpu_wall, 0);
         info->target_freq = policy->cur;
+        info->thermal_counter = 0;
+        info->next_delay_ms = 20;
     }
-    schedule_delayed_work_on(policy->cpu, &((struct vortex_policy_info *)policy->governor_data)->work, msecs_to_jiffies(10));
+    schedule_delayed_work_on(policy->cpu, &((struct vortex_policy_info *)policy->governor_data)->work, msecs_to_jiffies(20));
     return 0;
 }
 
@@ -160,5 +199,5 @@ module_init(vortex_module_init);
 module_exit(vortex_module_exit);
 
 MODULE_AUTHOR("Kingfinik98");
-MODULE_DESCRIPTION("VortexCore v2 - Hybrid API GKI 5.10");
+MODULE_DESCRIPTION("VortexCore v3 - Final Polish GKI 5.10");
 MODULE_LICENSE("GPL");
