@@ -79,8 +79,9 @@ set_config "CONFIG_CPU_FREQ_GOV_ONDEMAND=y"
 set_config "CONFIG_SWAP=y"
 set_config "CONFIG_BLK_DEV_ZRAM=y"
 set_config "CONFIG_ZRAM_DEF_COMP_LZ4=y"
-set_config "CONFIG_ZRAM_WRITEBACK=y"
-set_config "CONFIG_ZRAM_MEMORY_TRACKING=y"
+# FIX STORAGE BUG:
+set_config "CONFIG_ZRAM_WRITEBACK=n"
+set_config "CONFIG_ZRAM_MEMORY_TRACKING=n"
 
 # I/O Scheduler — Kyber for UFS 4.0
 set_config "CONFIG_MQ_IOSCHED_KYBER=y"
