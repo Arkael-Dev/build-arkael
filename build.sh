@@ -123,6 +123,40 @@ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
 fi
 # ----------------------------------------------------
 
+# --- INJECT VORTEXCORE GOVERNOR (GKI 5.10, 6.1, 6.6) ---
+if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
+  log "Injecting VortexCore Custom Governor..."
+  
+  # 1. Copy source file ke kernel tree
+  cp "$WORKDIR/governor-vortexcore.c" "$KSRC/drivers/cpufreq/governor-vortexcore.c"
+  
+  # 2. Tambahkan ke Makefile jika belum ada
+  if ! grep -q "governor-vortexcore.o" "$KSRC/drivers/cpufreq/Makefile"; then
+    echo "obj-\$(CONFIG_CPU_FREQ_GOV_VORTEXCORE) += governor-vortexcore.o" >> "$KSRC/drivers/cpufreq/Makefile"
+    log "VortexCore added to cpufreq Makefile."
+  else
+    log "VortexCore already in cpufreq Makefile."
+  fi
+  
+  # 3. Tambahkan ke Kconfig jika belum ada
+  if ! grep -q "CPU_FREQ_GOV_VORTEXCORE" "$KSRC/drivers/cpufreq/Kconfig"; then
+    cat << 'KCONF_EOF' >> "$KSRC/drivers/cpufreq/Kconfig"
+
+config CPU_FREQ_GOV_VORTEXCORE
+    tristate "VortexCore CPU frequency policy governor"
+    depends on CPU_FREQ
+    help
+      VortexCore governor balances performance and efficiency for gaming and daily use.
+
+      If in doubt, say N.
+KCONF_EOF
+    log "VortexCore added to cpufreq Kconfig."
+  else
+    log "VortexCore already in cpufreq Kconfig."
+  fi
+fi
+# ----------------------------------------------------
+
 # --- PATCH inject.sh ---
 log "Applying inject.sh patch..."
 wget -qO Inject_300hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/Inject_300hz.sh
@@ -451,6 +485,7 @@ make ${MAKE_ARGS[@]} $KERNEL_DEFCONFIG
 log "Enabling VorteX kernel dependencies..."
 config --enable CONFIG_TCP_CONG_WESTWOOD
 config --enable CONFIG_DEVFREQ_GOV_SCHEDUTIL
+config --enable CONFIG_CPU_FREQ_GOV_VORTEXCORE
 
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   config --enable CONFIG_ANDROID_LOW_MEMORY_KILLER
