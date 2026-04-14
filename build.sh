@@ -128,7 +128,7 @@ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   log "Injecting VortexCore Custom Governor..."
   
   # 1. Copy source file ke kernel tree
-  if [ "$KVER" == "6.1" ]; then
+  if [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
     cp "$WORKDIR/governor-vortexcore-6.1.c" "$KSRC/drivers/cpufreq/governor-vortexcore.c"
   else
     cp "$WORKDIR/governor-vortexcore.c" "$KSRC/drivers/cpufreq/governor-vortexcore.c"
