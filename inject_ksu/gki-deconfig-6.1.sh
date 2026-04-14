@@ -6,7 +6,7 @@
 DEFCONFIG_FILE="arch/arm64/configs/gki_defconfig"
 
 clean_config() {
-  # It is mandatory to delete these two formats so that they do not crash in GKI 6.1
+  # GKI 6.1
   sed -i "/^$1=/d" $DEFCONFIG_FILE
   sed -i "/^# $1 is not set/d" $DEFCONFIG_FILE
 }
@@ -77,7 +77,7 @@ set_config "CONFIG_CPU_FREQ_GOV_SCHEDUTIL=y"
 set_config "CONFIG_CPU_FREQ_GOV_VORTEXCORE=y"
 set_config "CONFIG_CPU_FREQ_GOV_ONDEMAND=y"
 
-# Networking extras (Westwood must be active for vortex_gki.c)
+# Networking extras (Westwood vortex_gki.c)
 set_config "CONFIG_IP_NF_TARGET_TTL=y"
 set_config "CONFIG_NET_SCH_FQ=y"
 set_config "CONFIG_NET_SCH_CAKE=y"
