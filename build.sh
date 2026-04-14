@@ -130,7 +130,7 @@ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   # 1. Copy source file ke kernel tree
   cp "$WORKDIR/governor-vortexcore.c" "$KSRC/drivers/cpufreq/governor-vortexcore.c"
   
-  # 2. Tambahkan ke Makefile jika belum ada
+  # 2. Add to Makefile if it is not already there
   if ! grep -q "governor-vortexcore.o" "$KSRC/drivers/cpufreq/Makefile"; then
     echo "obj-\$(CONFIG_CPU_FREQ_GOV_VORTEXCORE) += governor-vortexcore.o" >> "$KSRC/drivers/cpufreq/Makefile"
     log "VortexCore added to cpufreq Makefile."
@@ -138,7 +138,7 @@ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
     log "VortexCore already in cpufreq Makefile."
   fi
   
-  # 3. Tambahkan ke Kconfig jika belum ada
+  # 3. Add to Kconfig if it's not there
   if ! grep -q "CPU_FREQ_GOV_VORTEXCORE" "$KSRC/drivers/cpufreq/Kconfig"; then
     cat << 'KCONF_EOF' >> "$KSRC/drivers/cpufreq/Kconfig"
 
