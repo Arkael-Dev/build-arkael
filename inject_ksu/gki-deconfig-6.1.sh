@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 
 # =========================================
-# 🔧 SET & CLEAN CONFIG HELPERS
+# 🔧 SET & CLEAN CONFIG HELPERS (FIXED)
 # =========================================
 DEFCONFIG_FILE="arch/arm64/configs/gki_defconfig"
 
 clean_config() {
-  sed -i "/^$1/d" $DEFCONFIG_FILE
+  # It is mandatory to delete these two formats so that they do not crash in GKI 6.1
+  sed -i "/^$1=/d" $DEFCONFIG_FILE
+  sed -i "/^# $1 is not set/d" $DEFCONFIG_FILE
 }
 
 set_config() {
@@ -66,7 +68,7 @@ else
 fi
 
 # =========================================
-# ⚡ BOOST PERFORMANCE
+# ⚡ BOOST PERFORMANCE (CLEANED)
 # =========================================
 echo "⚙️ Adding Universal Performance Tuning"
 
@@ -75,40 +77,17 @@ set_config "CONFIG_CPU_FREQ_GOV_SCHEDUTIL=y"
 set_config "CONFIG_CPU_FREQ_GOV_VORTEXCORE=y"
 set_config "CONFIG_CPU_FREQ_GOV_ONDEMAND=y"
 
-# Better I/O & filesystem performance
-set_config "CONFIG_SWAP=y"
-set_config "CONFIG_BLK_DEV_ZRAM=y"
-set_config "CONFIG_ZRAM_DEF_COMP_LZ4=y"
-set_config "CONFIG_ZRAM_WRITEBACK=y"
-set_config "CONFIG_ZRAM_MEMORY_TRACKING=y"
-
-# I/O Scheduler — Kyber for UFS 4.0
-set_config "CONFIG_MQ_IOSCHED_KYBER=y"
-set_config "CONFIG_DEFAULT_KYBER=y"
-
-# F2FS optimizations
-set_config "CONFIG_F2FS_FS=y"
-set_config "CONFIG_F2FS_FS_XATTR=y"
-set_config "CONFIG_F2FS_FS_POSIX_ACL=y"
-set_config "CONFIG_F2FS_FS_COMPRESSION=y"
-
-# Memory management improvements
-set_config "CONFIG_LRU_GEN=y"
-set_config "CONFIG_LRU_GEN_ENABLED=y"
-
-# Networking extras
+# Networking extras (Westwood must be active for vortex_gki.c)
 set_config "CONFIG_IP_NF_TARGET_TTL=y"
 set_config "CONFIG_NET_SCH_FQ=y"
 set_config "CONFIG_NET_SCH_CAKE=y"
 set_config "CONFIG_TCP_CONG_ADVANCED=y"
-set_config "CONFIG_DEFAULT_BBR=y"
-set_config "CONFIG_TCP_CONG_BBR=y"
 set_config "CONFIG_TCP_CONG_WESTWOOD=y"
 set_config "CONFIG_IP6_NF_TARGET_HL=y"
 set_config "CONFIG_IP6_NF_MATCH_HL=y"
 
 # =========================================
-# 🚫 REMOVE DEBUG FLAGS
+# 🚫 REMOVE DEBUG FLAGS (FIXED LOGIC)
 # =========================================
 echo "Disable useless debugging configs for performance and resources"
 
@@ -116,4 +95,3 @@ set_config "CONFIG_UBSAN=n"
 set_config "CONFIG_PAGE_OWNER=n"
 set_config "CONFIG_RCU_TRACE=n"
 set_config "CONFIG_SECTION_MISMATCH_WARN_ONLY=y"
-# CONFIG_SCHED_DEBUG dinonaktifkan sementara — causing kernel panic
