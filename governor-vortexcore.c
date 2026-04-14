@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * VortexCore CPU Governor v3 (Final Polish)
+ * VortexCore CPU Governor v3.1 (Gaming Stability Fix)
  * Engineered for GKI 5.10 (Hybrid API)
  * Features: Adaptive Sampling, Proactive Thermal, Refined big.LITTLE
  * Author: Kingfinik98
@@ -40,7 +40,7 @@ struct vortex_policy_info {
 };
 
 /* ========================================================================
- * VORTEXCORE v3 CORE LOGIC
+ * VORTEXCORE v3.1 CORE LOGIC
  * ======================================================================== */
 static void vortex_eval_freq(struct cpufreq_policy *policy)
 {
@@ -83,17 +83,18 @@ static void vortex_eval_freq(struct cpufreq_policy *policy)
     } else {
         if (current_freq > policy->min) {
             unsigned int freq_diff = current_freq - policy->min;
-            unsigned int decay_step = max(policy->min / 100, freq_diff / 10);
+            /* FIX 1: Less aggressive ramp-down (Changed /10 to /20 = 5% decay) */
+            unsigned int decay_step = max(policy->min / 100, freq_diff / 20);
             freq_target = (current_freq > policy->min + decay_step) ? current_freq - decay_step : policy->min;
         } else {
             freq_target = policy->min;
         }
     }
 
-    /* 3. Proactive Thermal Awareness */
+    /* FIX 3: Proactive Thermal (Increased threshold from 10 to 20) */
     if (freq_target >= thermal_max) {
         info->thermal_counter++;
-        if (info->thermal_counter > 10) {
+        if (info->thermal_counter > 20) {
             freq_target = (thermal_max * 95) / 100;
         }
     } else {
@@ -101,17 +102,17 @@ static void vortex_eval_freq(struct cpufreq_policy *policy)
             info->thermal_counter--;
     }
 
-    /* 1. Safer Frequency Call (Strict Jitter Prevention) */
+    /* Safer Frequency Call (Strict Jitter Prevention) */
     if (freq_target != info->target_freq) {
         info->target_freq = freq_target;
-        cpufreq_driver_target(policy, freq_target, CPUFREQ_RELATION_L);
+        __cpufreq_driver_target(policy, freq_target, CPUFREQ_RELATION_L);
     }
 
-    /* 2. Adaptive Sampling Rate */
+    /* FIX 2: Faster ramp-up response (Max delay reduced from 40ms to 20ms) */
     if (load >= fast_ramp_up_load || load > dyn_target_load) {
         info->next_delay_ms = 10; /* 10ms for gaming/load */
     } else if (current_freq == policy->min) {
-        info->next_delay_ms = 40; /* 40ms for deep idle */
+        info->next_delay_ms = 20; /* Fixed: was 40ms, now 20ms for faster spike response */
     } else {
         info->next_delay_ms = 20; /* 20ms for daily use */
     }
@@ -199,5 +200,5 @@ module_init(vortex_module_init);
 module_exit(vortex_module_exit);
 
 MODULE_AUTHOR("Kingfinik98");
-MODULE_DESCRIPTION("VortexCore v3 - Final Polish GKI 5.10");
+MODULE_DESCRIPTION("VortexCore v3.1 - Gaming Stability Fix");
 MODULE_LICENSE("GPL");
