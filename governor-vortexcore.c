@@ -104,7 +104,7 @@ static void vortex_eval_freq(struct cpufreq_policy *policy)
     /* 1. Safer Frequency Call (Strict Jitter Prevention) */
     if (freq_target != info->target_freq) {
         info->target_freq = freq_target;
-        __cpufreq_driver_target(policy, freq_target, CPUFREQ_RELATION_L);
+        cpufreq_driver_target(policy, freq_target, CPUFREQ_RELATION_L);
     }
 
     /* 2. Adaptive Sampling Rate */
