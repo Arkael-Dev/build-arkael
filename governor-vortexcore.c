@@ -2,7 +2,7 @@
 /*
  * VortexCore CPU Governor
  * 
- * Engineered for GKI 5.10
+ * Engineered for GKI 5.10, 6.1, and 6.6
  * Philosophy: Dynamic equilibrium between peak gaming throughput and daily battery endurance.
  * Implements an aggressive ramp-up heuristic combined with a granular decay algorithm.
  *
@@ -17,11 +17,13 @@
 #include <linux/slab.h>
 #include <linux/tick.h>
 #include <linux/sched/cpufreq.h>
+#include <linux/workqueue.h>
 
 /* VortexCore Heuristic Parameters */
 #define VORTEX_DEFAULT_TARGET_LOAD 80
 #define VORTEX_FAST_RAMP_UP_LOAD 90
 #define VORTEX_SMOOTH_RAMP_DOWN_STEP (1 * 1024 * 1024) // Granular step-down ~1MHz
+#define VORTEX_SAMPLE_RATE (10) // Sampling rate dalam milidetik
 
 static unsigned int target_load = VORTEX_DEFAULT_TARGET_LOAD;
 module_param(target_load, uint, 0644);
@@ -37,7 +39,10 @@ struct vortex_cpu_info {
 
 static DEFINE_PER_CPU(struct vortex_cpu_info, vortex_info);
 
-static void vortex_update_cpu(struct cpufreq_policy *policy)
+/* ========================================================================
+ * LOGIKA INTI VORTEXCORE (Dipakai Bersama oleh Legacy & Modern API)
+ * ======================================================================== */
+static void vortex_eval_freq(struct cpufreq_policy *policy)
 {
     struct vortex_cpu_info *info = &per_cpu(vortex_info, policy->cpu);
     u64 now, idle_time, wall_time;
@@ -60,14 +65,11 @@ static void vortex_update_cpu(struct cpufreq_policy *policy)
 
     /* VortexCore Decision Matrix */
     if (load >= fast_ramp_up_load) {
-        // Critical load threshold (Gaming/Touch boost), bypass ramp and jump to max Fclk
         freq_target = policy->max;
     } else if (load > target_load) {
-        // Sustained mid-load, scale frequency proportionally to workload
         unsigned int freq_adj = policy->max * load / 100;
         freq_target = max(freq_adj, current_freq);
     } else {
-        // Sub-target load (Daily usage), apply smooth decay to prevent Fclk stutter
         if (current_freq > policy->min) {
             if (current_freq > VORTEX_SMOOTH_RAMP_DOWN_STEP)
                 freq_target = current_freq - VORTEX_SMOOTH_RAMP_DOWN_STEP;
@@ -81,6 +83,70 @@ static void vortex_update_cpu(struct cpufreq_policy *policy)
     info->target_freq = freq_target;
     __cpufreq_driver_target(policy, freq_target, CPUFREQ_RELATION_L);
 }
+
+/* ========================================================================
+ * LEGACY API (Khusus Kernel 5.10 & 6.1)
+ * ======================================================================== */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0)
+
+struct vortex_policy_info {
+    struct delayed_work work;
+    struct cpufreq_policy *policy;
+};
+
+static void vortex_work_handler(struct work_struct *work)
+{
+    struct vortex_policy_info *vpinfo = container_of(work, struct vortex_policy_info, work.work);
+    vortex_eval_freq(vpinfo->policy);
+    schedule_delayed_work_on(vpinfo->policy->cpu, &vpinfo->work, msecs_to_jiffies(VORTEX_SAMPLE_RATE));
+}
+
+static int vortex_governor(struct cpufreq_policy *policy, unsigned int event)
+{
+    struct vortex_policy_info *vpinfo;
+    unsigned int cpu;
+
+    switch (event) {
+    case CPUFREQ_GOV_START:
+        if (!policy->governor_data) {
+            vpinfo = kzalloc(sizeof(*vpinfo), GFP_KERNEL);
+            if (!vpinfo)
+                return -ENOMEM;
+            vpinfo->policy = policy;
+            INIT_DEFERRABLE_WORK(&vpinfo->work, vortex_work_handler);
+            policy->governor_data = vpinfo;
+        }
+        for_each_cpu(cpu, policy->cpus) {
+            struct vortex_cpu_info *info = &per_cpu(vortex_info, cpu);
+            info->prev_cpu_idle = get_cpu_idle_time(cpu, &info->prev_cpu_wall, 0);
+            info->target_freq = policy->cur;
+        }
+        schedule_delayed_work_on(policy->cpu, &vpinfo->work, msecs_to_jiffies(VORTEX_SAMPLE_RATE));
+        break;
+    case CPUFREQ_GOV_STOP:
+        vpinfo = policy->governor_data;
+        if (vpinfo) {
+            cancel_delayed_work_sync(&vpinfo->work);
+            kfree(vpinfo);
+            policy->governor_data = NULL;
+        }
+        break;
+    case CPUFREQ_GOV_LIMITS:
+        break;
+    }
+    return 0;
+}
+
+static struct cpufreq_governor vortex_gov = {
+    .name = "vortexcore",
+    .owner = THIS_MODULE,
+    .governor = vortex_governor,
+};
+
+#else
+/* ========================================================================
+ * MODERN API (Khusus Kernel 6.6 ke atas)
+ * ======================================================================== */
 
 static unsigned int vortex_speed(struct cpufreq_policy *policy)
 {
@@ -96,11 +162,16 @@ static void vortex_limits(struct cpufreq_policy *policy)
 static struct cpufreq_governor vortex_gov = {
     .name = "vortexcore",
     .owner = THIS_MODULE,
-    .update_cpu = vortex_update_cpu,
+    .update_cpu = vortex_eval_freq,
     .limits = vortex_limits,
     .speed = vortex_speed,
 };
 
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0) */
+
+/* ========================================================================
+ * INIT & EXIT
+ * ======================================================================== */
 static int __init vortex_init(void)
 {
     return cpufreq_register_governor(&vortex_gov);
@@ -115,5 +186,5 @@ module_init(vortex_init);
 module_exit(vortex_exit);
 
 MODULE_AUTHOR("Kingfinik98");
-MODULE_DESCRIPTION("VortexCore - Dynamic Gaming & Endurance Governor for GKI 5.10");
+MODULE_DESCRIPTION("VortexCore - Dynamic Gaming & Endurance Governor for GKI 5.10/6.1/6.6");
 MODULE_LICENSE("GPL");
