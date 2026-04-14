@@ -72,6 +72,7 @@ echo "⚙️ Adding Universal Performance Tuning"
 
 set_config "CONFIG_CPU_FREQ=y"
 set_config "CONFIG_CPU_FREQ_GOV_SCHEDUTIL=y"
+set_config "CONFIG_CPU_FREQ_GOV_VORTEXCORE=y"
 set_config "CONFIG_CPU_FREQ_GOV_ONDEMAND=y"
 
 # Better I/O & filesystem performance
