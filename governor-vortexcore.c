@@ -9,6 +9,7 @@
  * Author: Kingfinik98
  */
 
+#include <linux/version.h>
 #include <linux/cpufreq.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
@@ -23,7 +24,7 @@
 #define VORTEX_DEFAULT_TARGET_LOAD 80
 #define VORTEX_FAST_RAMP_UP_LOAD 90
 #define VORTEX_SMOOTH_RAMP_DOWN_STEP (1 * 1024 * 1024) // Granular step-down ~1MHz
-#define VORTEX_SAMPLE_RATE (10) // Sampling rate dalam milidetik
+#define VORTEX_SAMPLE_RATE (10) // Sampling rate in milliseconds
 
 static unsigned int target_load = VORTEX_DEFAULT_TARGET_LOAD;
 module_param(target_load, uint, 0644);
@@ -40,7 +41,7 @@ struct vortex_cpu_info {
 static DEFINE_PER_CPU(struct vortex_cpu_info, vortex_info);
 
 /* ========================================================================
- * LOGIKA INTI VORTEXCORE (Dipakai Bersama oleh Legacy & Modern API)
+ * VORTEXCORE CORE LOGIC (Shared by Legacy and Modern APIs)
  * ======================================================================== */
 static void vortex_eval_freq(struct cpufreq_policy *policy)
 {
@@ -85,7 +86,7 @@ static void vortex_eval_freq(struct cpufreq_policy *policy)
 }
 
 /* ========================================================================
- * LEGACY API (Khusus Kernel 5.10 & 6.1)
+ * LEGACY API (Specifically for Kernel 5.10 & 6.1)
  * ======================================================================== */
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0)
 
@@ -145,7 +146,7 @@ static struct cpufreq_governor vortex_gov = {
 
 #else
 /* ========================================================================
- * MODERN API (Khusus Kernel 6.6 ke atas)
+ * MODERN API (Specifically for Kernel 6.6 and above)
  * ======================================================================== */
 
 static unsigned int vortex_speed(struct cpufreq_policy *policy)
