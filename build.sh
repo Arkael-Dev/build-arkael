@@ -132,7 +132,7 @@ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   
   # 2. Add to Makefile if it is not already there
   if ! grep -q "governor-vortexcore.o" "$KSRC/drivers/cpufreq/Makefile"; then
-    echo "obj-\$(CONFIG_CPU_FREQ_GOV_VORTEXCORE) += governor-vortexcore.o" >> "$KSRC/drivers/cpufreq/Makefile"
+    echo "obj-y += governor-vortexcore.o" >> "$KSRC/drivers/cpufreq/Makefile"
     log "VortexCore added to cpufreq Makefile."
   else
     log "VortexCore already in cpufreq Makefile."
