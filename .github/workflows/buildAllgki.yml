@@ -30,6 +30,10 @@ jobs:
   build:
     name: "${{ matrix.kernel_version }} | ${{ matrix.variant_name }}"
     runs-on: ubuntu-latest
+    
+    # ✅ FIX: secrets: inherit dipindah ke sini (level JOB)
+    secrets: inherit
+    
     strategy:
       fail-fast: false
       matrix:
@@ -84,9 +88,9 @@ jobs:
         with:
           fetch-depth: 1
 
+      # ✅ FIX: Hapus secrets: inherit dari sini
       - name: 🔨 Trigger Build Workflow
         uses: ./.github/workflows/build.yml
-        secrets: inherit
         with:
           TODO: "kernel"
           KSU: ${{ matrix.ksu }}
