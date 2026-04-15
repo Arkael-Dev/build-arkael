@@ -15,9 +15,9 @@ on:
         default: 'full'
         type: choice
         options:
-          - 'full'           # All GKI × All Variants (18 builds)
+          - 'full'           # All GKI × All Variants (9 builds)
           - 'ksu_only'       # Only KSU variants (no vanilla)
-          - 'minimal'        # Only popular combos (VNL, KSU+SuSFS, VorteXSU, WildKSU)
+          - 'minimal'        # Only popular combos (VNL, KSU+SuSFS, VorteXSU)
 
 env:
   MAN_DISABLE: true
@@ -36,7 +36,7 @@ jobs:
         # Kernel Versions
         kernel_version: ['5.10', '6.1', '6.6']
         
-        # Variant Configuration (4 VARIANTS ONLY - TANPA SUKISU)
+        # Variant Configuration (3 VARIANTS ONLY - TANPA WILDKSU)
         include:
           # ========== VANILLA (No Root) ==========
           - variant_name: "VNL"
@@ -59,18 +59,7 @@ jobs:
           - variant_name: "VorteXSU"
             ksu: "vortexsu"
             ksu_susfs: "true"
-            last_build: "false"
-
-          # ========== WILDKSU (No KPM) ==========
-          - variant_name: "WildKSU"
-            ksu: "wildksu"
-            ksu_susfs: "false"
-            last_build: "false"
-          
-          - variant_name: "WildKSU+SuSFS"
-            ksu: "wildksu"
-            ksu_susfs: "true"
-            last_build: "true"  # ← LAST BUILD (final combo)
+            last_build: "true"  # ← LAST BUILD
 
     steps:
       # ------------------------------------------
@@ -113,12 +102,9 @@ jobs:
       # ------------------------------------------
       - name: ⚙️ Run Build Script
         env:
-          # Telegram Secrets
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
-          # GitHub Secrets
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          # Build Configuration
           TODO: "kernel"
           KSU: ${{ matrix.ksu }}
           KSU_SUSFS: ${{ matrix.ksu_susfs }}
@@ -238,7 +224,7 @@ jobs:
           echo "🏷️  Release Tag: ${RELEASE_TAG}"
 
       # ------------------------------------------
-      # STEP 4: Prepare Release Notes (TANPA SUKISU)
+      # STEP 4: Prepare Release Notes (3 VARIANTS ONLY)
       # ------------------------------------------
       - name: 📝 Prepare Release Notes
         run: |
@@ -263,24 +249,18 @@ jobs:
           - `VorteX_E-Sport-*-5.10-KSU.zip` - Standard KernelSU
           - `VorteX_E-Sport-*-5.10-KSU+SuSFS.zip` - KernelSU + Hidden Root
           - `VorteX_E-Sport-*-5.10-VorteXSU+SuSFS.zip` - VorteXSU (KPM Patch)
-          - `VorteX_E-Sport-*-5.10-WildKSU.zip` - WildKSU
-          - `VorteX_E-Sport-*-5.10-WildKSU+SuSFS.zip` - WildKSU + Hidden Root
           
           #### 🟢 GKI 6.1 (Android 14)
           - `VorteX_E-Sport-*-6.1-VNL.zip` - Vanilla (No Root)
           - `VorteX_E-Sport-*-6.1-KSU.zip` - Standard KernelSU
           - `VorteX_E-Sport-*-6.1-KSU+SuSFS.zip` - KernelSU + Hidden Root
           - `VorteX_E-Sport-*-6.1-VorteXSU+SuSFS.zip` - VorteXSU (KPM Patch)
-          - `VorteX_E-Sport-*-6.1-WildKSU.zip` - WildKSU
-          - `VorteX_E-Sport-*-6.1-WildKSU+SuSFS.zip` - WildKSU + Hidden Root
           
           #### 🟣 GKI 6.6 (Android 15)
           - `VorteX_E-Sport-*-6.6-VNL.zip` - Vanilla (No Root)
           - `VorteX_E-Sport-*-6.6-KSU.zip` - Standard KernelSU
           - `VorteX_E-Sport-*-6.6-KSU+SuSFS.zip` - KernelSU + Hidden Root
           - `VorteX_E-Sport-*-6.6-VorteXSU+SuSFS.zip` - VorteXSU (KPM Patch)
-          - `VorteX_E-Sport-*-6.6-WildKSU.zip` - WildKSU
-          - `VorteX_E-Sport-*-6.6-WildKSU+SuSFS.zip` - WildKSU + Hidden Root
           
           ---
           
@@ -292,13 +272,12 @@ jobs:
           - 🎮 **GPU Tuning** - Adreno SkiaVK driver included
           - 🔧 **WiFi/BT Fixes** - SM8650 & WCN3988 support (GKI 6.1)
           
-          ### 🔐 Root Solutions (4 Variants)
+          ### 🔐 Root Solutions (3 Variants)
           
           | Variant | KPM Patch | SuSFS Support | Description |
           |---------|-----------|---------------|-------------|
           | **KSU** | ❌ | ✅ Optional | Standard KernelSU-Next |
           | **VorteXSU** | ✅ | ✅ Recommended | Custom KPM-based root |
-          | **WildKSU** | ❌ | ✅ Optional | Alternative KSU fork |
           | **VNL** | ❌ | ❌ | No root (vanilla) |
           
           ---
@@ -387,7 +366,7 @@ jobs:
           echo "=========================================="
 
       # ------------------------------------------
-      # STEP 7: Send Telegram Notification (TANPA SUKISU)
+      # STEP 7: Send Telegram Notification (3 VARIANTS ONLY)
       # ------------------------------------------
       - name: 📬 Send Telegram Notification
         env:
@@ -408,7 +387,7 @@ jobs:
           📦 *Total Variants*: ${TOTAL_ZIPS} ZIPs
           🐧 *Kernel Versions*: 5.10, 6.1, 6.6
           📅 *Build Date*: ${BUILD_TIMESTAMP}
-          🔐 *Root Options*: KSU, VorteXSU, WildKSU, VNL
+          🔐 *Root Options*: KSU, VorteXSU, VNL
 
           ———————————————
           📥 *DOWNLOAD RELEASE*:
@@ -425,11 +404,10 @@ jobs:
           • KSU (Standard KernelSU)
           • KSU+SuSFS (Hidden Root)
           • VorteXSU (KPM Patch)
-          • WildKSU (Alternative)
 
           ———————————————
           _Built with ❤️ by @Kingfinik98_
-          _© 2024-2026 VorteX_E-Sport_"
+          _© 2025-2026 VorteX_E-Sport_"
           
           curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${TG_CHAT_ID}" \
@@ -440,7 +418,7 @@ jobs:
           echo "=========================================="
 
       # ------------------------------------------
-      # STEP 8: Final Summary (TANPA SUKISU)
+      # STEP 8: Final Summary (3 VARIANTS ONLY)
       # ------------------------------------------
       - name: 📊 Build Summary
         if: always()
@@ -452,5 +430,5 @@ jobs:
           echo "| **Status** | ✅ Success |" >> $GITHUB_STEP_SUMMARY
           echo "| **Release Tag** | \`${RELEASE_TAG}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Kernel Versions** | \`5.10\`, \`6.1\`, \`6.6\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Variants Built** | \`VNL\`, \`KSU\`, \`VorteXSU\`, \`WildKSU\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Variants Built** | \`VNL\`, \`KSU\`, \`VorteXSU\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Total Builds** | $(find release_files -name '*.zip' 2>/dev/null | wc -l) files |" >> $GITHUB_STEP_SUMMARY
