@@ -58,8 +58,13 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: 🔍 Build Info
+      # ============================================
+      # 🔥 FIX: SET STATUS=RELEASE (YANG SEBELUMNYA HILANG!)
+      # ============================================
+      - name: 🔍 Set Build Status
         run: |
+          echo "STATUS=RELEASE" >> $GITHUB_ENV
+          echo "TRIGGER=workflow_dispatch" >> $GITHUB_ENV
           echo "=========================================="
           echo "  🚀 VORTEX_E-SPORT BUILD SYSTEM"
           echo "=========================================="
@@ -68,6 +73,7 @@ jobs:
           echo "  KSU   : ${{ matrix.ksu }}"
           echo "  SuSFS : ${{ matrix.ksu_susfs }}"
           echo "  Last  : ${{ matrix.last_build }}"
+          echo "  STATUS: RELEASE (FIXED!)"
           echo "=========================================="
 
       - name: 📦 Install Dependencies
@@ -89,8 +95,10 @@ jobs:
           KERNEL_VERSION: ${{ matrix.kernel_version }}
           LAST_BUILD: ${{ matrix.last_build }}
           KVER: ${{ matrix.kernel_version }}
+          STATUS: "RELEASE"
         run: |
           echo "▶️ STARTING: ${{ matrix.variant_name }} (${{ matrix.kernel_version }})"
+          echo "STATUS=$STATUS"
           export GIT_CLONE_PROTECTION_ACTIVE=false
           chmod +x *.sh py/*.py 2>/dev/null || true
           ./build.sh
