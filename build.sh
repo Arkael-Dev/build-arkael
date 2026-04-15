@@ -400,9 +400,13 @@ EOF
           log "Applying manual statfs CRC fix for KernelSU Next GKI 6.1..."
           sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
           sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
+        elif [ "$KVER" == "6.6" ]; then
+          log "Applying manual statfs CRC fix for KernelSU Next GKI 6.6..."
+          sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
+          sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
         else
           log "Applying statfs CRC fix patch (KernelSU Next)..."
-          patch -p1 < $KERNEL_PATCHES/susfs/fix-statfs-crc-mismatch-susfs.patch || true
+          patch -p1 < $KERNEL_PATCHES/Susfs/fix-statfs-crc-mismatch-susfs.patch || true
         fi
       elif [ "$KSU" == "vortexsu" ] && [ "$KVER" == "6.1" ]; then
         log "Applying manual statfs CRC fix for VorteXSU GKI 6.1..."
@@ -497,7 +501,7 @@ fi
 if [ "$DEFCONFIG_TO_MERGE" ]; then
   log "Merging configs..."
   if [ -f "scripts/kconfig/merge_config.sh" ]; then
-    for config in $DEFCONFIG_TO_MERGE; then
+    for config in $DEFCONFIG_TO_MERGE; do
       make ${MAKE_ARGS[@]} scripts/kconfig/merge_config.sh $config
     done
   else
