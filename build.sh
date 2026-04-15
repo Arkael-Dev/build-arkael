@@ -157,39 +157,6 @@ KCONF_EOF
 fi
 # ----------------------------------------------------
 
-# --- INJECT VORTEXMAX GOVERNOR (GKI 5.10, 6.1, 6.6) ---
-if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  log "Injecting VortexMax Custom Governor..."
-  
-  # 1. Copy source file ke kernel tree
-  cp "$WORKDIR/governor-vortexmax.c" "$KSRC/drivers/cpufreq/governor-vortexmax.c"
-  
-  # 2. Add to Makefile if it is not already there
-  if ! grep -q "governor-vortexmax.o" "$KSRC/drivers/cpufreq/Makefile"; then
-    echo "obj-\$(CONFIG_CPU_FREQ_GOV_VORTEXMAX) += governor-vortexmax.o" >> "$KSRC/drivers/cpufreq/Makefile"
-    log "VortexMax added to cpufreq Makefile."
-  else
-    log "VortexMax already in cpufreq Makefile."
-  fi
-  
-  # 3. Add to Kconfig if it's not there
-  if ! grep -q "CPU_FREQ_GOV_VORTEXMAX" "$KSRC/drivers/cpufreq/Kconfig"; then
-    cat << 'KCONF_EOF' >> "$KSRC/drivers/cpufreq/Kconfig"
-
-config CPU_FREQ_GOV_VORTEXMAX
-    tristate "VortexMax CPU frequency policy governor"
-    depends on CPU_FREQ
-    help
-      VortexMax governor provides maximum performance tuning for extreme gaming.
-
-      If in doubt, say N.
-KCONF_EOF
-    log "VortexMax added to cpufreq Kconfig."
-  else
-    log "VortexMax already in cpufreq Kconfig."
-  fi
-fi
-# ----------------------------------------------------
 
 # --- PATCH inject.sh ---
 log "Applying inject.sh patch..."
@@ -520,7 +487,6 @@ log "Enabling VorteX kernel dependencies..."
 config --enable CONFIG_TCP_CONG_WESTWOOD
 config --enable CONFIG_DEVFREQ_GOV_SCHEDUTIL
 config --enable CONFIG_CPU_FREQ_GOV_VORTEXCORE
-config --enable CONFIG_CPU_FREQ_GOV_VORTEXMAX
 
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   config --enable CONFIG_ANDROID_LOW_MEMORY_KILLER
