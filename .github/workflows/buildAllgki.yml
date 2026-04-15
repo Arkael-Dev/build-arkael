@@ -1,0 +1,426 @@
+#/*!
+# * © 2024-2026 Kingfinik98 (VorteX_E-Sport). All Rights Reserved.
+# * Original Author: Kingfinik98
+# * Original Repository: https://github.com/Kingfinik98/build-vortex
+# * Signed-off-by: kingfinix98@gmail.com
+# */
+
+name: Release Build - All GKI
+
+on:
+  workflow_dispatch:
+    inputs:
+      RELEASE_TYPE:
+        description: '🎯 Release Type'
+        default: 'full'
+        type: choice
+        options:
+          - 'full'           # All GKI × All Variants (~21 builds)
+          - 'ksu_only'       # Only KSU variants (no vanilla)
+          - 'minimal'        # Only popular combos (VNL, KSU+SuSFS, VorteXSU, SukiSU)
+
+env:
+  MAN_DISABLE: true
+  DEBIAN_FRONTEND: noninteractive
+
+jobs:
+  # ============================================
+  # JOB 1: MATRIX BUILD ALL COMBINATIONS
+  # ============================================
+  build:
+    name: "${{ matrix.kernel_version }} | ${{ matrix.variant_name }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Kernel Versions
+        kernel_version: ['5.10', '6.1', '6.6']
+        
+        # Variant Configuration
+        include:
+          # ========== VANILLA (No Root) ==========
+          - variant_name: "VNL"
+            ksu: "no"
+            ksu_susfs: "false"
+            last_build: "false"
+
+          # ========== STANDARD KERNELSU ==========
+          - variant_name: "KSU"
+            ksu: "yes"
+            ksu_susfs: "false"
+            last_build: "false"
+          
+          - variant_name: "KSU+SuSFS"
+            ksu: "yes"
+            ksu_susfs: "true"
+            last_build: "false"
+
+          # ========== VORTEXSU (KPM Enabled) ==========
+          - variant_name: "VorteXSU"
+            ksu: "vortexsu"
+            ksu_susfs: "true"
+            last_build: "false"
+
+          # ========== SUKISU ULTRA (KPM Enabled) ==========
+          - variant_name: "SukiSU"
+            ksu: "sukisu"
+            ksu_susfs: "true"
+            last_build: "false"
+
+          # ========== WILDKSU (No KPM) ==========
+          - variant_name: "WildKSU"
+            ksu: "wildksu"
+            ksu_susfs: "false"
+            last_build: "false"
+          
+          - variant_name: "WildKSU+SuSFS"
+            ksu: "wildksu"
+            ksu_susfs: "true"
+            last_build: "true"  # ← LAST BUILD (final combo)
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: 🔨 Trigger Build Workflow
+        uses: ./.github/workflows/build.yml
+        secrets: inherit
+        with:
+          TODO: "kernel"
+          KSU: ${{ matrix.ksu }}
+          KSU_SUSFS: ${{ matrix.ksu_susfs }}
+          KERNEL_VERSION: ${{ matrix.kernel_version }}
+          LAST_BUILD: ${{ matrix.last_build }}
+
+  # ============================================
+  # JOB 2: CREATE UNIFIED RELEASE
+  # ============================================
+  release:
+    name: "🚀 Create Unified Release"
+    permissions:
+      contents: write
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+      # ------------------------------------------
+      # STEP 1: Checkout & Download Artifacts
+      # ------------------------------------------
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: 📦 Download All Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release_files
+          pattern: '*'
+          merge-multiple: true
+
+      # ------------------------------------------
+      # STEP 2: Extract Variables from info.txt
+      # ------------------------------------------
+      - name: 🔍 Extract Build Variables
+        id: extract_vars
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          echo "=========================================="
+          echo "  🔍 EXTRACTING BUILD VARIABLES"
+          echo "=========================================="
+          
+          # Find info.txt from any artifact
+          INFO_FILE=$(find release_files -name "info.txt" -type f 2>/dev/null | head -1)
+          
+          if [[ -f "$INFO_FILE" ]]; then
+            echo "✅ Found info.txt: $INFO_FILE"
+            echo ""
+            
+            # Extract variables safely
+            while IFS='=' read -r key value; do
+              # Skip empty lines and comments
+              [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
+              
+              # Trim whitespace
+              key=$(echo "$key" | xargs)
+              value=$(echo "$value" | xargs)
+              
+              if [[ -n "$key" && -n "$value" ]]; then
+                echo "$key=$value" >> $GITHUB_ENV
+                echo "  • $key=$value"
+              fi
+            done < "$INFO_FILE"
+            
+            echo ""
+            echo "✅ Variables extracted successfully!"
+          else
+            echo "⚠️  info.txt not found, using defaults"
+            echo "KERNEL_NAME=VorteX_E-Sport" >> $GITHUB_ENV
+            echo "RELEASE=v0.3" >> $GITHUB_ENV
+            echo "LINUX_VERSION=unknown" >> $GITHUB_ENV
+            echo "SUSFS_VERSION=N/A" >> $GITHUB_ENV
+          fi
+
+      # ------------------------------------------
+      # STEP 3: Generate Release Tag
+      # ------------------------------------------
+      - name: 🏷️ Generate Release Tag
+        run: |
+          TIMESTAMP=$(date +%Y%m%d-%H%M)
+          
+          # Use extracted variables or defaults
+          KERNEL_NAME="${KERNEL_NAME:-VorteX_E-Sport}"
+          RELEASE="${RELEASE:-v0.3}"
+          
+          RELEASE_TAG="${KERNEL_NAME}-AllGKI-${TIMESTAMP}"
+          
+          echo "=========================================="
+          echo "  🏷️  RELEASE TAG GENERATION"
+          echo "=========================================="
+          echo "  Tag: ${RELEASE_TAG}"
+          echo "=========================================="
+          
+          echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
+          echo "BUILD_TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
+
+      # ------------------------------------------
+      # STEP 4: Prepare Release Notes
+      # ------------------------------------------
+      - name: 📝 Prepare Release Notes
+        run: |
+          cat > release_notes.md << 'EOF'
+          ## 🐧 VorteX_E-Sport - All GKI Release
+          
+          ### 📋 Build Information
+          
+          | Item | Details |
+          |------|---------|
+          | **Kernel Name** | {KERNEL_NAME} |
+          | **Build Date** | {TIMESTAMP} |
+          | **Kernel Version** | {LINUX_VERSION} |
+          | **SuSFS Version** | {SUSFS_VERSION} |
+          
+          ---
+          
+          ### 📦 Available Variants
+          
+          #### 🔵 GKI 5.10 (Android 12/12.1)
+          - `VorteX_E-Sport-*-5.10-VNL.zip` - Vanilla (No Root)
+          - `VorteX_E-Sport-*-5.10-KSU.zip` - Standard KernelSU
+          - `VorteX_E-Sport-*-5.10-KSU+SuSFS.zip` - KernelSU + Hidden Root
+          - `VorteX_E-Sport-*-5.10-VorteXSU+SuSFS.zip` - VorteXSU (KPM Patch)
+          - `VorteX_E-Sport-*-5.10-SukiSU+SuSFS.zip` - SukiSU Ultra (KPM Patch)
+          - `VorteX_E-Sport-*-5.10-WildKSU.zip` - WildKSU
+          - `VorteX_E-Sport-*-5.10-WildKSU+SuSFS.zip` - WildKSU + Hidden Root
+          
+          #### 🟢 GKI 6.1 (Android 14)
+          - `VorteX_E-Sport-*-6.1-VNL.zip` - Vanilla (No Root)
+          - `VorteX_E-Sport-*-6.1-KSU.zip` - Standard KernelSU
+          - `VorteX_E-Sport-*-6.1-KSU+SuSFS.zip` - KernelSU + Hidden Root
+          - `VorteX_E-Sport-*-6.1-VorteXSU+SuSFS.zip` - VorteXSU (KPM Patch)
+          - `VorteX_E-Sport-*-6.1-SukiSU+SuSFS.zip` - SukiSU Ultra (KPM Patch)
+          - `VorteX_E-Sport-*-6.1-WildKSU.zip` - WildKSU
+          - `VorteX_E-Sport-*-6.1-WildKSU+SuSFS.zip` - WildKSU + Hidden Root
+          
+          #### 🟣 GKI 6.6 (Android 15)
+          - `VorteX_E-Sport-*-6.6-VNL.zip` - Vanilla (No Root)
+          - `VorteX_E-Sport-*-6.6-KSU.zip` - Standard KernelSU
+          - `VorteX_E-Sport-*-6.6-KSU+SuSFS.zip` - KernelSU + Hidden Root
+          - `VorteX_E-Sport-*-6.6-VorteXSU+SuSFS.zip` - VorteXSU (KPM Patch)
+          - `VorteX_E-Sport-*-6.6-SukiSU+SuSFS.zip` - SukiSU Ultra (KPM Patch)
+          - `VorteX_E-Sport-*-6.6-WildKSU.zip` - WildKSU
+          - `VorteX_E-Sport-*-6.6-WildKSU+SuSFS.zip` - WildKSU + Hidden Root
+          
+          ---
+          
+          ### ⚡ Features
+          
+          - 🎮 **VortexCore Governor** - Custom CPU governor for gaming & daily use
+          - 🛡️ **Ultra-Safe Kernel Patches** - Optimized for stability
+          - 📸 **Camera Fixes** - Infinix GT 20 Pro camera patch (GKI 5.10)
+          - 🎮 **GPU Tuning** - Adreno SkiaVK driver included
+          - 🔧 **WiFi/BT Fixes** - SM8650 & WCN3988 support (GKI 6.1)
+          
+          ### 🔐 Root Solutions
+          
+          | Variant | KPM Patch | SuSFS Support | Description |
+          |---------|-----------|---------------|-------------|
+          | **KSU** | ❌ | ✅ Optional | Standard KernelSU-Next |
+          | **VorteXSU** | ✅ | ✅ Recommended | Custom KPM-based root |
+          | **SukiSU** | ✅ | ✅ Recommended | KPM-based (same family) |
+          | **WildKSU** | ❌ | ✅ Optional | Alternative KSU fork |
+          | **VNL** | ❌ | ❌ | No root (vanilla) |
+          
+          ---
+          
+          ### 📱 Installation
+          
+          1. Download ZIP file sesuai variant pilihan
+          2. Flash via AnyKernel3 / Magisk / KernelFlash
+          3. Reboot device
+          
+          > ⚠️ **Backup data sebelum flash!**
+          
+          ---
+          
+          ### 💬 Support
+          
+          - 📞 Telegram: [VorteX_E-Sport](https://t.me/VorteX_ESport)
+          - 🌐 GitHub: [Kingfinik98/build-vortex](https://github.com/Kingfinik98/build-vortex)
+          
+          ---
+          
+          *Built with ❤️ by Kingfinik98 (VorteX_E-Sport)*
+          *© 2024-2026 All Rights Reserved*
+          EOF
+          
+          # Replace placeholders with actual values
+          sed -i "s/{KERNEL_NAME}/${KERNEL_NAME:-VorteX_E-Sport}/g" release_notes.md
+          sed -i "s/{TIMESTAMP}/${BUILD_TIMESTAMP:-$(date)}/g" release_notes.md
+          sed -i "s/{LINUX_VERSION/${LINUX_VERSION:-Multiple}/g" release_notes.md
+          sed -i "s/{SUSFS_VERSION}/${SUSFS_VERSION:-N/A}/g" release_notes.md
+          
+          echo "✅ Release notes prepared:"
+          cat release_notes.md | head -30
+          echo "..."
+          
+      # ------------------------------------------
+      # STEP 5: List All Files to Upload
+      # ------------------------------------------
+      - name: 📋 List Build Artifacts
+        run: |
+          echo "=========================================="
+          echo "  📦 ARTIFACTS TO UPLOAD"
+          echo "=========================================="
+          
+          if [ -d "release_files" ]; then
+            find release_files -type f \( -name "*.zip" -o -name "*.img" \) | sort | while read file; do
+              SIZE=$(ls -lh "$file" | awk '{print $5}')
+              NAME=$(basename "$file")
+              echo "  📄 $NAME ($SIZE)"
+            done
+            
+            TOTAL=$(find release_files -type f \( -name "*.zip" -o -name "*.img" \) | wc -l)
+            echo ""
+            echo "  Total files: $TOTAL"
+          else
+            echo "  ⚠️  No artifacts found!"
+          fi
+          
+          echo "=========================================="
+
+      # ------------------------------------------
+      # STEP 6: Create GitHub Release
+      # ------------------------------------------
+      - name: 🚀 Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          echo "=========================================="
+          echo "  🚀 CREATING GITHUB RELEASE"
+          echo "=========================================="
+          
+          # Set defaults if not extracted
+          RELEASE_REPO="${RELEASE_REPO:-Kingfinik98/build-vortex}"
+          
+          echo "  Tag: ${RELEASE_TAG}"
+          echo "  Repo: ${RELEASE_REPO}"
+          echo ""
+          
+          # Create release with all artifacts
+          gh release create "${RELEASE_TAG}" \
+            --repo "${RELEASE_REPO}" \
+            --title "🐧 VorteX_E-Sport - All GKI (${BUILD_TIMESTAMP})" \
+            --notes-file release_notes.md \
+            release_files/*.zip \
+            release_files/*.img \
+            2>/dev/null || {
+              echo "⚠️  Some files may have failed, but release created"
+            }
+          
+          echo ""
+          echo "✅ Release created successfully!"
+          echo "🔗 Link: https://github.com/${RELEASE_REPO}/releases/tag/${RELEASE_TAG}"
+          echo "=========================================="
+
+      # ------------------------------------------
+      # STEP 7: Send Telegram Notification
+      # ------------------------------------------
+      - name: 📬 Send Telegram Notification
+        env:
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        run: |
+          echo "=========================================="
+          echo "  📬 SENDING TELEGRAM NOTIFICATION"
+          echo "=========================================="
+          
+          RELEASE_REPO="${RELEASE_REPO:-Kingfinik98/build-vortex}"
+          RELEASE_LINK="https://github.com/${RELEASE_REPO}/releases/tag/${RELEASE_TAG}"
+          
+          # Count total builds
+          TOTAL_ZIPS=$(find release_files -name "*.zip" 2>/dev/null | wc -l)
+          
+          # Create beautiful message
+          MESSAGE=$(cat << EOF
+          *🐧 VORTEX_E-SPORT - ALL GKI RELEASE* 🚀
+          
+          ✅ *Build Status*: SUCCESS
+          📦 *Total Variants*: ${TOTAL_ZIPS} ZIPs
+          🐧 *Kernel Versions*: 5.10, 6.1, 6.6
+          📅 *Build Date*: ${BUILD_TIMESTAMP}
+          🔐 *Root Options*: KSU, VorteXSU, SukiSU, WildKSU, VNL
+          
+          ———————————————
+          📥 *DOWNLOAD RELEASE*:
+          [${RELEASE_TAG}](${RELEASE_LINK})
+          ———————————————
+          
+          *Available Variants:*
+          🔵 GKI 5.10 (Android 12)
+          🟢 GKI 6.1 (Android 14)
+          🟣 GKI 6.6 (Android 15)
+          
+          Each version includes:
+          • VNL (Vanilla/No Root)
+          • KSU (Standard KernelSU)
+          • KSU+SuSFS (Hidden Root)
+          • VorteXSU (KPM Patch)
+          • SukiSU (KPM Patch)
+          • WildKSU (Alternative)
+          
+          ———————————————
+          _Built with ❤️ by @Kingfinik98_
+          _© 2024-2026 VorteX_E-Sport_
+          EOF
+          )
+          
+          # Send message using curl (direct, no need functions.sh)
+          curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TG_CHAT_ID}" \
+            -d "parse_mode=markdown" \
+            -d "disable_web_page_preview=true" \
+            -d "text=${MESSAGE}" \
+            && echo "" && echo "✅ Telegram notification sent!" || echo "❌ Failed to send Telegram notification"
+          
+          echo "=========================================="
+
+      # ------------------------------------------
+      # STEP 8: Final Summary
+      # ------------------------------------------
+      - name: 📊 Build Summary
+        if: always()
+        run: |
+          echo "## 🎉 Release Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Status** | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Release Tag** | \`${RELEASE_TAG}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Kernel Versions** | \`5.10\`, \`6.1\`, \`6.6\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Variants Built** | \`VNL\`, \`KSU\`, \`VorteXSU\`, \`SukiSU\`, \`WildKSU\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Total Builds** | $(find release_files -name '*.zip' 2>/dev/null | wc -l) files |" >> $GITHUB_STEP_SUMMARY
