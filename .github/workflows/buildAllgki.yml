@@ -59,21 +59,24 @@ jobs:
           fetch-depth: 1
 
       # ============================================
-      # 🔥 FIX: SET STATUS=RELEASE (YANG SEBELUMNYA HILANG!)
+      # 🔥 FIX #1: SET STATUS=RELEASE (CRITICAL!)
       # ============================================
-      - name: 🔍 Set Build Status
+      - name: 🔍 Initialize Build Environment
         run: |
-          echo "STATUS=RELEASE" >> $GITHUB_ENV
-          echo "TRIGGER=workflow_dispatch" >> $GITHUB_ENV
           echo "=========================================="
           echo "  🚀 VORTEX_E-SPORT BUILD SYSTEM"
           echo "=========================================="
-          echo "  Kernel : ${{ matrix.kernel_version }}"
-          echo "  Variant: ${{ matrix.variant_name }}"
-          echo "  KSU   : ${{ matrix.ksu }}"
-          echo "  SuSFS : ${{ matrix.ksu_susfs }}"
-          echo "  Last  : ${{ matrix.last_build }}"
-          echo "  STATUS: RELEASE (FIXED!)"
+          
+          # 🔥 FIX: Set STATUS agar build.sh tahu ini RELEASE build
+          echo "STATUS=RELEASE" >> $GITHUB_ENV
+          echo "TRIGGER=workflow_dispatch" >> $GITHUB_ENV
+          
+          echo "  Kernel   : ${{ matrix.kernel_version }}"
+          echo "  Variant  : ${{ matrix.variant_name }}"
+          echo "  KSU      : ${{ matrix.ksu }}"
+          echo "  SuSFS    : ${{ matrix.ksu_susfs }}"
+          echo "  Last Build: ${{ matrix.last_build }}"
+          echo "  STATUS   : RELEASE ✓ (FIX APPLIED)"
           echo "=========================================="
 
       - name: 📦 Install Dependencies
@@ -84,7 +87,10 @@ jobs:
             wget curl git zip unzip p7zip-full
           pip install lxml
 
-      - name: ⚙️ Run Build Script
+      # ============================================
+      # 🔥 FIX #2: PASS STATUS KE ENVIRONMENT
+      # ============================================
+      - name: ⚙️ Execute Build Script
         env:
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
@@ -97,17 +103,35 @@ jobs:
           KVER: ${{ matrix.kernel_version }}
           STATUS: "RELEASE"
         run: |
-          echo "▶️ STARTING: ${{ matrix.variant_name }} (${{ matrix.kernel_version }})"
-          echo "STATUS=$STATUS"
+          echo "▶️ STARTING BUILD: ${{ matrix.variant_name }} (${{ matrix.kernel_version }})"
+          echo "→ STATUS=$STATUS"
+          echo "→ KSU=$KSU"
+          echo "→ KSU_SUSFS=$KSU_SUSFS"
+          echo "→ LAST_BUILD=$LAST_BUILD"
+          echo ""
+          
           export GIT_CLONE_PROTECTION_ACTIVE=false
           chmod +x *.sh py/*.py 2>/dev/null || true
+          
           ./build.sh
+          
           EXIT_CODE=$?
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "❌ Failed: $EXIT_CODE"
+          
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo ""
+            echo "✅ Build completed successfully!"
+            
+            # Debug: Cek artifacts
+            if [ -d "$WORKDIR/artifacts" ]; then
+              echo "📦 Artifacts generated:"
+              ls -lh $WORKDIR/artifacts/ 2>/dev/null || echo "(empty)"
+            else
+              echo "⚠️ No artifacts directory found!"
+            fi
+          else
+            echo "❌ Build failed with exit code: $EXIT_CODE"
             exit $EXIT_CODE
           fi
-          echo "✅ Build OK!"
 
       - name: 📤 Upload Artifacts
         if: always()
@@ -247,7 +271,7 @@ jobs:
           sed -i "s/{KERNEL_NAME}/${KERNEL_NAME:-VorteX_E-Sport}/g" release_notes.md
           sed -i "s/{TIMESTAMP}/${BUILD_TIMESTAMP:-$(date)}/g" release_notes.md
           sed -i "s/{LINUX_VERSION}/${LINUX_VERSION:-Multiple}/g" release_notes.md
-          sed -i "s/{SUSFS_VERSION}/${SUSFS_VERSION:-N/A}/g" release_notes.md
+          sed -i "s/{SUSFS_VERSION/${SUSFS_VERSION:-N/A}/g" release_notes.md
           echo "✅ Release notes prepared!"
 
       - name: 📋 List Build Artifacts
