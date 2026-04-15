@@ -1,11 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * VortexMax CPU Governor (Stable Aggressive)
- * Engineered for GKI 5.10, 6.1, 6.6 (Hybrid API)
- * Philosophy: Peak performance without thermal suicide. 
- * Waits for actual load before striking, drops to MIN to allow cooldown.
- * Author: kingfinix98@gmail.com
- */
+
+VortexMax CPU Governor (Stable Aggressive)
+
+Engineered for GKI 5.10, 6.1, 6.6 (Hybrid API)
+
+Philosophy: Peak performance without thermal suicide.
+
+Waits for actual load before striking, drops to MIN to allow cooldown.
+
+Author: kingfinix98@gmail.com
+*/
+
 
 #include <linux/cpufreq.h>
 #include <linux/init.h>
@@ -17,19 +23,25 @@
 #include <linux/tick.h>
 #include <linux/workqueue.h>
 
-/* 
- * Threshold: CPU load percentage to trigger MAX frequency.
- * 5% is enough to detect gaming/heavy tasks without triggering on background noise.
- */
+/*
+
+Threshold: CPU load percentage to trigger MAX frequency.
+
+5% is enough to detect gaming/heavy tasks without triggering on background noise.
+*/
 static unsigned int max_threshold = 5;
 module_param_named(max_threshold, max_threshold, uint, 0644);
 
-/* 
- * Down Delay: How many sampling loops to hold MAX before dropping to MIN.
- * Prevents oscillation when CPU load fluctuates around the threshold.
- */
+
+/*
+
+Down Delay: How many sampling loops to hold MAX before dropping to MIN.
+
+Prevents oscillation when CPU load fluctuates around the threshold.
+*/
 static unsigned int down_delay = 2;
 module_param_named(down_delay, down_delay, uint, 0644);
+
 
 struct vortex_cpu_info {
     u64 prev_idle;
@@ -45,12 +57,20 @@ struct vortex_policy_info {
 };
 
 /*
- * Binary scaling governor:
- * - Instant jump to max saat load naik
- * - Hold max untuk sementara (anti oscillation saat load fluktuatif)
- * - Turun ke min untuk cooldown
- * Fokus: low latency & fast response (gaming oriented)
- */
+
+Binary scaling governor:
+
+Instant jump to max saat load naik
+
+
+Hold max untuk sementara (anti oscillation saat load fluktuatif)
+
+
+Turun ke min untuk cooldown
+
+
+Fokus: low latency & fast response (gaming oriented)
+*/
 static void vortex_eval_freq(struct cpufreq_policy *policy)
 {
     /* CRITICAL FIX: Prevent crash from uninitialized or race-condition pointers */
@@ -99,6 +119,7 @@ static void vortex_eval_freq(struct cpufreq_policy *policy)
         __cpufreq_driver_target(policy, target, CPUFREQ_RELATION_H);
     }
 }
+
 
 static void vortex_work(struct work_struct *work)
 {
@@ -172,13 +193,13 @@ static void vortex_limits(struct cpufreq_policy *policy)
 }
 
 static struct cpufreq_governor vortex_gov = {
-    .name	= "vortexmax",
-    .owner	= THIS_MODULE,
-    .init	= vortex_init,
-    .exit	= vortex_exit,
-    .start	= vortex_start,
-    .stop	= vortex_stop,
-    .limits	= vortex_limits,
+    .name		= "vortexmax",
+    .owner		= THIS_MODULE,
+    .init		= vortex_init,
+    .exit		= vortex_exit,
+    .start		= vortex_start,
+    .stop		= vortex_stop,
+    .limits		= vortex_limits,
 };
 
 static int __init vortex_module_init(void)
