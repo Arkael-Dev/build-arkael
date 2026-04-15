@@ -402,7 +402,7 @@ EOF
           sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
         else
           log "Applying statfs CRC fix patch (KernelSU Next)..."
-          patch -p1 < $KERNEL_PATCHES/susfs/fix-statfs-crc-mismatch-susfs.patch
+          patch -p1 < $KERNEL_PATCHES/fix-statfs-crc-mismatch-susfs.patch
         fi
       elif [ "$KSU" == "vortexsu" ] && [ "$KVER" == "6.1" ]; then
         log "Applying manual statfs CRC fix for VorteXSU GKI 6.1..."
