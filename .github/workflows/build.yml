@@ -41,7 +41,6 @@ on:
           - "no"           # Vanilla - No Root
           - "yes"          # KernelSU-Next (Standard)
           - "vortexsu"     # VorteXSU (KPM Enabled)
-          - "sukisu"       # SukiSU Ultra (KPM Enabled) 🆕
           - "wildksu"      # WildKSU (No KPM) 🆕
 
       KSU_SUSFS:
@@ -164,7 +163,7 @@ jobs:
           fi
 
           # ==========================================
-          # KERNELSU VARIANT VALIDATION
+          # KERNELSU VARIANT VALIDATION (4 VARIANTS ONLY)
           # ==========================================
           echo ""
           echo "--- Validating KSU Variant ---"
@@ -176,18 +175,15 @@ jobs:
             "vortexsu")
               _info "Variant: VorteXSU (KPM Enabled)"
               ;;
-            "sukisu")
-              _info "Variant: SukiSU Ultra (KPM Enabled) 🆕"
-              ;;
             "wildksu")
-              _info "Variant: WildKSU (No KPM) 🆕"
+              _info "Variant: WildKSU (No KPM)"
               ;;
             "no")
               _info "Variant: Vanilla (No Root)"
               ;;
             *)
               _error "Invalid KSU value: '$KSU'"
-              _info "Valid options: yes, vortexsu, sukisu, wildksu, no"
+              _info "Valid options: yes, vortexsu, wildksu, no"
               ;;
           esac
 
@@ -202,9 +198,9 @@ jobs:
               _error "Cannot enable SuSFS without KernelSU (KSU=no)"
           fi
           
-          # VorteXSU & SukiSU strongly recommend SuSFS
-          if [[ ($KSU == "vortexsu" || $KSU == "sukisu") && $KSU_SUSFS != "true" ]]; then
-              _warn "$KSU variant works best with SuSFS enabled!"
+          # VorteXSU strongly recommend SuSFS
+          if [[ $KSU == "vortexsu" && $KSU_SUSFS != "true" ]]; then
+              _warn "VorteXSU variant works best with SuSFS enabled!"
               _info "Consider setting KSU_SUSFS=true for optimal root hiding"
           fi
           
@@ -257,14 +253,14 @@ jobs:
           esac
 
           # ==========================================
-          # VARIANT-SPECIFIC WARNINGS/INFO
+          # VARIANT-SPECIFIC WARNINGS/INFO (TANPA SUKISU)
           # ==========================================
           echo ""
           echo "--- Variant Specific Information ---"
           
-          if [[ $KSU == "sukisu" ]]; then
-            _info "🌟 SukiSU Ultra will use KPM patch (same as VorteXSU)"
-            _info "   Output ZIP will contain: SukiSU+SuSFS (if enabled)"
+          if [[ $KSU == "vortexsu" ]]; then
+            _info "⚡ VorteXSU will use KPM patch"
+            _info "   Output ZIP will contain: VorteXSU+SuSFS (if enabled)"
           fi
           
           if [[ $KSU == "wildksu" ]]; then
@@ -272,9 +268,9 @@ jobs:
             _info "   Output ZIP will contain: WildKSU+SuSFS (if enabled)"
           fi
           
-          if [[ $KSU == "vortexsu" ]]; then
-            _info "⚡ VorteXSU will use KPM patch"
-            _info "   Output ZIP will contain: VorteXSU+SuSFS (if enabled)"
+          if [[ $KSU == "yes" ]]; then
+            _info "📦 Standard KernelSU-Next (No KPM)"
+            _info "   Output ZIP will contain: KSU+SuSFS (if enabled)"
           fi
 
           # ==========================================
@@ -383,13 +379,9 @@ jobs:
           echo "=========================================="
           echo ""
           
-          # Export required for git clone operations
           export GIT_CLONE_PROTECTION_ACTIVE=false
-          
-          # Make scripts executable
           chmod +x *.sh py/*.py 2>/dev/null || true
           
-          # Execute main build script
           ./build.sh
           
           BUILD_EXIT_CODE=$?
@@ -439,7 +431,6 @@ jobs:
       - name: 📊 Generate Build Summary
         if: always()
         run: |
-          # Create summary for GitHub Actions UI
           cat >> $GITHUB_STEP_SUMMARY << 'EOF'
           
           ## 🏗️ Build Details
@@ -455,7 +446,6 @@ jobs:
           
           EOF
           
-          # List artifacts if they exist
           if [ -d "artifacts" ] && [ "$(ls -A artifacts)" ]; then
             echo "| File | Size |" >> $GITHUB_STEP_SUMMARY
             echo "|------|------|" >> $GITHUB_STEP_SUMMARY
