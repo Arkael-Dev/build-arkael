@@ -1,5 +1,5 @@
 #/*!
-# * © 2024-2026 Kingfinik98 (VorteX_E-Sport). All Rights Reserved.
+# * © 2025-2026 Kingfinik98 (VorteX_E-Sport). All Rights Reserved.
 # * Original Author: Kingfinik98
 # * Original Repository: https://github.com/Kingfinik98/build-vortex
 # */
@@ -44,7 +44,7 @@ elif [ "$KVER" == "5.10" ]; then
   KERNEL_BRANCH="vortex-basse"
 fi
 DEFCONFIG_TO_MERGE=""
-GKI_RELEASES_REPO="https://github.com/Kingfinik98/build-vortex"
+GKI_RELEASES_REPO="https://github.com/KINGfinik98/build-vortex"
 #Change the clang by removing the (#) sign then apply
 #CLANG_URL="https://github.com/linastorvaldz/idk/releases/download/clang-r547379/clang.tgz"
 #CLANG_URL="https://github.com/LineageOS/android_prebuilts_clang/kernel/linux-x86_clang-r416183b/archive/refs/heads/lineage-20.0.tar.gz"
@@ -113,8 +113,8 @@ fi
 #fi
 # ----------------------------------------------------
 
-# # --- INJECT VORTEX GPU TUNING (GKI 5.10, 6.1, 6.6) ---
-if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
+# # --- INJECT VORTEX GPU TUNING (GKI 5.10 ONLY) ---
+if [ "$KVER" == "5.10" ]; then
   log "Injecting VorteX Ultra-Safe Kernel Patch..."
   mkdir -p "$KSRC/drivers/misc"
   cp "$KERNEL_PATCHES/vortex_gki.c" "$KSRC/drivers/misc/vortex_gki.c"
@@ -153,6 +153,38 @@ KCONF_EOF
     log "VortexCore added to cpufreq Kconfig."
   else
     log "VortexCore already in cpufreq Kconfig."
+  fi
+fi
+
+# --- INJECT VORTEXMAX GOVERNOR (GKI 5.10, 6.1, 6.6) ---
+if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
+  log "Injecting VortexMax Custom Governor..."
+  
+  # 1. Copy source file ke kernel tree
+  cp "$WORKDIR/governor-vortexmax.c" "$KSRC/drivers/cpufreq/governor-vortexmax.c"
+  
+  # 2. Add to Makefile if it is not already there
+  if ! grep -q "governor-vortexmax.o" "$KSRC/drivers/cpufreq/Makefile"; then
+    echo "obj-y += governor-vortexmax.o" >> "$KSRC/drivers/cpufreq/Makefile"
+    log "VortexMax added to cpufreq Makefile."
+  else
+    log "VortexMax already in cpufreq Makefile."
+  fi
+  
+  # 3. Add to Kconfig if it's not there
+  if ! grep -q "CPU_FREQ_GOV_VORTEXMAX" "$KSRC/drivers/cpufreq/Kconfig"; then
+    cat << 'KCONF_MAX_EOF' >> "$KSRC/drivers/cpufreq/Kconfig"
+
+config CPU_FREQ_GOV_VORTEXMAX
+    tristate "VortexMax Raw Performance Governor"
+    depends on CPU_FREQ
+    help
+      VortexMax provides uncompromising peak frequency scaling for maximum gaming performance.
+      If in doubt, say N.
+KCONF_MAX_EOF
+    log "VortexMax added to cpufreq Kconfig."
+  else
+    log "VortexMax already in cpufreq Kconfig."
   fi
 fi
 # ----------------------------------------------------
@@ -317,7 +349,7 @@ elif [ "$KSU" == "vortexsu" ]; then
     rm -rf sus/.git
     susfs=sus/kernel_patches
     cp -r $susfs/fs .
-    cp -r $susfs/include .
+    cp -r $susfs/include/linux/* ./include/linux/
     cp -r $susfs/50_add_susfs_in_${SUSFS_BRANCH}.patch .
     patch -p1 < 50_add_susfs_in_${SUSFS_BRANCH}.patch || true
     SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
@@ -410,7 +442,7 @@ EOF
       fi
     fi
 
-    SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d ' ' -f3 | sed 's/"//g')
+    SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
     config --enable CONFIG_KSU_SUSFS
   else
     log "Skipping standard SUSFS patch (Handled by VorteXSU or logic elsewhere)."
@@ -485,6 +517,7 @@ log "Enabling VorteX kernel dependencies..."
 config --enable CONFIG_TCP_CONG_WESTWOOD
 config --enable CONFIG_DEVFREQ_GOV_SCHEDUTIL
 config --enable CONFIG_CPU_FREQ_GOV_VORTEXCORE
+config --enable CONFIG_CPU_FREQ_GOV_VORTEXMAX
 
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   config --enable CONFIG_ANDROID_LOW_MEMORY_KILLER
@@ -513,7 +546,7 @@ if [ $TODO == "defconfig" ]; then
 fi
 
 # Build the actual kernel
-log "Building kernel..."
+log "Starting Compilation..."
 make ${MAKE_ARGS[@]}
 
 # Check KMI Function symbol
@@ -529,16 +562,12 @@ if [ "$KSU" == "vortexsu" ]; then
   cd $OUTDIR/arch/arm64/boot
   if [ -f Image ]; then
     echo "✅ Image found, applying KPM patch..."
-    curl -LSs "https://github.com/Kingfinik98/SukiSU_patch/raw/refs/heads/main/kpm/patch_linux" -o patch
-    chmod 777 patch
+    curl -LSs "https://github.com/Kingfinik98/SukiSU_patch/raw/refs/heads/main/kpm/patch_linux" -o patch && chmod 777 patch
     ./patch
-    if [ -f oImage ]; then
-      mv -f oImage Image
-      ls -lh Image
-      log "✅ KPM Patch applied successfully."
-    else
-      log "Error: oImage not found!"
-    fi
+    [ -f oImage ] && mv -f oImage Image && ls -lh Image && log "✅ KPM Patch applied successfully."
+  else
+    log "Error: oImage not found!"
+  fi
   else
     log "Warning: Image file not found in $PWD. Skipping KPM patch."
   fi
@@ -567,7 +596,7 @@ else
   AK3_ZIP_NAME=${AK3_ZIP_NAME//-BUILD_DATE/}
   AK3_ZIP_NAME=${AK3_ZIP_NAME//REL/$RELEASE}
   sed -i \
-    "s/kernel.string=.*.*/kernel.string=${KERNEL_NAME} ${RELEASE} ${LINUX_VERSION} ${VorteX} ${VARIANT}/g" \
+    "s/kernel.string=.*/kernel.string=${KERNEL_NAME} ${RELEASE} ${LINUX_VERSION} ${VARIANT}/g" \
     $WORKDIR/anykernel/anykernel.sh
 fi
 
@@ -579,7 +608,7 @@ zip -r9 $WORKDIR/$AK3_ZIP_NAME ./*
 cd $OLDPWD
 
 if [ $STATUS != "BETA" ]; then
-  echo "BASE_NAME=$KERNEL_NAME-$VARIANT" >> $GITHUB_ENV
+  echo "BASE_NAME=${KERNEL_NAME}-${VARIANT}" >> $GITHUB_ENV
   mkdir -p $WORKDIR/artifacts
   mv $WORKDIR/*.zip $WORKDIR/artifacts
 fi
@@ -587,9 +616,9 @@ fi
 if [ $LAST_BUILD == "true" ] && [ $STATUS != "BETA" ]; then
   (
     echo "LINUX_VERSION=$LINUX_VERSION"
-    echo "SUSFS_VERSION=$(curl -s https://gitlab.com/simonpunk/susfs4ksu/raw/gki-android15-6.6/kernel_patches/include/linux/susfs.h | grep -E '^#define SUSFS_VERSION' | cut -d' ' -f3 | sed 's/"//g')"
+    SUSFS_VERSION=$(curl -s https://gitlab.com/simonpunk/susfs4ksu/raw/gki-android15-6.6/kernel_patches/include/linux/susfs.h | grep -E '^#define SUSFS_VERSION' | cut -d' ' -f3 | sed 's/"//g')
     echo "KERNEL_NAME=$KERNEL_NAME"
-    echo "RELEASE_REPO=$(simplify_gh_url "$GKI_RELEASES_REPO")"
+    echo "RELEASE_REPO=$(simplify_gh_url "$GKI_RELEASES_REPO")" >> $WORKDIR/artifacts/info.txt
   ) >> $WORKDIR/artifacts/info.txt
 fi
 
@@ -597,7 +626,7 @@ if [ $STATUS == "BETA" ]; then
   upload_file "$WORKDIR/$AK3_ZIP_NAME" "$text"
   upload_file "$WORKDIR/build.log"
 else
-  send_msg "✅ Build Succeeded for $VorteX ${VARIANT} variant."
+  send_msg "✅ Build Succeeded for ${VARIANT} variant."
 fi
 
 exit 0
