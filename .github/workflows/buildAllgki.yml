@@ -1,5 +1,5 @@
 #/*!
-# * © 2025-2026 Kingfinik98 (VorteX_E-Sport). All Rights Reserved.
+# * © 2024-2026 Kingfinik98 (VorteX_E-Sport). All Rights Reserved.
 # * Original Author: Kingfinik98
 # * Original Repository: https://github.com/Kingfinik98/build-vortex
 # * Signed-off-by: kingfinix98@gmail.com
@@ -11,13 +11,13 @@ on:
   workflow_dispatch:
     inputs:
       RELEASE_TYPE:
-        description: '🎯 Release Type'
+        description: '🎯 Release Mode'
         default: 'full'
         type: choice
         options:
-          - 'full'           # All GKI × All Variants (9 builds)
-          - 'ksu_only'       # Only KSU variants (no vanilla)
-          - 'minimal'        # Only popular combos (VNL, KSU+SuSFS, VorteXSU)
+          - 'full'           # Build ALL combinations (12 builds) - Complete release
+          - 'ksu_only'       # KSU variants only, no vanilla (9 builds)
+          - 'minimal'        # Popular combos only (4 builds) - Fast test
 
 env:
   MAN_DISABLE: true
@@ -36,7 +36,7 @@ jobs:
         # Kernel Versions
         kernel_version: ['5.10', '6.1', '6.6']
         
-        # Variant Configuration (3 VARIANTS ONLY - TANPA WILDKSU)
+        # Variant Configuration (3 VARIANTS ONLY)
         include:
           # ========== VANILLA (No Root) ==========
           - variant_name: "VNL"
@@ -71,7 +71,7 @@ jobs:
           fetch-depth: 1
 
       # ------------------------------------------
-      # STEP 2: Determine Build Status
+      # STEP 2: Display Build Info
       # ------------------------------------------
       - name: 🔍 Determine Build Status
         run: |
@@ -82,8 +82,8 @@ jobs:
           echo "=========================================="
           echo "  Kernel : ${{ matrix.kernel_version }}"
           echo "  Variant: ${{ matrix.variant_name }}"
-          echo "  KSU    : ${{ matrix.ksu }}"
-          echo "  SuSFS  : ${{ matrix.ksu_susfs }}"
+          echo  "  KSU    : ${{ matrix.ksu }}"
+          echo  "  SuSFS  : ${{ matrix.ksu_susfs }}"
           echo "=========================================="
 
       # ------------------------------------------
@@ -224,7 +224,7 @@ jobs:
           echo "🏷️  Release Tag: ${RELEASE_TAG}"
 
       # ------------------------------------------
-      # STEP 4: Prepare Release Notes (3 VARIANTS ONLY)
+      # STEP 4: Prepare Release Notes
       # ------------------------------------------
       - name: 📝 Prepare Release Notes
         run: |
@@ -284,11 +284,11 @@ jobs:
           
           ### 📱 Installation
           
-          1. Download ZIP file sesuai variant pilihan
-          2. Flash via AnyKernel3 / Magisk / KernelFlash
+          1. Download ZIP file according to your chosen variant
+          2 Flash via AnyKernel3 / Magisk / KernelFlash
           3. Reboot device
           
-          > ⚠️ **Backup data sebelum flash!**
+          > ⚠️ **Backup your data before flashing!**
           
           ---
           
@@ -366,7 +366,7 @@ jobs:
           echo "=========================================="
 
       # ------------------------------------------
-      # STEP 7: Send Telegram Notification (3 VARIANTS ONLY)
+      # STEP 7: Send Telegram Notification
       # ------------------------------------------
       - name: 📬 Send Telegram Notification
         env:
@@ -384,7 +384,7 @@ jobs:
           MESSAGE="*🐧 VORTEX_E-SPORT - ALL GKI RELEASE* 🚀
 
           ✅ *Build Status*: SUCCESS
-          📦 *Total Variants*: ${TOTAL_ZIPS} ZIPs
+          📦 *Total Builds*: ${TOTAL_ZIPS} ZIPs
           🐧 *Kernel Versions*: 5.10, 6.1, 6.6
           📅 *Build Date*: ${BUILD_TIMESTAMP}
           🔐 *Root Options*: KSU, VorteXSU, VNL
@@ -396,7 +396,7 @@ jobs:
 
           *Available Variants:*
           🔵 GKI 5.10 (Android 12)
-          🟢 GKI 6.1 (Android 14)
+          🟢 GCI 6.1 (Android 14)
           🟣 GKI 6.6 (Android 15)
 
           Each version includes:
@@ -407,7 +407,7 @@ jobs:
 
           ———————————————
           _Built with ❤️ by @Kingfinik98_
-          _© 2025-2026 VorteX_E-Sport_"
+          _© 2024-2026 VorteX_E-Sport_"
           
           curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${TG_CHAT_ID}" \
@@ -418,7 +418,7 @@ jobs:
           echo "=========================================="
 
       # ------------------------------------------
-      # STEP 8: Final Summary (3 VARIANTS ONLY)
+      # STEP 8: Final Summary
       # ------------------------------------------
       - name: 📊 Build Summary
         if: always()
