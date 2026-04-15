@@ -20,7 +20,7 @@ KERNEL_NAME="VorteX_E-Sport"
 USER="VorteX"
 HOST="VorteX"
 TIMEZONE="Asia/Jakarta"
-ANYKERNEL_REPO="https://github.com/Kingfinik98/AnyKernel"
+ANYKERNEL_REPO="https://github.com/Kingfinik98/AnyKernel3"
 
 # Fixed Logic: 5.10 & 6.1 use gki_defconfig, others use quartix_defconfig
 if [ "$KVER" == "5.10" ]; then
@@ -208,13 +208,12 @@ fi
 # --------------------------------------
 cd $WORKDIR
 
-# Set Kernel variant
+# Set Kernel variant (WITHOUT SUKISU)
 log "Setting Kernel variant..."
 case "$KSU" in
   "yes") VARIANT="KSU" ;;
   "vortexsu") VARIANT="VorteXSU" ;;
   "no") VARIANT="VNL" ;;
-  "sukisu") VARIANT="SukiSU" ;;          # 🆕 SukiSU Ultra Variant
   "wildksu") VARIANT="WildKSU" ;;         # 🆕 WildKSU Variant
 esac
 susfs_included && VARIANT+="+SuSFS"
@@ -308,7 +307,7 @@ if ksu_included; then
     fi
   fi
 
-# --- VorteXSU Setup Block ---
+# --- VorteXSU Setup Block (KPM ENABLED) ---
 elif [ "$KSU" == "vortexsu" ]; then
   log "Setting up VorteXSU for KVER $KVER..."
   
@@ -336,50 +335,6 @@ elif [ "$KSU" == "vortexsu" ]; then
 fi
 
 # ============================================
-# 🆕 SukiSU Ultra Setup Block (NEW VARIANT - KPM ENABLED)
-# ============================================
-if [ "$KSU" == "sukisu" ]; then
-  log "🌟 Setting up SukiSU Ultra for KVER $KVER..."
-  
-  log "Running SukiSU Ultra setup from main branch..."
-  curl -LSs "https://raw.githubusercontent.com/Kingfinik98/SukiSU-Ultra/refs/heads/main/kernel/setup.sh" | bash -s main
-  
-  config --enable CONFIG_KSU
-  config --enable CONFIG_KPM  # 🆕 Enable KPM for SukiSU (same as VorteXSU)
-  
-  if [ "$KVER" == "5.10" ]; then
-    log "Applying additional fixes for SukiSU Ultra on GKI 5.10..."
-    # Apply stack protector fix jika diperlukan
-    if [ -f "drivers/kernelsu/ksu.c" ]; then
-      sed -i '/^#if.*CONFIG_STACKPROTECTOR_PER_TASK/c\#if 0 \/\/ Disabled to fix duplicate symbol' drivers/kernelsu/ksu.c || true
-      log "Stack protector fix applied for SukiSU Ultra."
-    fi
-    
-    # Apply SUSFS patches for GKI 5.10 (same method as VorteXSU)
-    log "Applying SUSFS patches for GKI 5.10 (SukiSU Method)..."
-    SUSFS_BRANCH="gki-android12-5.10"
-    git clone https://gitlab.com/simonpunk/susfs4ksu/ -b $SUSFS_BRANCH sus_sukisu 2>/dev/null || true
-    if [ -d "sus_sukisu" ]; then
-      rm -rf sus_sukisu/.git
-      susfs=sus_sukisu/kernel_patches
-      cp -r $susfs/fs . 2>/dev/null || true
-      cp -r $susfs/include . 2>/dev/null || true
-      cp -r $susfs/50_add_susfs_in_${SUSFS_BRANCH}.patch . 2>/dev/null || true
-      patch -p1 < 50_add_susfs_in_${SUSFS_BRANCH}.patch 2>/dev/null || true
-      SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h 2>/dev/null | cut -d' ' -f3 | sed 's/"//g')
-      config --enable CONFIG_KSU_SUSFS
-      log "[✓] SukiSU Ultra & SUSFS patched for $KVER."
-      rm -rf sus_sukisu
-    fi
-  else
-    config --enable CONFIG_KSU_SUSFS
-    log "SUSFS config enabled for $KVER. Applying patches in Standard block..."
-  fi
-  
-  log "[✅] SukiSU Ultra setup completed for $KVER (KPM Enabled)."
-fi
-
-# ============================================
 # 🆕 WildKSU Setup Block (NEW VARIANT - NO KPM)
 # ============================================
 if [ "$KSU" == "wildksu" ]; then
@@ -404,10 +359,10 @@ if [ "$KSU" == "wildksu" ]; then
 fi
 # ============================================
 
-# SUSFS (Standard Logic for KernelSU yes & VorteXSU/SukiSU 6.1/6.6 & WildKSU)
+# SUSFS (Standard Logic for KernelSU yes & VorteXSU 6.1/6.6 & WildKSU)
 if susfs_included; then
-  # Skip standard SUSFS if already handled by VorteXSU/SukiSU 5.10 custom method
-  if [ "$KSU" != "vortexsu" ] && [ "$KSU" != "sukisu" ] || ([ "$KSU" == "vortexsu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ])) || ([ "$KSU" == "sukisu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ])); then
+  # Skip standard SUSFS if already handled by VorteXSU 5.10 custom method
+  if [ "$KSU" != "vortexsu" ] || ([ "$KSU" == "vortexsu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ])); then
     log "Applying kernel-side susfs patches (Standard Method)"
     SUSFS_DIR="$WORKDIR/susfs"
     SUSFS_PATCHES="${SUSFS_DIR}/kernel_patches"
@@ -464,8 +419,8 @@ EOF
       rm -f "$NS_INJECT_FILE"
 
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c3) -eq 510 ]; then
-      # Skip standard SUSFS 5.10 patch for vortexsu/sukisu (already handled above)
-      if [ "$KSU" != "vortexsu" ] && [ "$KSU" != "sukisu" ]; then
+      # Skip standard SUSFS 5.10 patch for vortexsu (already handled above)
+      if [ "$KSU" != "vortexsu" ]; then
         patch -p1 < $KERNEL_PATCHES/Susfs/pershoot-susfs-k5.10.patch || true
       fi
     fi
@@ -492,16 +447,7 @@ EOF
         log "Applying manual statfs CRC fix for VorteXSU GKI 6.6..."
         sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
         sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
-      # === NEW: Statfs fixes for SukiSU (KPM Variant) ===
-      elif [ "$KSU" == "sukisu" ] && [ "$KVER" == "6.1" ]; then
-        log "Applying manual statfs CRC fix for SukiSU Ultra GKI 6.1..."
-        sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
-        sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
-      elif [ "$KSU" == "sukisu" ] && [ "$KVER" == "6.6" ]; then
-        log "Applying manual statfs CRC fix for SukiSU Ultra GKI 6.6..."
-        sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
-        sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
-      # === NEW: Statfs fixes for WildKSU (Non-KPM Variant) ===
+      # === Statfs fixes for WildKSU (Non-KPM Variant) ===
       elif [ "$KSU" == "wildksu" ] && [ "$KVER" == "6.1" ]; then
         log "Applying manual statfs CRC fix for WildKSU GKI 6.1..."
         sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
@@ -510,14 +456,14 @@ EOF
         log "Applying manual statfs CRC fix for WildKSU GKI 6.6..."
         sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
         sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
-      # === END NEW ===
+      # === END WILDKSU FIXES ===
       fi
     fi
 
     SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d ' ' -f3 | sed 's/"//g')
     config --enable CONFIG_KSU_SUSFS
   else
-    log "Skipping standard SUSFS patch (Handled by VorteXSU/SukiSU 5.10 custom method)."
+    log "Skipping standard SUSFS patch (Handled by VorteXSU 5.10 custom method)."
   fi
 else
   config --disable CONFIG_KSU_SUSFS
@@ -627,9 +573,9 @@ else
   $KMI_CHECK "$KSRC/android/abi_gki_aarch64.xml" "$MODULE_SYMVERS" || true
 fi
 
-# --- PATCH KPM SECTION (FIXED: VorteXSU + SukiSU = KPM, Others = No KPM) ---
+# --- PATCH KPM SECTION (ONLY VORTEXSU = KPM, Others = No KPM) ---
 log "Applying KPM Patch..."
-if [ "$KSU" == "vortexsu" ] || [ "$KSU" == "sukisu" ]; then
+if [ "$KSU" == "vortexsu" ]; then
   cd $OUTDIR/arch/arm64/boot
   if [ -f Image ]; then
     echo "✅ Image found, applying KPM patch for ${VARIANT}..."
