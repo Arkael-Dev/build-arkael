@@ -41,7 +41,6 @@ on:
           - "no"           # Vanilla - No Root
           - "yes"          # KernelSU-Next (Standard)
           - "vortexsu"     # VorteXSU (KPM Enabled)
-          - "wildksu"      # WildKSU (No KPM) 🆕
 
       KSU_SUSFS:
         description: '🛡️ Enable SuSFS (Hide Root)?'
@@ -163,7 +162,7 @@ jobs:
           fi
 
           # ==========================================
-          # KERNELSU VARIANT VALIDATION (4 VARIANTS ONLY)
+          # KERNELSU VARIANT VALIDATION (3 VARIANTS ONLY)
           # ==========================================
           echo ""
           echo "--- Validating KSU Variant ---"
@@ -175,15 +174,12 @@ jobs:
             "vortexsu")
               _info "Variant: VorteXSU (KPM Enabled)"
               ;;
-            "wildksu")
-              _info "Variant: WildKSU (No KPM)"
-              ;;
             "no")
               _info "Variant: Vanilla (No Root)"
               ;;
             *)
               _error "Invalid KSU value: '$KSU'"
-              _info "Valid options: yes, vortexsu, wildksu, no"
+              _info "Valid options: yes, vortexsu, no"
               ;;
           esac
 
@@ -253,7 +249,7 @@ jobs:
           esac
 
           # ==========================================
-          # VARIANT-SPECIFIC WARNINGS/INFO (TANPA SUKISU)
+          # VARIANT-SPECIFIC WARNINGS/INFO
           # ==========================================
           echo ""
           echo "--- Variant Specific Information ---"
@@ -263,14 +259,13 @@ jobs:
             _info "   Output ZIP will contain: VorteXSU+SuSFS (if enabled)"
           fi
           
-          if [[ $KSU == "wildksu" ]]; then
-            _info "🐺 WildKSU does NOT use KPM patch"
-            _info "   Output ZIP will contain: WildKSU+SuSFS (if enabled)"
-          fi
-          
           if [[ $KSU == "yes" ]]; then
             _info "📦 Standard KernelSU-Next (No KPM)"
             _info "   Output ZIP will contain: KSU+SuSFS (if enabled)"
+          fi
+          
+          if [[ $KSU == "no" ]]; then
+            _info "📋 Vanilla build - No root solution"
           fi
 
           # ==========================================
