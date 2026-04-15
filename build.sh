@@ -113,8 +113,8 @@ fi
 #fi
 # ----------------------------------------------------
 
-# --- INJECT VORTEX GPU TUNING (GKI 5.10 ONLY) ---
-if [ "$KVER" == "5.10" ]; then
+# # --- INJECT VORTEX GPU TUNING (GKI 5.10, 6.1, 6.6) ---
+if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   log "Injecting VorteX Ultra-Safe Kernel Patch..."
   mkdir -p "$KSRC/drivers/misc"
   cp "$KERNEL_PATCHES/vortex_gki.c" "$KSRC/drivers/misc/vortex_gki.c"
@@ -156,7 +156,6 @@ KCONF_EOF
   fi
 fi
 # ----------------------------------------------------
-
 
 # --- PATCH inject.sh ---
 log "Applying inject.sh patch..."
