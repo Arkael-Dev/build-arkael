@@ -28,12 +28,8 @@ jobs:
   # JOB 1: MATRIX BUILD ALL COMBINATIONS
   # ============================================
   build:
-    name: "${{ matrix.kernel_version }} | ${{ matrix.variant_name }}"
+    name: "🐧 ${{ matrix.kernel_version }} | ${{ matrix.variant_name }}"
     runs-on: ubuntu-latest
-    
-    # ✅ FIX: secrets: inherit dipindah ke sini (level JOB)
-    secrets: inherit
-    
     strategy:
       fail-fast: false
       matrix:
@@ -83,20 +79,90 @@ jobs:
             last_build: "true"  # ← LAST BUILD (final combo)
 
     steps:
+      # ------------------------------------------
+      # STEP 1: Checkout Source Code
+      # ------------------------------------------
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      # ✅ FIX: Hapus secrets: inherit dari sini
-      - name: 🔨 Trigger Build Workflow
-        uses: ./.github/workflows/build.yml
-        with:
+      # ------------------------------------------
+      # STEP 2: Determine Build Status
+      # ------------------------------------------
+      - name: 🔍 Determine Build Status
+        run: |
+          echo "STATUS=RELEASE" >> $GITHUB_ENV
+          echo "TRIGGER=workflow_dispatch" >> $GITHUB_ENV
+          echo "=========================================="
+          echo "  🚀 VORTEX_E-SPORT BUILD SYSTEM"
+          echo "=========================================="
+          echo "  Kernel : ${{ matrix.kernel_version }}"
+          echo "  Variant: ${{ matrix.variant_name }}"
+          echo "  KSU    : ${{ matrix.ksu }}"
+          echo "  SuSFS  : ${{ matrix.ksu_susfs }}"
+          echo "=========================================="
+
+      # ------------------------------------------
+      # STEP 3: Install Dependencies
+      # ------------------------------------------
+      - name: 📦 Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gh bc bison flex libssl-dev libelf-dev dwarves cpio \
+            wget curl git zip unzip p7zip-full
+          pip install lxml
+
+      # ------------------------------------------
+      # STEP 4: Execute Build Script (INLINE)
+      # ------------------------------------------
+      - name: ⚙️ Run Build Script
+        env:
+          # Telegram Secrets
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          # GitHub Secrets
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          # Build Configuration
           TODO: "kernel"
           KSU: ${{ matrix.ksu }}
           KSU_SUSFS: ${{ matrix.ksu_susfs }}
           KERNEL_VERSION: ${{ matrix.kernel_version }}
           LAST_BUILD: ${{ matrix.last_build }}
+          KVER: ${{ matrix.kernel_version }}
+        run: |
+          echo "=========================================="
+          echo "  ▶️  STARTING BUILD PROCESS"
+          echo "=========================================="
+          
+          export GIT_CLONE_PROTECTION_ACTIVE=false
+          chmod +x *.sh py/*.py 2>/dev/null || true
+          
+          ./build.sh
+          
+          BUILD_EXIT_CODE=$?
+          
+          if [ $BUILD_EXIT_CODE -eq 0 ]; then
+            echo "✅ Build completed successfully!"
+          else
+            echo "❌ Build failed with exit code: $BUILD_EXIT_CODE"
+            exit $BUILD_EXIT_CODE
+          fi
+
+      # ------------------------------------------
+      # STEP 5: Upload Artifacts
+      # ------------------------------------------
+      - name: 📤 Upload Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${{ matrix.kernel_version }}-${{ matrix.variant_name }}-${{ github.run_number }}"
+          path: |
+            artifacts/*.zip
+            artifacts/*.img
+          retention-days: 30
+          if-no-files-found: warn
 
   # ============================================
   # JOB 2: CREATE UNIFIED RELEASE
@@ -110,7 +176,7 @@ jobs:
     
     steps:
       # ------------------------------------------
-      # STEP 1: Checkout & Download Artifacts
+      # STEP 1: Checkout & Download All Artifacts
       # ------------------------------------------
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
@@ -136,19 +202,13 @@ jobs:
           echo "  🔍 EXTRACTING BUILD VARIABLES"
           echo "=========================================="
           
-          # Find info.txt from any artifact
           INFO_FILE=$(find release_files -name "info.txt" -type f 2>/dev/null | head -1)
           
           if [[ -f "$INFO_FILE" ]]; then
             echo "✅ Found info.txt: $INFO_FILE"
-            echo ""
             
-            # Extract variables safely
             while IFS='=' read -r key value; do
-              # Skip empty lines and comments
               [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
-              
-              # Trim whitespace
               key=$(echo "$key" | xargs)
               value=$(echo "$value" | xargs)
               
@@ -158,7 +218,6 @@ jobs:
               fi
             done < "$INFO_FILE"
             
-            echo ""
             echo "✅ Variables extracted successfully!"
           else
             echo "⚠️  info.txt not found, using defaults"
@@ -174,21 +233,15 @@ jobs:
       - name: 🏷️ Generate Release Tag
         run: |
           TIMESTAMP=$(date +%Y%m%d-%H%M)
-          
-          # Use extracted variables or defaults
           KERNEL_NAME="${KERNEL_NAME:-VorteX_E-Sport}"
           RELEASE="${RELEASE:-v0.3}"
           
           RELEASE_TAG="${KERNEL_NAME}-AllGKI-${TIMESTAMP}"
           
-          echo "=========================================="
-          echo "  🏷️  RELEASE TAG GENERATION"
-          echo "=========================================="
-          echo "  Tag: ${RELEASE_TAG}"
-          echo "=========================================="
-          
           echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
           echo "BUILD_TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
+          
+          echo "🏷️  Release Tag: ${RELEASE_TAG}"
 
       # ------------------------------------------
       # STEP 4: Prepare Release Notes
@@ -281,16 +334,13 @@ jobs:
           *© 2024-2026 All Rights Reserved*
           EOF
           
-          # Replace placeholders with actual values
           sed -i "s/{KERNEL_NAME}/${KERNEL_NAME:-VorteX_E-Sport}/g" release_notes.md
           sed -i "s/{TIMESTAMP}/${BUILD_TIMESTAMP:-$(date)}/g" release_notes.md
           sed -i "s/{LINUX_VERSION/${LINUX_VERSION:-Multiple}/g" release_notes.md
           sed -i "s/{SUSFS_VERSION}/${SUSFS_VERSION:-N/A}/g" release_notes.md
           
-          echo "✅ Release notes prepared:"
-          cat release_notes.md | head -30
-          echo "..."
-          
+          echo "✅ Release notes prepared!"
+
       # ------------------------------------------
       # STEP 5: List All Files to Upload
       # ------------------------------------------
@@ -328,23 +378,18 @@ jobs:
           echo "  🚀 CREATING GITHUB RELEASE"
           echo "=========================================="
           
-          # Set defaults if not extracted
           RELEASE_REPO="${RELEASE_REPO:-Kingfinik98/build-vortex}"
           
           echo "  Tag: ${RELEASE_TAG}"
           echo "  Repo: ${RELEASE_REPO}"
-          echo ""
           
-          # Create release with all artifacts
           gh release create "${RELEASE_TAG}" \
             --repo "${RELEASE_REPO}" \
             --title "🐧 VorteX_E-Sport - All GKI (${BUILD_TIMESTAMP})" \
             --notes-file release_notes.md \
             release_files/*.zip \
             release_files/*.img \
-            2>/dev/null || {
-              echo "⚠️  Some files may have failed, but release created"
-            }
+            2>/dev/null || echo "⚠️  Some files may have failed, but release created"
           
           echo ""
           echo "✅ Release created successfully!"
@@ -365,51 +410,34 @@ jobs:
           
           RELEASE_REPO="${RELEASE_REPO:-Kingfinik98/build-vortex}"
           RELEASE_LINK="https://github.com/${RELEASE_REPO}/releases/tag/${RELEASE_TAG}"
-          
-          # Count total builds
           TOTAL_ZIPS=$(find release_files -name "*.zip" 2>/dev/null | wc -l)
           
-          # Create beautiful message
-          MESSAGE=$(cat << EOF
-          *🐧 VORTEX_E-SPORT - ALL GKI RELEASE* 🚀
-          
+          MESSAGE="*🐧 VORTEX_E-SPORT - ALL GKI RELEASE* 🚀
+
           ✅ *Build Status*: SUCCESS
           📦 *Total Variants*: ${TOTAL_ZIPS} ZIPs
           🐧 *Kernel Versions*: 5.10, 6.1, 6.6
           📅 *Build Date*: ${BUILD_TIMESTAMP}
           🔐 *Root Options*: KSU, VorteXSU, SukiSU, WildKSU, VNL
-          
+
           ———————————————
           📥 *DOWNLOAD RELEASE*:
           [${RELEASE_TAG}](${RELEASE_LINK})
           ———————————————
-          
+
           *Available Variants:*
           🔵 GKI 5.10 (Android 12)
           🟢 GKI 6.1 (Android 14)
           🟣 GKI 6.6 (Android 15)
-          
-          Each version includes:
-          • VNL (Vanilla/No Root)
-          • KSU (Standard KernelSU)
-          • KSU+SuSFS (Hidden Root)
-          • VorteXSU (KPM Patch)
-          • SukiSU (KPM Patch)
-          • WildKSU (Alternative)
-          
-          ———————————————
+
           _Built with ❤️ by @Kingfinik98_
-          _© 2024-2026 VorteX_E-Sport_
-          EOF
-          )
+          _© 2024-2026 VorteX_E-Sport_"
           
-          # Send message using curl (direct, no need functions.sh)
           curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${TG_CHAT_ID}" \
             -d "parse_mode=markdown" \
             -d "disable_web_page_preview=true" \
-            -d "text=${MESSAGE}" \
-            && echo "" && echo "✅ Telegram notification sent!" || echo "❌ Failed to send Telegram notification"
+            -d "text=${MESSAGE}" && echo "" && echo "✅ Telegram notification sent!" || echo "❌ Failed to send notification"
           
           echo "=========================================="
 
