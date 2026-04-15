@@ -1,3 +1,10 @@
+#/*!
+# * © 2024-2026 Kingfinik98 (VorteX_E-Sport). All Rights Reserved.
+# * Original Author: Kingfinik98
+# * Original Repository: https://github.com/Kingfinik98/build-vortex
+# * Signed-off-by: kingfinix98@gmail.com
+# */
+
 name: Build GKI
 
 on:
@@ -19,7 +26,7 @@ on:
   workflow_dispatch:
     inputs:
       TODO:
-        description: To do
+        description: '📋 Build Type'
         default: "kernel"
         type: choice
         options:
@@ -27,16 +34,18 @@ on:
           - "defconfig"
 
       KSU:
-        description: KernelSU Type
+        description: '🔐 Root Solution (Variant)'
         default: "yes"
         type: choice
         options:
-          - "no"
-          - "yes"
-          - "vortexsu" # Updated from resukisu to vortexsu
+          - "no"           # Vanilla - No Root
+          - "yes"          # KernelSU-Next (Standard)
+          - "vortexsu"     # VorteXSU (KPM Enabled)
+          - "sukisu"       # SukiSU Ultra (KPM Enabled) 🆕
+          - "wildksu"      # WildKSU (No KPM) 🆕
 
       KSU_SUSFS:
-        description: Include SUSFS?
+        description: '🛡️ Enable SuSFS (Hide Root)?'
         default: "false"
         type: choice
         options:
@@ -44,7 +53,7 @@ on:
           - "false"
 
       KSU_MANUAL_HOOK:
-        description: Use KSU Manual Hooks?
+        description: '🪝 Use KSU Manual Hooks?'
         default: "false"
         type: choice
         options:
@@ -52,13 +61,18 @@ on:
           - "false"
 
       KERNEL_VERSION:
-        description: Which kernel version do you want to build?
-        default: ""
+        description: '🐧 Kernel Version (GKI)'
+        default: "6.6"
         type: choice
         options:
-          - "6.6"
-          - "6.1"
-          - "5.10"
+          - "6.6"          # Android 15
+          - "6.1"          # Android 14
+          - "5.10"         # Android 12/12.1
+
+      LAST_BUILD:
+        description: '📦 Is this the last build? (Generate info.txt)'
+        default: "false"
+        type: boolean
 
 env:
   MAN_DISABLE: true
@@ -69,95 +83,389 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source
+      # ============================================
+      # STEP 1: CHECKOUT SOURCE CODE
+      # ============================================
+      - name: 📥 Checkout source
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      - name: Determine Build Status
+      # ============================================
+      # STEP 2: DETERMINE BUILD STATUS (RELEASE/BETA)
+      # ============================================
+      - name: 🔍 Determine Build Status
+        id: status
         run: |
           if [ "${{ toJson(github.event.inputs) }}" == "null" ]; then
             echo "STATUS=RELEASE" >> $GITHUB_ENV
             echo "TRIGGER=workflow_call" >> $GITHUB_ENV
+            echo "🟢 RELEASE BUILD (Triggered by workflow_call)"
           else
             echo "STATUS=BETA" >> $GITHUB_ENV
             echo "TRIGGER=workflow_dispatch" >> $GITHUB_ENV
+            echo "🔵 BETA BUILD (Triggered manually)"
           fi
 
-      - name: Validate Inputs and Secrets
+      # ============================================
+      # STEP 3: VALIDATE INPUTS & SECRETS
+      # ============================================
+      - name: ✅ Validate Inputs and Secrets
         env:
-          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }} # telegram chat id
-          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }} # telegram bot token
-          GH_TOKEN: ${{ secrets.GH_TOKEN }} # github token
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           KSU: ${{ inputs.KSU }}
           KSU_SUSFS: ${{ inputs.KSU_SUSFS }}
           KSU_MANUAL_HOOK: ${{ inputs.KSU_MANUAL_HOOK }}
+          KERNEL_VERSION: ${{ inputs.KERNEL_VERSION }}
         run: |
+          echo "=========================================="
+          echo "  🔍 VALIDATING INPUTS & SECRETS"
+          echo "=========================================="
+          
           _error() {
               echo "❌ ERROR: $*"
               let ret++
           }
 
+          _warn() {
+              echo "⚠️  WARNING: $*"
+          }
+
+          _info() {
+              echo "ℹ️  INFO: $*"
+          }
+
           ret=0
-          # Check Secrets
+          
+          # ==========================================
+          # CHECK SECRETS
+          # ==========================================
+          echo ""
+          echo "--- Checking Secrets ---"
+          
           if [[ -z "$TG_CHAT_ID" ]]; then
             _error "Missing TG_CHAT_ID secret (Telegram Chat ID)"
+          else
+            _info "TG_CHAT_ID: ✓ Configured"
           fi
+          
           if [[ -z "$TG_BOT_TOKEN" ]]; then
             _error "Missing TG_BOT_TOKEN secret (Telegram Bot Token)"
+          else
+            _info "TG_BOT_TOKEN: ✓ Configured"
           fi
+          
           if [[ -z "$GH_TOKEN" ]]; then
             _error "Missing GH_TOKEN secret (GitHub PAT)"
+          else
+            _info "GH_TOKEN: ✓ Configured"
           fi
 
-          # KernelSU Validation
+          # ==========================================
+          # KERNELSU VARIANT VALIDATION
+          # ==========================================
+          echo ""
+          echo "--- Validating KSU Variant ---"
+          
+          case "$KSU" in
+            "yes")
+              _info "Variant: Standard KernelSU-Next"
+              ;;
+            "vortexsu")
+              _info "Variant: VorteXSU (KPM Enabled)"
+              ;;
+            "sukisu")
+              _info "Variant: SukiSU Ultra (KPM Enabled) 🆕"
+              ;;
+            "wildksu")
+              _info "Variant: WildKSU (No KPM) 🆕"
+              ;;
+            "no")
+              _info "Variant: Vanilla (No Root)"
+              ;;
+            *)
+              _error "Invalid KSU value: '$KSU'"
+              _info "Valid options: yes, vortexsu, sukisu, wildksu, no"
+              ;;
+          esac
+
+          # ==========================================
+          # SUSFS COMPATIBILITY CHECKS
+          # ==========================================
+          echo ""
+          echo "--- Checking SuSFS Compatibility ---"
+          
+          # SuSFS requires any KSU variant (not vanilla)
           if [[ $KSU == "no" && $KSU_SUSFS == "true" ]]; then
-              _error "Cannot use SuSFS without KernelSU"
+              _error "Cannot enable SuSFS without KernelSU (KSU=no)"
           fi
+          
+          # VorteXSU & SukiSU strongly recommend SuSFS
+          if [[ ($KSU == "vortexsu" || $KSU == "sukisu") && $KSU_SUSFS != "true" ]]; then
+              _warn "$KSU variant works best with SuSFS enabled!"
+              _info "Consider setting KSU_SUSFS=true for optimal root hiding"
+          fi
+          
+          # Log SuSFS status
+          if [[ $KSU_SUSFS == "true" ]]; then
+            _info "SuSFS: ✓ Will be applied"
+          else
+            _info "SuSFS: ✗ Disabled"
+          fi
+
+          # ==========================================
+          # MANUAL HOOK CHECK
+          # ==========================================
+          echo ""
+          echo "--- Checking KSU Manual Hooks ---"
+          
           if [[ $KSU == "no" && $KSU_MANUAL_HOOK == "true" ]]; then
             _error "Cannot use KSU Manual Hooks without KernelSU!"
           fi
-          # VorteXSU requires SUSFS active for standard patching logic (6.1/6.6)
-          if [[ $KSU == "vortexsu" && $KSU_SUSFS != "true" ]]; then
-              _error "VorteXSU build requires KSU_SUSFS to be true"
+          
+          if [[ $KSU_MANUAL_HOOK == "true" ]]; then
+            _info "Manual Hooks: ✓ Enabled"
+          else
+            _info "Manual Hooks: ✗ Disabled"
           fi
 
+          # ==========================================
+          # KERNEL VERSION CHECK
+          # ==========================================
+          echo ""
+          echo "--- Checking Kernel Version ---"
+          
+          case "$KERNEL_VERSION" in
+            "6.6")
+              _info "Kernel: 6.6 (Android 15) - Latest GKI"
+              ;;
+            "6.1")
+              _info "Kernel: 6.1 (Android 14) - Stable GKI"
+              ;;
+            "5.10")
+              _info "Kernel: 5.10 (Android 12/12.1) - Legacy GKI"
+              ;;
+            "")
+              _warn "No kernel version specified, using default from build.sh"
+              ;;
+            *)
+              _error "Invalid kernel version: '$KERNEL_VERSION'"
+              _info "Valid options: 5.10, 6.1, 6.6"
+              ;;
+          esac
+
+          # ==========================================
+          # VARIANT-SPECIFIC WARNINGS/INFO
+          # ==========================================
+          echo ""
+          echo "--- Variant Specific Information ---"
+          
+          if [[ $KSU == "sukisu" ]]; then
+            _info "🌟 SukiSU Ultra will use KPM patch (same as VorteXSU)"
+            _info "   Output ZIP will contain: SukiSU+SuSFS (if enabled)"
+          fi
+          
+          if [[ $KSU == "wildksu" ]]; then
+            _info "🐺 WildKSU does NOT use KPM patch"
+            _info "   Output ZIP will contain: WildKSU+SuSFS (if enabled)"
+          fi
+          
+          if [[ $KSU == "vortexsu" ]]; then
+            _info "⚡ VorteXSU will use KPM patch"
+            _info "   Output ZIP will contain: VorteXSU+SuSFS (if enabled)"
+          fi
+
+          # ==========================================
+          # FINAL RESULT
+          # ==========================================
+          echo ""
+          echo "=========================================="
           if [[ $ret -gt 0 ]]; then
+            echo "❌ VALIDATION FAILED ($ret error(s))"
+            echo "=========================================="
             exit $ret
+          else
+            echo "✅ ALL VALIDATIONS PASSED"
+            echo "=========================================="
+            
+            # Print summary for GitHub Actions log
+            echo ""
+            echo "## 📋 Build Configuration Summary" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| **Kernel Version** | \`$KERNEL_VERSION\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| **KSU Variant** | \`$KSU\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| **SuSFS** | \`$KSU_SUSFS\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Manual Hooks** | \`$KSU_MANUAL_HOOK\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Build Type** | \`${STATUS:-BETA}\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Trigger** | \`${TRIGGER:-manual}\` |" >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: Install Dependencies
+      # ============================================
+      # STEP 4: INSTALL DEPENDENCIES
+      # ============================================
+      - name: 📦 Install Dependencies
         run: |
+          echo "=========================================="
+          echo "  📦 INSTALLING BUILD DEPENDENCIES"
+          echo "=========================================="
+          
           sudo apt-get update
-          sudo apt-get install -y gh bc bison flex libssl-dev libelf-dev dwarves cpio
+          sudo apt-get install -y \
+            gh \
+            bc \
+            bison \
+            flex \
+            libssl-dev \
+            libelf-dev \
+            dwarves \
+            cpio \
+            wget \
+            curl \
+            git \
+            zip \
+            unzip \
+            p7zip-full
+            
           pip install lxml
+          
+          echo ""
+          echo "✅ Dependencies installed successfully"
 
-      - name: Run Build Script
+      # ============================================
+      # STEP 5: DISPLAY BUILD CONFIGURATION
+      # ============================================
+      - name: 🎯 Display Build Configuration
         env:
-          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }} # telegram chat id
-          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }} # telegram bot token
-          GH_TOKEN: ${{ secrets.GH_TOKEN }} # github token
+          KSU: ${{ inputs.KSU }}
+          KSU_SUSFS: ${{ inputs.KSU_SUSFS }}
+          KERNEL_VERSION: ${{ inputs.KERNEL_VERSION }}
+          TODO: ${{ inputs.TODO }}
+        run: |
+          echo "=========================================="
+          echo "  🚀 VORTEX_E-SPORT BUILD SYSTEM"
+          echo "=========================================="
+          echo ""
+          echo "📋 Build Configuration:"
+          echo "  • Kernel Version : ${KERNEL_VERSION:-auto}"
+          echo "  • KSU Variant    : ${KSU:-yes}"
+          echo "  • SuSFS          : ${KSU_SUSFS:-false}"
+          echo "  • Build Type     : ${TODO:-kernel}"
+          echo "  • Status         : ${STATUS:-BETA}"
+          echo ""
+          echo "🔧 Toolchain:"
+          echo "  • Clang : GreenForce gf-clang-22.1.4"
+          echo "  • GAS    : AOSP Prebuilt"
+          echo ""
+          echo "⏰ Build started at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "=========================================="
+
+      # ============================================
+      # STEP 6: EXECUTE BUILD SCRIPT
+      # ============================================
+      - name: ⚙️ Run Build Script
+        env:
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           KSU: ${{ inputs.KSU }}
           KSU_SUSFS: ${{ inputs.KSU_SUSFS }}
           KSU_MANUAL_HOOK: ${{ inputs.KSU_MANUAL_HOOK }}
           LAST_BUILD: ${{ inputs.LAST_BUILD }}
           TODO: ${{ inputs.TODO }}
-          KVER: ${{ inputs.KERNEL_VERSION }} # This passes the version to the script
+          KVER: ${{ inputs.KERNEL_VERSION }}
         run: |
+          echo "=========================================="
+          echo "  ▶️  STARTING BUILD PROCESS"
+          echo "=========================================="
+          echo ""
+          
+          # Export required for git clone operations
           export GIT_CLONE_PROTECTION_ACTIVE=false
-          chmod +x *.sh py/*.py
+          
+          # Make scripts executable
+          chmod +x *.sh py/*.py 2>/dev/null || true
+          
+          # Execute main build script
           ./build.sh
+          
+          BUILD_EXIT_CODE=$?
+          
+          if [ $BUILD_EXIT_CODE -eq 0 ]; then
+            echo ""
+            echo "=========================================="
+            echo "  ✅ BUILD COMPLETED SUCCESSFULLY"
+            echo "=========================================="
+          else
+            echo ""
+            echo "=========================================="
+            echo "  ❌ BUILD FAILED WITH EXIT CODE: $BUILD_EXIT_CODE"
+            echo "=========================================="
+            exit $BUILD_EXIT_CODE
+          fi
 
-      - name: Upload Artifacts (ZIP & IMG)
+      # ============================================
+      # STEP 7: UPLOAD ARTIFACTS (ZIP & IMG FILES)
+      # ============================================
+      - name: 📤 Upload Artifacts (ZIP & IMG)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BASE_NAME }}-${{ github.run_number }}
           path: |
             artifacts/*.zip
             artifacts/*.img
+          retention-days: 30
+          if-no-files-found: warn
 
-      - name: Upload Artifacts (Info File)
+      # ============================================
+      # STEP 8: UPLOAD ARTIFACTS (INFO FILE)
+      # ============================================
+      - name: 📄 Upload Artifacts (Info File)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: info-${{ github.run_number }}
           path: artifacts/*.txt
+          retention-days: 90
+          if-no-files-found: ignore
+
+      # ============================================
+      # STEP 9: BUILD SUMMARY (GITHUB UI)
+      # ============================================
+      - name: 📊 Generate Build Summary
+        if: always()
+        run: |
+          # Create summary for GitHub Actions UI
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          
+          ## 🏗️ Build Details
+          
+          | Item | Value |
+          |------|-------|
+          | **Run ID** | \`${{ github.run_id }}\` |
+          | **Run Number** | \`${{ github.run_number }}\` |
+          | **Triggered By** | \`${{ github.actor }}\` |
+          | **Status** | \`${{ job.status }}\` |
+          
+          ### 📦 Artifacts
+          
+          EOF
+          
+          # List artifacts if they exist
+          if [ -d "artifacts" ] && [ "$(ls -A artifacts)" ]; then
+            echo "| File | Size |" >> $GITHUB_STEP_SUMMARY
+            echo "|------|------|" >> $GITHUB_STEP_SUMMARY
+            for f in artifacts/*; do
+              if [ -f "$f" ]; then
+                SIZE=$(ls -lh "$f" | awk '{print $5}')
+                NAME=$(basename "$f")
+                echo "| \`$NAME\` | $SIZE |" >> $GITHUB_STEP_SUMMARY
+              fi
+            done
+          else
+            echo "*No artifacts generated*" >> $GITHUB_STEP_SUMMARY
+          fi
