@@ -22,7 +22,6 @@ HOST="VorteX"
 TIMEZONE="Asia/Jakarta"
 ANYKERNEL_REPO="https://github.com/Kingfinik98/AnyKernel3"
 
-# Fixed Logic: 5.10 & 6.1 use gki_defconfig, others use quartix_defconfig
 if [ "$KVER" == "5.10" ]; then
   KERNEL_DEFCONFIG="gki_defconfig"
 elif [ "$KVER" == "6.1" ]; then
@@ -46,34 +45,21 @@ elif [ "$KVER" == "5.10" ]; then
 fi
 DEFCONFIG_TO_MERGE=""
 GKI_RELEASES_REPO="https://github.com/Kingfinik98/build-vortex"
-#Change the clang by removing the (#) sign then apply
-#CLANG_URL="https://github.com/linastorvaldz/idk/releases/download/clang-r547379/clang.tgz"
-#CLANG_URL="https://github.com/LineageOS/android_prebuilts_clang/kernel/linux-x86_clang-r416183b/archive/refs/heads/lineage-20.0.tar.gz"
-#CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main-kernel-2025/clang-r536225.tar.gz"
-#CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/62cdcefa89e31af2d72c366e8b5ef8db84caea62/clang-r547379.tar.gz"
-#CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/105aba85d97a53d364585ca755752dae054b49e8/clang-r584948b.tar.gz"
+
 CLANG_URL="https://github.com/greenforce-project/greenforce_clang/releases/download/20260410/gf-clang-22.1.4-20260410.tar.gz"
-#CLANG_URL="https://github.com/greenforce-project/greenforce_clang/releases/download/20260302/gf-clang-23.0.0-20260302.tar.gz"
-#CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/42d2c090c14c9c7f4dfd365ae551e2b959dc775c/clang-r584948b.tar.gz"
-#CLANG_URL="https://github.com/linastorvaldz/gki-builder/releases/download/clang-r487747c/clang-r487477c.tar.gz"
-#CLANG_URL="$(./clang.sh slim)"
 CLANG_BRANCH=""
 AK3_ZIP_NAME="$KERNEL_NAME-REL-KVER-VARIANT-BUILD_DATE.zip"
 OUTDIR="$WORKDIR/out"
 KSRC="$WORKDIR/ksrc"
 KERNEL_PATCHES="$WORKDIR/kernel-patches"
 
-# Handle error
 exec > >(tee $WORKDIR/build.log) 2>&1
 trap 'error "Failed at line $LINENO [$BASH_COMMAND]"' ERR
 
-# Import functions
 source $WORKDIR/functions.sh
 
-# Set timezone
 sudo timedatectl set-timezone "$TIMEZONE" || export TZ="$TIMEZONE"
 
-# Clone kernel source
 log "Cloning kernel source from $(simplify_gh_url "$KERNEL_REPO")"
 git clone -q --depth=1 $KERNEL_REPO -b $KERNEL_BRANCH $KSRC
 
@@ -89,7 +75,6 @@ if [ "$KVER" == "5.10" ]; then
   patch -p1 < infinix_cam.patch || log "Camera patch already embedded."
   rm infinix_cam.patch
 fi
-# ----------------------------------------------------
 
 # --- PATCH DRIVER SKIAVK (GKI 5.10 ONLY) ---
 if [ "$KVER" == "5.10" ]; then
@@ -98,23 +83,8 @@ if [ "$KVER" == "5.10" ]; then
   curl -LSs "https://raw.githubusercontent.com/Kingfinik98/build-vortex/6.x/system/vendor/lib64/libgsl.so" -o $WORKDIR/vendor/lib64/libgsl.so
   log "libgsl.so placed successfully"
 fi
-# ----------------------------------------------------
 
-# --- PATCH CPUSET (GKI 5.10 ONLY) ---
-#if [ "$KVER" == "5.10" ]; then
-  #log "Injecting VorteX Cpuset Patch..."
-  #curl -LSs "https://raw.githubusercontent.com/Kingfinik98/build-vortex/6.x/kernel/cgroup/cpuset.c" -o "$KERNEL_PATCHES/cpuset.c"
-  
-  #log "Fixing missing symbol cpusets_insane_config_key in cpuset.c..."
-  #sed -i '/DEFINE_STATIC_KEY_FALSE(cpusets_enabled_key);/a\DEFINE_STATIC_KEY_FALSE(cpusets_insane_config_key);' "$KERNEL_PATCHES/cpuset.c"
-
-  #mkdir -p "$KSRC/kernel/cgroup"
-  #cp "$KERNEL_PATCHES/cpuset.c" "$KSRC/kernel/cgroup/cpuset.c"
-  #log "Cpuset patch applied successfully."
-#fi
-# ----------------------------------------------------
-
-# # --- INJECT VORTEX GPU TUNING (GKI 5.10, 6.1, 6.6) ---
+# --- INJECT VORTEX GPU TUNING ---
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   log "Injecting VorteX Ultra-Safe Kernel Patch..."
   mkdir -p "$KSRC/drivers/misc"
@@ -122,24 +92,17 @@ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   sed -i '/vortex_gki/d' "$KSRC/drivers/misc/Makefile"
   echo "obj-y += vortex_gki.o" >> "$KSRC/drivers/misc/Makefile"
 fi
-# ----------------------------------------------------
 
-# --- INJECT VORTEXCORE GOVERNOR (GKI 5.10, 6.1, 6.6) ---
+# --- INJECT VORTEXCORE GOVERNOR ---
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   log "Injecting VortexCore Custom Governor..."
-  
-  # 1. Copy source file ke kernel tree
   cp "$WORKDIR/governor-vortexcore.c" "$KSRC/drivers/cpufreq/governor-vortexcore.c"
   
-  # 2. Add to Makefile if it is not already there
   if ! grep -q "governor-vortexcore.o" "$KSRC/drivers/cpufreq/Makefile"; then
     echo "obj-\$(CONFIG_CPU_FREQ_GOV_VORTEXCORE) += governor-vortexcore.o" >> "$KSRC/drivers/cpufreq/Makefile"
     log "VortexCore added to cpufreq Makefile."
-  else
-    log "VortexCore already in cpufreq Makefile."
   fi
   
-  # 3. Add to Kconfig if it's not there
   if ! grep -q "CPU_FREQ_GOV_VORTEXCORE" "$KSRC/drivers/cpufreq/Kconfig"; then
     cat << 'KCONF_EOF' >> "$KSRC/drivers/cpufreq/Kconfig"
 
@@ -152,25 +115,20 @@ config CPU_FREQ_GOV_VORTEXCORE
       If in doubt, say N.
 KCONF_EOF
     log "VortexCore added to cpufreq Kconfig."
-  else
-    log "VortexCore already in cpufreq Kconfig."
   fi
 fi
-# ----------------------------------------------------
 
 # --- PATCH inject.sh ---
 log "Applying inject.sh patch..."
 wget -qO Inject_300hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/Inject_300hz.sh
 bash Inject_300hz.sh
 rm Inject_300hz.sh
-#--------------------------------------
 
 # --- PATCH WIFI SM8650 & FIX BTQCA (GKI 6.1 ONLY) ---
 if [ "$KVER" == "6.1" ]; then
   log "Applying WiFi SM8650 patch..."
   curl -LSs https://github.com/OnePlus-12-Development/android_kernel_qcom_sm8650/commit/3e0cb08.patch | patch -p1 --forward || log "WiFi SM8650 patch skipped or already applied."
 
-  log "Checking and fixing btqca.c WCN3988 definition..."
   TARGET_FILE="drivers/bluetooth/btqca.h"
   if [ -f "$TARGET_FILE" ]; then
     if grep -q "QCA_WCN3988" "$TARGET_FILE"; then
@@ -183,14 +141,6 @@ if [ "$KVER" == "6.1" ]; then
     log "[WARNING] File $TARGET_FILE not found, skip patch."
   fi
 fi
-# ---------------------------------------------------
-
-# --- PATCH VORTEX ESPORT GAMING PREF ---
-#log " Applying VorteX Esport Gaming Preferences..."
-#curl -LSs "https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/gaming/vortex.sh" -o vortex.sh
-#patch -p1 < vortex.sh 2>/dev/null || true
-#rm -f vortex.sh
-# -----------------------------------------
 
 # --- ADD KSU INJECT SCRIPT ---
 log "Injecting custom KSU & SuSFS configs from GitHub..."
@@ -205,20 +155,17 @@ elif [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   bash inject.sh
   rm inject.sh
 fi
-# --------------------------------------
 cd $WORKDIR
 
-# Set Kernel variant (WITHOUT SUKISU)
+# Set Kernel variant (3 VARIANTS ONLY: yes, vortexsu, no)
 log "Setting Kernel variant..."
 case "$KSU" in
   "yes") VARIANT="KSU" ;;
   "vortexsu") VARIANT="VorteXSU" ;;
   "no") VARIANT="VNL" ;;
-  "wildksu") VARIANT="WildKSU" ;;         # 🆕 WildKSU Variant
 esac
 susfs_included && VARIANT+="+SuSFS"
 
-# Replace Placeholder in zip name
 AK3_ZIP_NAME=${AK3_ZIP_NAME//KVER/$LINUX_VERSION}
 AK3_ZIP_NAME=${AK3_ZIP_NAME//VARIANT/$VARIANT}
 
@@ -230,15 +177,9 @@ if [ -z "$CLANG_BRANCH" ]; then
   wget -qO clang-archive "$CLANG_URL"
   mkdir -p "$CLANG_DIR"
   case "$(basename $CLANG_URL)" in
-    *.tar.* | *.tgz)
-      tar -xf clang-archive -C "$CLANG_DIR"
-      ;;
-    *.7z)
-      7z x clang-archive -o${CLANG_DIR}/ -bd -y > /dev/null
-      ;;
-    *)
-      error "Unsupported file format"
-      ;;
+    *.tar.* | *.tgz) tar -xf clang-archive -C "$CLANG_DIR" ;;
+    *.7z) 7z x clang-archive -o${CLANG_DIR}/ -bd -y > /dev/null ;;
+    *) error "Unsupported file format" ;;
   esac
   rm clang-archive
 
@@ -263,7 +204,6 @@ git clone --depth=1 -q \
 
 export PATH="${CLANG_BIN}:${GAS_DIR}:$PATH"
 
-# Extract clang version
 COMPILER_STRING=$(clang -v 2>&1 | head -n 1 | sed 's/(https..*//' | sed 's/ version//')
 
 cd $KSRC
@@ -274,10 +214,8 @@ if ksu_included; then
     if [ -d $KSU_PATH ]; then
       log "KernelSU driver found in $KSU_PATH, Removing..."
       KSU_DIR=$(dirname "$KSU_PATH")
-
       [ -f "$KSU_DIR/Kconfig" ] && sed -i '/kernelsu/d' $KSU_DIR/Kconfig
       [ -f "$KSU_DIR/Makefile" ] && sed -i '/kernelsu/d' $KSU_DIR/Makefile
-
       rm -rf $KSU_PATH
     fi
   done
@@ -335,31 +273,10 @@ elif [ "$KSU" == "vortexsu" ]; then
 fi
 
 # ============================================
-# 🆕 WildKSU Setup Block (NEW VARIANT - NO KPM)
-# ============================================
-if [ "$KSU" == "wildksu" ]; then
-  log "🐺 Setting up WildKSU for KVER $KVER..."
-  
-  log "Running WildKSU setup from dev branch..."
-  curl -LSs "https://raw.githubusercontent.com/WildKernels/Wild_KSU/refs/heads/dev/kernel/setup.sh" | bash -s dev
-  
-  config --enable CONFIG_KSU
-  # Note: WildKSU does NOT use KPM patch
-  
-  if [ "$KVER" == "5.10" ]; then
-    log "Applying additional fixes for WildKSU on GKI 5.10..."
-    # Apply stack protector fix jika diperlukan
-    if [ -f "drivers/kernelsu/ksu.c" ]; then
-      sed -i '/^#if.*CONFIG_STACKPROTECTOR_PER_TASK/c\#if 0 \/\/ Disabled to fix duplicate symbol' drivers/kernelsu/ksu.c || true
-      log "Stack protector fix applied for WildKSU."
-    fi
-  fi
-  
-  log "[✅] WildKSU setup completed for $KVER (No KPM)."
-fi
+# WILDKSU DIHAPUS (Error kompilasi sucompat.c)
 # ============================================
 
-# SUSFS (Standard Logic for KernelSU yes & VorteXSU 6.1/6.6 & WildKSU)
+# SUSFS (Standard Logic for KernelSU yes & VorteXSU 6.1/6.6)
 if susfs_included; then
   # Skip standard SUSFS if already handled by VorteXSU 5.10 custom method
   if [ "$KSU" != "vortexsu" ] || ([ "$KSU" == "vortexsu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ])); then
@@ -386,7 +303,6 @@ if susfs_included; then
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c2) -eq 61 ]; then
       patch -p1 < $KERNEL_PATCHES/susfs/fs_proc_base.c-fix-k6.1.patch || true
       
-      log "Injecting full SUSFS definitions into namespace.c for GKI 6.1..."
       NS_INJECT_FILE="$WORKDIR/.ns_inject_tmp"
       
       cat << 'EOF' > "$NS_INJECT_FILE"
@@ -419,7 +335,6 @@ EOF
       rm -f "$NS_INJECT_FILE"
 
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c3) -eq 510 ]; then
-      # Skip standard SUSFS 5.10 patch for vortexsu (already handled above)
       if [ "$KSU" != "vortexsu" ]; then
         patch -p1 < $KERNEL_PATCHES/Susfs/pershoot-susfs-k5.10.patch || true
       fi
@@ -436,31 +351,16 @@ EOF
           sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
           sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
         else
-          log "Applying statfs CRC fix patch (KernelSU Next)..."
           patch -p1 < $KERNEL_PATCHES/Susfs/fix-statfs-crc-mismatch-susfs.patch || true
         fi
-      elif [ "$KSU" == "vortexsu" ] && [ "$KVER" == "6.1" ]; then
-        log "Applying manual statfs CRC fix for VorteXSU GKI 6.1..."
+      elif [ "$KSU" == "vortexsu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]); then
+        log "Applying manual statfs CRC fix for VorteXSU GKI $KVER..."
         sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
         sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
-      elif [ "$KSU" == "vortexsu" ] && [ "$KVER" == "6.6" ]; then
-        log "Applying manual statfs CRC fix for VorteXSU GKI 6.6..."
-        sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
-        sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
-      # === Statfs fixes for WildKSU (Non-KPM Variant) ===
-      elif [ "$KSU" == "wildksu" ] && [ "$KVER" == "6.1" ]; then
-        log "Applying manual statfs CRC fix for WildKSU GKI 6.1..."
-        sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
-        sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
-      elif [ "$KSU" == "wildksu" ] && [ "$KVER" == "6.6" ]; then
-        log "Applying manual statfs CRC fix for WildKSU GKI 6.6..."
-        sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
-        sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
-      # === END WILDKSU FIXES ===
       fi
     fi
 
-    SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d ' ' -f3 | sed 's/"//g')
+    SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
     config --enable CONFIG_KSU_SUSFS
   else
     log "Skipping standard SUSFS patch (Handled by VorteXSU 5.10 custom method)."
@@ -482,7 +382,6 @@ if [ $TODO == "kernel" ]; then
   sed -i 's/echo "+"/# echo "+"/g' scripts/setlocalversion
 fi
 
-# Declare needed variables
 export KBUILD_BUILD_USER="$USER"
 export KBUILD_BUILD_HOST="$HOST"
 export KBUILD_BUILD_TIMESTAMP=$(date)
@@ -530,7 +429,6 @@ EOF
 log "Generating config..."
 make ${MAKE_ARGS[@]} $KERNEL_DEFCONFIG
 
-# --- VORTEX DEPENDENCIES (Safe Universal + Strict 5.10) ---
 log "Enabling VorteX kernel dependencies..."
 config --enable CONFIG_TCP_CONG_WESTWOOD
 config --enable CONFIG_DEVFREQ_GOV_SCHEDUTIL
@@ -541,7 +439,6 @@ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   config --enable CONFIG_KSM
   config --enable CONFIG_CPU_IDLE
 fi
-# ----------------------------------------------------
 
 if [ "$DEFCONFIG_TO_MERGE" ]; then
   log "Merging configs..."
@@ -555,25 +452,22 @@ if [ "$DEFCONFIG_TO_MERGE" ]; then
   make ${MAKE_ARGS[@]} olddefconfig
 fi
 
-# Upload defconfig if we are doing defconfig
 if [ $TODO == "defconfig" ]; then
   log "Uploading defconfig..."
   upload_file $OUTDIR/.config
   exit 0
 fi
 
-# Build the actual kernel
 log "Building kernel..."
 make ${MAKE_ARGS[@]}
 
-# Check KMI Function symbol
 if [ $(echo "$LINUX_VERSION_CODE" | head -c1) -eq 6 ]; then
   $KMI_CHECK "$KSRC/android/abi_gki_aarch64.stg" "$MODULE_SYMVERS" || true
 else
   $KMI_CHECK "$KSRC/android/abi_gki_aarch64.xml" "$MODULE_SYMVERS" || true
 fi
 
-# --- PATCH KPM SECTION (ONLY VORTEXSU = KPM, Others = No KPM) ---
+# --- KPM SECTION (ONLY VORTEXSU) ---
 log "Applying KPM Patch..."
 if [ "$KSU" == "vortexsu" ]; then
   cd $OUTDIR/arch/arm64/boot
@@ -596,16 +490,13 @@ else
   log "Skipping KPM patch (Not KPM-enabled variant: ${VARIANT})."
 fi
 cd $WORKDIR
-# ----------------------------------------------------
 
 ## Post-compiling stuff
 cd $WORKDIR
 
-# Clone AnyKernel
 log "Cloning anykernel from $(simplify_gh_url "$ANYKERNEL_REPO")"
 git clone -q --depth=1 $ANYKERNEL_REPO -b $ANYKERNEL_BRANCH anykernel
 
-# Set kernel string in anykernel
 if [ $STATUS == "BETA" ]; then
   BUILD_DATE=$(date -d "$KBUILD_BUILD_TIMESTAMP" +"%Y%m%d-%H%M")
   AK3_ZIP_NAME=${AK3_ZIP_NAME//BUILD_DATE/$BUILD_DATE}
@@ -621,7 +512,6 @@ else
     $WORKDIR/anykernel/anykernel.sh
 fi
 
-# Zip the anykernel
 cd anykernel
 log "Zipping anykernel..."
 cp $KERNEL_IMAGE .
