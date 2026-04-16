@@ -44,7 +44,7 @@ elif [ "$KVER" == "5.10" ]; then
   KERNEL_BRANCH="vortex-basse"
 fi
 DEFCONFIG_TO_MERGE=""
-GKI_RELEASES_REPO="https://github.com/Kingfinik98/build-vortex"
+GKI_RELEASES_REPO="https://github.com/Kingfinik98/build-vortex/releases"
 
 CLANG_URL="https://github.com/greenforce-project/greenforce_clang/releases/download/20260410/gf-clang-22.1.4-20260410.tar.gz"
 CLANG_BRANCH=""
