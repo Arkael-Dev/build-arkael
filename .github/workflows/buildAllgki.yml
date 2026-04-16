@@ -236,140 +236,24 @@ jobs:
           ls -lh release_files/ 2>/dev/null || echo "  ⚠️ No files found!"
           echo "=========================================="
 
-      # =====================================================================
-      # ✅ BUGFIX #003: Enhanced Build Variables Extraction
-      # =====================================================================
-      
-      - name: 🔍 Extract Build Variables (Enhanced)
+      - name: 🔍 Extract Build Variables
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          echo "=========================================="
-          echo "  🔍 EXTRACTING BUILD VARIABLES"
-          echo "=========================================="
-          
-          # Initialize variables
-          KERNEL_NAME="VorteX_E-Sport"
-          LINUX_VERSION=""
-          SUSFS_VERSION=""
-          RELEASE_VER="v0.3"
-          
-          # Method 1: Try to read from info.txt files
-          echo ""
-          echo "📄 Method 1: Scanning for info.txt files..."
-          INFO_FILES=$(find release_files -name "info.txt" -type f 2>/dev/null)
-          
-          if [ -n "${INFO_FILES}" ]; then
-            echo "  ✓ Found $(echo "${INFO_FILES}" | wc -l) info.txt file(s)"
-            
-            while IFS= read -r INFO_FILE; do
-              echo "  📖 Reading: ${INFO_FILE}"
-              
-              # Parse key=value pairs (robust parsing)
-              while IFS='=' read -r key value; do
-                # Skip empty lines and comments
-                [[ -z "${key}" || "${key}" =~ ^[[:space:]]*# ]] && continue
-                
-                # Trim whitespace
-                key=$(echo "${key}" | xargs)
-                value=$(echo "${value}" | xargs)
-                
-                # Store variables (use first non-empty value)
-                if [[ -n "${key}" && -n "${value}" ]]; then
-                  case "${key}" in
-                    KERNEL_NAME)
-                      [ -z "${KERNEL_NAME}" ] && KERNEL_NAME="${value}"
-                      echo "    → KERNEL_NAME = ${value}"
-                      ;;
-                    LINUX_VERSION|KERNEL_VERSION|VERSION)
-                      [ -z "${LINUX_VERSION}" ] && LINUX_VERSION="${value}"
-                      echo "    → LINUX_VERSION = ${value}"
-                      ;;
-                    SUSFS_VERSION|SUSFS)
-                      [ -z "${SUSFS_VERSION}" ] && SUSFS_VERSION="${value}"
-                      echo "    → SUSFS_VERSION = ${value}"
-                      ;;
-                    RELEASE|BUILD_VERSION)
-                      [ -z "${RELEASE_VER}" ] && RELEASE_VER="${value}"
-                      echo "    → RELEASE = ${value}"
-                      ;;
-                  esac
-                fi
-              done < "${INFO_FILE}"
-            done <<< "${INFO_FILES}"
+          INFO_FILE=$(find release_files -name "info.txt" -type f 2>/dev/null | head -1)
+          if [[ -f "$INFO_FILE" ]]; then
+            while IFS='=' read -r key value; do
+              [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
+              key=$(echo "$key" | xargs)
+              value=$(echo "$value" | xargs)
+              [[ -n "$key" && -n "$value" ]] && echo "$key=$value" >> $GITHUB_ENV
+            done < "$INFO_FILE"
           else
-            echo "  ℹ️ No info.txt files found"
+            echo "KERNEL_NAME=VorteX_E-Sport" >> $GITHUB_ENV
+            echo "RELEASE=v0.3" >> $GITHUB_ENV
+            echo "LINUX_VERSION=unknown" >> $GITHUB_ENV
+            echo "SUSFS_VERSION=N/A" >> $GITHUB_ENV
           fi
-          
-          # Method 2: Auto-detect from artifact filenames
-          echo ""
-          echo "📦 Method 2: Auto-detecting from artifacts..."
-          
-          # Detect kernel versions from ZIP filenames
-          DETECTED_KERNELS=$(find release_files -name "*.zip" 2>/dev/null \
-            | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' \
-            | sort -u \
-            | tr '\n' ',' \
-            | sed 's/,$//')
-          
-          if [ -n "${DETECTED_KERNELS}" ]; then
-            echo "  ✓ Detected kernel versions: ${DETECTED_KERNELS}"
-            
-            # If LINUX_VERSION still empty, use detected
-            if [ -z "${LINUX_VERSION}" ]; then
-              LINUX_VERSION="${DETECTED_KERNELS}"
-              echo "  → Set LINUX_VERSION = ${LINUX_VERSION}"
-            fi
-          else
-            echo "  ⚠️ Could not detect from filenames"
-          fi
-          
-          # Method 3: Try to extract SuSFS version from ZIP contents or common locations
-          echo ""
-          echo "🔍 Method 3: Searching for SuSFS version..."
-          
-          # Check common SuSFS version indicators
-          SUSFS_INDICATORS=$(find release_files -type f 2>/dev/null \
-            | xargs strings 2>/dev/null \
-            | grep -oiE '(susfs|SuSFS)[_-]?[0-9]+\.[0-9]+' \
-            | head -1 \
-            | grep -oE '[0-9]+\.[0-9]+.*')
-          
-          if [ -n "${SUSFS_INDICATORS}" ]; then
-            SUSFS_VERSION="${SUSFS_INDICATORS}"
-            echo "  ✓ Found SuSFS version indicator: ${SUSFS_VERSION}"
-          else
-            # Try alternative: check if any filename contains susfs
-            SUSFS_FILE=$(find release_files -name "*susfs*" -o -name "*SuSFS*" 2>/dev/null | head -1)
-            if [ -n "${SUSFS_FILE}" ]; then
-              SUSFS_VERSION="Included (see builds)"
-              echo "  ✓ SuSFS present in build artifacts"
-            else
-              SUSFS_VERSION="Not Included"
-              echo "  ℹ️ No SuSFS found in this build"
-            fi
-          fi
-          
-          # Final fallbacks if still empty
-          [ -z "${LINUX_VERSION}" ] && LINUX_VERSION="5.10.x / 6.1.x / 6.6.x"
-          [ -z "${SUSFS_VERSION}" ] && SUSFS_VERSION="Check Individual Builds"
-          [ -z "${RELEASE_VER}" ] && RELEASE_VER="v0.3"
-          
-          # Export all variables to GitHub ENV
-          echo ""
-          echo "=========================================="
-          echo "  ✅ FINAL VARIABLES"
-          echo "=========================================="
-          echo "KERNEL_NAME=${KERNEL_NAME}" >> $GITHUB_ENV
-          echo "LINUX_VERSION=${LINUX_VERSION}" >> $GITHUB_ENV
-          echo "SUSFS_VERSION=${SUSFS_VERSION}" >> $GITHUB_ENV
-          echo "RELEASE=${RELEASE_VER}" >> $GITHUB_ENV
-          
-          echo "  KERNEL_NAME   : ${KERNEL_NAME}"
-          echo "  LINUX_VERSION : ${LINUX_VERSION}"
-          echo "  SUSFS_VERSION : ${SUSFS_VERSION}"
-          echo "  RELEASE       : ${RELEASE_VER}"
-          echo "=========================================="
 
       - name: 🏷️ Generate Release Tag
         run: |
@@ -379,12 +263,6 @@ jobs:
           echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
           echo "BUILD_TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
 
-      # =====================================================================
-      # ✅ UPDATED: Installation Guide Fixed (#005)
-      # Removed: Magisk (incorrect for kernel flashing)
-      # Added: KernelFlasher, Bolt Flasher, FKM, Recovery Mode
-      # =====================================================================
-      
       - name: 📝 Prepare Release Notes
         run: |
           cat > release_notes.md << 'EOF'
@@ -443,23 +321,17 @@ jobs:
           
           ### 📱 Installation
           
-          1. **Download** ZIP file according to your chosen variant
-          2. **Flash** using one of these recommended methods:
-             - 📱 **KernelFlasher** (Recommended - Easiest)
-             - ⚡ **Bolt Flasher** (Fast & Simple)
-             - 🔧 **FKM** (Flash Kernel Manager - Advanced)
-             - 🔄 **Recovery Mode** (TWRP/Custom Recovery)
-             - 📦 **AnyKernel3** (via Recovery only)
-          3. **Reboot** device
+          1. Download ZIP file according to your chosen variant
+          2 Flash via AnyKernel3 / Recovery / KernelFlash / fkm
+          3. Reboot device
           
-          > ⚠️ **IMPORTANT:** Do NOT flash kernel via Magisk! Use proper kernel flasher apps or recovery mode.
-          > 💾 **Backup your data before flashing!**
+          > ⚠️ **Backup your data before flashing!**
           
           ---
           
           ### 💬 Support
           
-          - 📞 Telegram: [VortexGKI Community](https://t.me/vortexgki)
+          - 📞 Telegram: [VorteX_E-Sport](https://t.me/vortexgki)
           - 🌐 GitHub: [Kingfinik98/build-vortex](https://github.com/Kingfinik98/build-vortex)
           
           ---
@@ -471,8 +343,8 @@ jobs:
           # ✅ BUGFIX #001: Safe sed substitution with pipe delimiter
           sed -i "s|{KERNEL_NAME}|${KERNEL_NAME:-VorteX_E-Sport}|g" release_notes.md
           sed -i "s|{TIMESTAMP}|${BUILD_TIMESTAMP:-$(date +%Y%m%d-%H%M)}|g" release_notes.md
-          sed -i "s|{LINUX_VERSION}|${LINUX_VERSION:-Multiple GKI Versions}|g" release_notes.md
-          sed -i "s|{SUSFS_VERSION}|${SUSFS_VERSION:-See Build Details}|g" release_notes.md
+          sed -i "s|{LINUX_VERSION}|${LINUX_VERSION:-Multiple}|g" release_notes.md
+          sed -i "s|{SUSFS_VERSION}|${SUSFS_VERSION:-N/A}|g" release_notes.md
           echo "✅ Release notes prepared!"
 
       - name: 📋 List Build Artifacts
@@ -496,6 +368,11 @@ jobs:
       # =====================================================================
       # ✅ BUGFIX #002: Fixed Subshell Loop & Variable Typo
       # =====================================================================
+      # Changes:
+      # - Replaced pipe-based loop with process substitution (< <())
+      # - Fixed variable typo: filesize -> FILESIZE
+      # - Counters now accurately tracked outside loop
+      # =====================================================================
       
       - name: 🚀 Create GitHub Release
         env:
@@ -510,8 +387,6 @@ jobs:
           echo "  Repo     : ${REPO}"
           echo "  Tag      : ${RELEASE_TAG}"
           echo "  Timestamp: ${BUILD_TIMESTAMP}"
-          echo "  Kernel   : ${LINUX_VERSION}"
-          echo "  SuSFS    : ${SUSFS_VERSION}"
           echo "=========================================="
           
           # Step 1: Create release FIRST (without assets)
@@ -535,6 +410,7 @@ jobs:
           FAIL_COUNT=0
           
           # Step 3: Upload assets using PROCESS SUBSTITUTION (not pipe!)
+          # This ensures variables are preserved in current shell
           echo ""
           echo "📤 Uploading assets..."
           
@@ -582,10 +458,6 @@ jobs:
           echo "✅ Release complete!"
           echo "🔗 https://github.com/${REPO}/releases/tag/${RELEASE_TAG}"
 
-      # =====================================================================
-      # ✅ UPDATED: Telegram Notification with Correct Link
-      # =====================================================================
-      
       - name: 📬 Send Telegram Notification
         env:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
@@ -598,13 +470,12 @@ jobs:
           
           ✅ *Status*: SUCCESS
           📦 *Builds*: ${TOTAL_ZIPS} ZIPs
-          🐧 *Kernels*: ${LINUX_VERSION}
+          🐧 *Kernels*: 5.10, 6.1, 6.6
           📅 *Date*: ${BUILD_TIMESTAMP}
-          🔐 *SuSFS*: ${SUSFS_VERSION}
+          🔐 *Root*: KSU, VorteXSU, VNL
           
           ———————————————
           📥 [DOWNLOAD](${LINK})
-          💬 [JOIN TELEGRAM](https://t.me/vortexgki)
           ———————————————
           _© 2026 VorteX_E-Sport_"
           curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
@@ -625,12 +496,10 @@ jobs:
           echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| **Tag** | \`${RELEASE_TAG}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Kernels** | \`${LINUX_VERSION}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **SuSFS** | \`${SUSFS_VERSION}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Kernels** | \`5.10\`, \`6.1\`, \`6.6\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **ZIP Files** | \`${TOTAL_ZIPS}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **IMG Files** | \`${TOTAL_IMGS}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Total Assets** | \`${TOTAL}\` files |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📥 Download Links" >> $GITHUB_STEP_SUMMARY
-          echo "- 🔗 [GitHub Release](https://github.com/Kingfinik98/build-vortex/releases/tag/${RELEASE_TAG})" >> $GITHUB_STEP_SUMMARY
-          echo "- 💬 [Telegram Group](https://t.me/vortexgki)" >> $GITHUB_STEP_SUMMARY
+          echo "### 📥 Download Link" >> $GITHUB_STEP_SUMMARY
+          echo "[🔗 View Release](https://github.com/Kingfinik98/build-vortex/releases/tag/${RELEASE_TAG})" >> $GITHUB_STEP_SUMMARY
