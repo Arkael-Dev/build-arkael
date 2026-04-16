@@ -380,7 +380,9 @@ jobs:
           echo "BUILD_TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
 
       # =====================================================================
-      # ✅ UPDATED: Telegram Link Fixed to https://t.me/vortexgki
+      # ✅ UPDATED: Installation Guide Fixed (#005)
+      # Removed: Magisk (incorrect for kernel flashing)
+      # Added: KernelFlasher, Bolt Flasher, FKM, Recovery Mode
       # =====================================================================
       
       - name: 📝 Prepare Release Notes
@@ -441,11 +443,17 @@ jobs:
           
           ### 📱 Installation
           
-          1. Download ZIP file according to your chosen variant
-          2 Flash via AnyKernel3 / Magisk / KernelFlash
-          3. Reboot device
+          1. **Download** ZIP file according to your chosen variant
+          2. **Flash** using one of these recommended methods:
+             - 📱 **KernelFlasher** (Recommended - Easiest)
+             - ⚡ **Bolt Flasher** (Fast & Simple)
+             - 🔧 **FKM** (Flash Kernel Manager - Advanced)
+             - 🔄 **Recovery Mode** (TWRP/Custom Recovery)
+             - 📦 **AnyKernel3** (via Recovery only)
+          3. **Reboot** device
           
-          > ⚠️ **Backup your data before flashing!**
+          > ⚠️ **IMPORTANT:** Do NOT flash kernel via Magisk! Use proper kernel flasher apps or recovery mode.
+          > 💾 **Backup your data before flashing!**
           
           ---
           
