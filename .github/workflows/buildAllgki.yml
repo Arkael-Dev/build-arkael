@@ -216,6 +216,15 @@ jobs:
           echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
           echo "BUILD_TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
 
+      # =====================================================================
+      # ✅ FIXED VERSION - Bug Report #001 Resolved
+      # =====================================================================
+      # Change Log:
+      # - Replaced sed delimiter from "/" to "|" to prevent parsing errors
+      # - Added safe date format fallback (%Y%m%d-%H%M) 
+      # - Prevents failure when variables contain special characters
+      # =====================================================================
+      
       - name: 📝 Prepare Release Notes
         run: |
           cat > release_notes.md << 'EOF'
@@ -293,10 +302,19 @@ jobs:
           *© 2026 All Rights Reserved*
           EOF
           
-          sed -i "s/{KERNEL_NAME}/${KERNEL_NAME:-VorteX_E-Sport}/g" release_notes.md
-          sed -i "s/{TIMESTAMP}/${BUILD_TIMESTAMP:-$(date)}/g" release_notes.md
-          sed -i "s/{LINUX_VERSION}/${LINUX_VERSION:-Multiple}/g" release_notes.md
-          sed -i "s/{SUSFS_VERSION}/${SUSFS_VERSION:-N/A}/g" release_notes.md
+          # ============================================================
+          # ✅ BUGFIX APPLIED: Safe sed substitution with pipe delimiter
+          # ============================================================
+          # Previous (broken): sed -i "s/pattern/replacement/g"
+          # Fixed (working) :  sed -i "s|pattern|replacement|g"
+          # Reason: Pipe "|" is safer than slash "/" for complex strings
+          # ============================================================
+          
+          sed -i "s|{KERNEL_NAME}|${KERNEL_NAME:-VorteX_E-Sport}|g" release_notes.md
+          sed -i "s|{TIMESTAMP}|${BUILD_TIMESTAMP:-$(date +%Y%m%d-%H%M)}|g" release_notes.md
+          sed -i "s|{LINUX_VERSION}|${LINUX_VERSION:-Multiple}|g" release_notes.md
+          sed -i "s|{SUSFS_VERSION}|${SUSFS_VERSION:-N/A}|g" release_notes.md
+          
           echo "✅ Release notes prepared!"
 
       - name: 📋 List Build Artifacts
