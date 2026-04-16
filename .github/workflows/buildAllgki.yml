@@ -189,6 +189,53 @@ jobs:
           pattern: '*'
           merge-multiple: true
 
+      # =====================================================================
+      # ✅ NEW: Debug & Flatten Artifact Structure
+      # =====================================================================
+      - name: 🔍 Inspect & Prepare Artifacts
+        run: |
+          echo "=========================================="
+          echo "  🔍 ARTIFACT STRUCTURE INSPECTION"
+          echo "=========================================="
+          
+          # Show directory structure
+          echo ""
+          echo "📁 Directory tree:"
+          find release_files -type f 2>/dev/null | head -20
+          
+          echo ""
+          echo "📊 File count:"
+          find release_files -type f \( -name "*.zip" -o -name "*.img" \) 2>/dev/null | wc -l
+          
+          # Check if files are in subdirectories
+          DEEP_FILES=$(find release_files -mindepth 2 -type f \( -name "*.zip" -o -name "*.img" \) 2>/dev/null | wc -l)
+          echo ""
+          echo "📂 Files in subdirectories: ${DEEP_FILES}"
+          
+          # If files are in subfolders, flatten them
+          if [ "${DEEP_FILES}" -gt 0 ]; then
+            echo ""
+            echo "🔧 Flattening artifact structure..."
+            mkdir -p release_flat
+            
+            # Move all zip/img files to flat directory
+            find release_files -type f \( -name "*.zip" -o -name "*.img" \) 2>/dev/null | while read f; do
+              cp "$f" release_flat/
+              echo "  ✓ Copied: $(basename "$f")"
+            done
+            
+            # Replace original with flattened
+            rm -rf release_files
+            mv release_flat release_files
+          fi
+          
+          echo ""
+          echo "=========================================="
+          echo "  ✅ FINAL ARTIFACT LIST"
+          echo "=========================================="
+          ls -lh release_files/ 2>/dev/null || echo "  ⚠️ No files found!"
+          echo "=========================================="
+
       - name: 🔍 Extract Build Variables
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -216,15 +263,6 @@ jobs:
           echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
           echo "BUILD_TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
 
-      # =====================================================================
-      # ✅ FIXED VERSION - Bug Report #001 Resolved
-      # =====================================================================
-      # Change Log:
-      # - Replaced sed delimiter from "/" to "|" to prevent parsing errors
-      # - Added safe date format fallback (%Y%m%d-%H%M) 
-      # - Prevents failure when variables contain special characters
-      # =====================================================================
-      
       - name: 📝 Prepare Release Notes
         run: |
           cat > release_notes.md << 'EOF'
@@ -302,19 +340,11 @@ jobs:
           *© 2026 All Rights Reserved*
           EOF
           
-          # ============================================================
-          # ✅ BUGFIX APPLIED: Safe sed substitution with pipe delimiter
-          # ============================================================
-          # Previous (broken): sed -i "s/pattern/replacement/g"
-          # Fixed (working) :  sed -i "s|pattern|replacement|g"
-          # Reason: Pipe "|" is safer than slash "/" for complex strings
-          # ============================================================
-          
+          # ✅ BUGFIX #001: Safe sed substitution with pipe delimiter
           sed -i "s|{KERNEL_NAME}|${KERNEL_NAME:-VorteX_E-Sport}|g" release_notes.md
           sed -i "s|{TIMESTAMP}|${BUILD_TIMESTAMP:-$(date +%Y%m%d-%H%M)}|g" release_notes.md
           sed -i "s|{LINUX_VERSION}|${LINUX_VERSION:-Multiple}|g" release_notes.md
           sed -i "s|{SUSFS_VERSION}|${SUSFS_VERSION:-N/A}|g" release_notes.md
-          
           echo "✅ Release notes prepared!"
 
       - name: 📋 List Build Artifacts
@@ -335,20 +365,97 @@ jobs:
           fi
           echo "=========================================="
 
+      # =====================================================================
+      # ✅ BUGFIX #002: Fixed Subshell Loop & Variable Typo
+      # =====================================================================
+      # Changes:
+      # - Replaced pipe-based loop with process substitution (< <())
+      # - Fixed variable typo: filesize -> FILESIZE
+      # - Counters now accurately tracked outside loop
+      # =====================================================================
+      
       - name: 🚀 Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           REPO="${REPO:-Kingfinik98/build-vortex}"
+          
+          echo "=========================================="
+          echo "  🚀 CREATING GITHUB RELEASE"
+          echo "=========================================="
+          echo "  Repo     : ${REPO}"
+          echo "  Tag      : ${RELEASE_TAG}"
+          echo "  Timestamp: ${BUILD_TIMESTAMP}"
+          echo "=========================================="
+          
+          # Step 1: Create release FIRST (without assets)
           gh release create "${RELEASE_TAG}" \
             --repo "${REPO}" \
             --title "🐧 VorteX_E-Sport - All GKI (${BUILD_TIMESTAMP})" \
             --notes-file release_notes.md \
-            release_files/*.zip \
-            release_files/*.img \
-            2>/dev/null || echo "⚠️ Some files may have failed"
-          echo "✅ Release created!"
+            || {
+              echo "⚠️ Release already exists or creation failed, trying to update..."
+              gh release edit "${RELEASE_TAG}" \
+                --repo "${REPO}" \
+                --title "🐧 VorteX_E-Sport - All GKI (${BUILD_TIMESTAMP})" \
+                --notes-file release_notes.md \
+                2>/dev/null || true
+            }
+          
+          echo "✅ Release created/updated!"
+          
+          # Step 2: Initialize counters (BEFORE loop - critical!)
+          UPLOAD_COUNT=0
+          FAIL_COUNT=0
+          
+          # Step 3: Upload assets using PROCESS SUBSTITUTION (not pipe!)
+          # This ensures variables are preserved in current shell
+          echo ""
+          echo "📤 Uploading assets..."
+          
+          if [ -d "release_files" ]; then
+            # ✅ BUGFIX #002: Use < <() instead of | to avoid subshell
+            while IFS= read -r f; do
+              FILENAME=$(basename "$f")
+              FILESIZE=$(ls -lh "$f" | awk '{print $5}')
+              
+              # ✅ BUGFIX #002: Fixed typo - use uppercase FILESIZE
+              echo -n "  📤 Uploading ${FILENAME} (${FILESIZE})... "
+              
+              if gh release upload "${RELEASE_TAG}" \
+                --repo "${REPO}" \
+                "${f}" \
+                --clobber 2>&1; then
+                echo "✅ OK"
+                UPLOAD_COUNT=$((UPLOAD_COUNT + 1))
+              else
+                echo "❌ FAILED"
+                FAIL_COUNT=$((FAIL_COUNT + 1))
+              fi
+            
+            done < <(find release_files -type f \( -name "*.zip" -o -name "*.img" \) 2>/dev/null)
+            
+          else
+            echo "  ⚠️ No release_files directory found!"
+          fi
+          
+          echo ""
+          echo "=========================================="
+          echo "  📊 UPLOAD SUMMARY"
+          echo "=========================================="
+          echo "  ✅ Successful: ${UPLOAD_COUNT} files"
+          echo "  ❌ Failed:     ${FAIL_COUNT} files"
+          echo "=========================================="
+          
+          # Verify at least one file uploaded
+          if [ "${UPLOAD_COUNT}" -eq 0 ] && [ "${FAIL_COUNT}" -eq 0 ]; then
+            echo "⚠️ WARNING: No files were uploaded! Release may be empty."
+            exit 1
+          fi
+          
+          echo ""
+          echo "✅ Release complete!"
           echo "🔗 https://github.com/${REPO}/releases/tag/${RELEASE_TAG}"
 
       - name: 📬 Send Telegram Notification
@@ -358,11 +465,11 @@ jobs:
         run: |
           REPO="${REPO:-Kingfinik98/build-vortex}"
           LINK="https://github.com/${REPO}/releases/tag/${RELEASE_TAG}"
-          TOTAL=$(find release_files -name "*.zip" 2>/dev/null | wc -l)
+          TOTAL_ZIPS=$(find release_files -name "*.zip" 2>/dev/null | wc -l)
           MSG="*🐧 VORTEX_E-SPORT - ALL GKI RELEASE* 🚀
           
           ✅ *Status*: SUCCESS
-          📦 *Builds*: ${TOTAL} ZIPs
+          📦 *Builds*: ${TOTAL_ZIPS} ZIPs
           🐧 *Kernels*: 5.10, 6.1, 6.6
           📅 *Date*: ${BUILD_TIMESTAMP}
           🔐 *Root*: KSU, VorteXSU, VNL
@@ -380,9 +487,19 @@ jobs:
       - name: 📊 Summary
         if: always()
         run: |
+          TOTAL_ZIPS=$(find release_files -name '*.zip' 2>/dev/null | wc -l)
+          TOTAL_IMGS=$(find release_files -name '*.img' 2>/dev/null | wc -l)
+          TOTAL=$((TOTAL_ZIPS + TOTAL_IMGS))
+          
           echo "## 🎉 Release Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| **Tag** | \`${RELEASE_TAG}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Kernels** | \`5.10\`, \`6.1\`, \`6.6\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Total** | $(find release_files -name '*.zip' 2>/dev/null | wc -l) files |" >> $GITHUB_STEP_SUMMARY
+          echo "| **ZIP Files** | \`${TOTAL_ZIPS}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **IMG Files** | \`${TOTAL_IMGS}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Total Assets** | \`${TOTAL}\` files |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📥 Download Link" >> $GITHUB_STEP_SUMMARY
+          echo "[🔗 View Release](https://github.com/Kingfinik98/build-vortex/releases/tag/${RELEASE_TAG})" >> $GITHUB_STEP_SUMMARY
