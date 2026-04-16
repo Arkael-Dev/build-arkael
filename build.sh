@@ -20,7 +20,7 @@ KERNEL_NAME="VorteX_E-Sport"
 USER="VorteX"
 HOST="VorteX"
 TIMEZONE="Asia/Jakarta"
-ANYKERNEL_REPO="https://github.com/Kingfinik98/AnyKernel"
+ANYKERNEL_REPO="https://github.com/Kingfinik98/AnyKernel3"
 
 if [ "$KVER" == "5.10" ]; then
   KERNEL_DEFCONFIG="gki_defconfig"
