@@ -77,21 +77,21 @@ if [ "$KVER" == "5.10" ]; then
 fi
 
 # --- PATCH DRIVER SKIAVK (GKI 5.10 ONLY) ---
-if [ "$KVER" == "5.10" ]; then
-  log "Placing Driver Adreno SkiaVK libgsl.so..."
-  mkdir -p $WORKDIR/vendor/lib64
-  curl -LSs "https://raw.githubusercontent.com/Kingfinik98/build-vortex/6.x/system/vendor/lib64/libgsl.so" -o $WORKDIR/vendor/lib64/libgsl.so
-  log "libgsl.so placed successfully"
-fi
+#if [ "$KVER" == "5.10" ]; then
+ # log "Placing Driver Adreno SkiaVK libgsl.so..."
+#  mkdir -p $WORKDIR/vendor/lib64
+#  curl -LSs "https://raw.githubusercontent.com/Kingfinik98/build-vortex/6.x/system/vendor/lib64/libgsl.so" -o $WORKDIR/vendor/lib64/libgsl.so
+ # log "libgsl.so placed successfully"
+#fi
 
 # --- INJECT VORTEX GPU TUNING ---
-if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  log "Injecting VorteX Ultra-Safe Kernel Patch..."
-  mkdir -p "$KSRC/drivers/misc"
-  cp "$KERNEL_PATCHES/vortex_gki.c" "$KSRC/drivers/misc/vortex_gki.c"
-  sed -i '/vortex_gki/d' "$KSRC/drivers/misc/Makefile"
-  echo "obj-y += vortex_gki.o" >> "$KSRC/drivers/misc/Makefile"
-fi
+#if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
+ # log "Injecting VorteX Ultra-Safe Kernel Patch..."
+ # mkdir -p "$KSRC/drivers/misc"
+#  cp "$KERNEL_PATCHES/vortex_gki.c" "$KSRC/drivers/misc/vortex_gki.c"
+ # sed -i '/vortex_gki/d' "$KSRC/drivers/misc/Makefile"
+#  echo "obj-y += vortex_gki.o" >> "$KSRC/drivers/misc/Makefile"
+#fi
 
 # --- INJECT VORTEXCORE GOVERNOR ---
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
