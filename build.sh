@@ -94,29 +94,29 @@ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
 fi
 
 # --- INJECT VORTEXCORE GOVERNOR ---
-if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  log "Injecting VortexCore Custom Governor..."
-  cp "$WORKDIR/governor-vortexcore.c" "$KSRC/drivers/cpufreq/governor-vortexcore.c"
+#if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
+#  log "Injecting VortexCore Custom Governor..."
+#  cp "$WORKDIR/governor-vortexcore.c" "$KSRC/drivers/cpufreq/governor-vortexcore.c"
   
-  if ! grep -q "governor-vortexcore.o" "$KSRC/drivers/cpufreq/Makefile"; then
-    echo "obj-\$(CONFIG_CPU_FREQ_GOV_VORTEXCORE) += governor-vortexcore.o" >> "$KSRC/drivers/cpufreq/Makefile"
-    log "VortexCore added to cpufreq Makefile."
-  fi
+#  if ! grep -q "governor-vortexcore.o" "$KSRC/drivers/cpufreq/Makefile"; then
+#    echo "obj-\$(CONFIG_CPU_FREQ_GOV_VORTEXCORE) += governor-vortexcore.o" >> "$KSRC/drivers/cpufreq/Makefile"
+ #   log "VortexCore added to cpufreq Makefile."
+#  fi
   
-  if ! grep -q "CPU_FREQ_GOV_VORTEXCORE" "$KSRC/drivers/cpufreq/Kconfig"; then
-    cat << 'KCONF_EOF' >> "$KSRC/drivers/cpufreq/Kconfig"
+#  if ! grep -q "CPU_FREQ_GOV_VORTEXCORE" "$KSRC/drivers/cpufreq/Kconfig"; then
+#  s  cat << 'KCONF_EOF' >> "$KSRC/drivers/cpufreq/Kconfig"
 
-config CPU_FREQ_GOV_VORTEXCORE
-    tristate "VortexCore CPU frequency policy governor"
-    depends on CPU_FREQ
-    help
-      VortexCore governor balances performance and efficiency for gaming and daily use.
+# config CPU_FREQ_GOV_VORTEXCORE
+#    tristate "VortexCore CPU frequency policy governor"
+ #   depends on CPU_FREQ
+  #  help
+   #   VortexCore governor balances performance and efficiency for gaming and daily use.
 
-      If in doubt, say N.
-KCONF_EOF
-    log "VortexCore added to cpufreq Kconfig."
-  fi
-fi
+  #    If in doubt, say N.
+#KCONF_EOF
+ #   log "VortexCore added to cpufreq Kconfig."
+#  fi
+#fi
 
 # --- INJECT VORTEXMAX GOVERNOR ---
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
