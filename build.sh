@@ -76,16 +76,23 @@ if [ "$KVER" == "5.10" ]; then
   rm infinix_cam.patch
 fi
 
-# --- PATCH VORTEX HOOK 1.0 (GKI 5.10 ONLY) - [CRITICAL] ---
-if [ "$KVER" == "5.10" ]; then
+# --- PATCH VORTEX HOOK 1.0 (GKI 5.10 ONLY) ---
+if [[ "$KVER" == 5.10* ]]; then
   log "🔧 Applying VORTEX HOOK 1.0 - Universal GKI-Compatible KernelSU Hook System..."
   log "   GKI Target: 5.10 | KSU Support: 1.5 | 1.6 | 1.8 | 2.0+"
-  curl -L "https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/kernel-patches/hooks/vortex-hook-1.0.patch" -o vortex-hook-1.0.patch
-  if [ -f "vortex-hook-1.0.patch" ]; then
-    patch -p1 < vortex-hook-1.0.patch && log "[✅] VORTEX HOOK 1.0 applied successfully." || log "[⚠️] VORTEX HOOK 1.0 patch already applied or failed (continuing...)"
+
+  PATCH_URL="https://raw.githubusercontent.com/Kingfinik98/build-vortex/6.x/kernel-patches/hooks/vortex-hook-1.0.patch"
+
+  curl -L "$PATCH_URL" -o vortex-hook-1.0.patch
+
+  if [ -s vortex-hook-1.0.patch ]; then
+    patch -p1 --forward < vortex-hook-1.0.patch \
+      && log "[✅] VORTEX HOOK 1.0 applied successfully." \
+      || log "[⚠️] Patch already applied / failed (skip)"
+
     rm -f vortex-hook-1.0.patch
   else
-    log "[❌] Failed to download VORTEX HOOK 1.0 patch! Build may be incomplete."
+    log "[❌] Failed to download VORTEX HOOK 1.0 patch!"
   fi
 fi
 
