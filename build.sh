@@ -119,29 +119,36 @@ KCONF_EOF
 fi
 
 # --- INJECT VORTEXMAX GOVERNOR ---
-if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  log "Injecting VortexCore Custom Governor..."
-  cp "$WORKDIR/governor-vortexmax.c" "$KSRC/drivers/cpufreq/governor-vortexmax.c"
-  
-  if ! grep -q "governor-vortexmax.o" "$KSRC/drivers/cpufreq/Makefile"; then
-    echo "obj-\$(CONFIG_CPU_FREQ_GOV_VORTEXMAX) += governor-vortexmax.o" >> "$KSRC/drivers/cpufreq/Makefile"
-    log "VortexCore added to cpufreq Makefile."
-  fi
-  
-  if ! grep -q "CPU_FREQ_GOV_VORTEXMAX" "$KSRC/drivers/cpufreq/Kconfig"; then
-    cat << 'KCONF_EOF' >> "$KSRC/drivers/cpufreq/Kconfig"
-
-config CPU_FREQ_GOV_VORTEXMAX
-    tristate "VortexCore CPU frequency policy governor"
-    depends on CPU_FREQ
-    help
-      VortexCore governor balances performance and efficiency for gaming.
-
-      If in doubt, say N.
-KCONF_EOF
-    log "VortexMax added to cpufreq Kconfig."
-  fi
-fi
+ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
+-  log "Injecting VortexCore Custom Governor..."
++  log "Injecting VortexMax Custom Governor..."
+   
+   cp "$WORKDIR/governor-vortexmax.c" "$KSRC/drivers/cpufreq/governor-vortexmax.c"
+   
+   if ! grep -q "governor-vortexmax.o" "$KSRC/drivers/cpufreq/Makefile"; then
+     echo "obj-\$(CONFIG_CPU_FREQ_GOV_VORTEXMAX) += governor-vortexmax.o" >> "$KSRC/drivers/cpufreq/Makefile"
+-    log "VortexCore added to cpufreq Makefile."
++    log "VortexMax added to cpufreq Makefile."  
+   fi
+   
+   if ! grep -q "CPU_FREQ_GOV_VORTEXMAX" "$KSRC/drivers/cpufreq/Kconfig"; then
+     cat << 'KCONF_EOF' >> "$KSRC/drivers/cpufreq/Kconfig"
+ 
+ config CPU_FREQ_GOV_VORTEXMAX
+-    tristate "VortexCore CPU frequency policy governor"
++    tristate "VortexMax CPU frequency policy governor" 
+     depends on CPU_FREQ
+     help
+-      VortexCore governor balances performance and efficiency for gaming and daily use.
++      VortexMax governor optimized for maximum performance with anti-parachute hold. 
++      Designed for gaming with zero-latency touch boost and smart ramp-up.
+ 
+       If in doubt, say N.
+ KCONF_EOF
+-    log "VortexCore added to cpufreq Kconfig."
++    log "VortexMax added to cpufreq Kconfig."
+   fi
+ fi
 
 # --- PATCH inject.sh ---
 log "Applying inject.sh patch..."
