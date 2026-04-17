@@ -76,26 +76,6 @@ if [ "$KVER" == "5.10" ]; then
   rm infinix_cam.patch
 fi
 
-# --- PATCH VORTEX HOOK 1.0 (GKI 5.10 ONLY) ---
-if [[ "$KVER" == 5.10* ]]; then
-  log "🔧 Applying VORTEX HOOK 1.0 - Universal GKI-Compatible KernelSU Hook System..."
-  log "   GKI Target: 5.10 | KSU Support: 1.5 | 1.6 | 1.8 | 2.0+"
-
-  PATCH_URL="https://raw.githubusercontent.com/Kingfinik98/build-vortex/6.x/kernel-patches/hooks/vortex-hook-1.0.patch"
-
-  curl -L "$PATCH_URL" -o vortex-hook-1.0.patch
-
-  if [ -s vortex-hook-1.0.patch ]; then
-    patch -p1 --forward < vortex-hook-1.0.patch \
-      && log "[✅] VORTEX HOOK 1.0 applied successfully." \
-      || log "[⚠️] Patch already applied / failed (skip)"
-
-    rm -f vortex-hook-1.0.patch
-  else
-    log "[❌] Failed to download VORTEX HOOK 1.0 patch!"
-  fi
-fi
-
 # --- PATCH DRIVER SKIAVK (GKI 5.10 ONLY) ---
 if [ "$KVER" == "5.10" ]; then
   log "Placing Driver Adreno SkiaVK libgsl.so..."
@@ -111,6 +91,31 @@ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   cp "$KERNEL_PATCHES/vortex_gki.c" "$KSRC/drivers/misc/vortex_gki.c"
   sed -i '/vortex_gki/d' "$KSRC/drivers/misc/Makefile"
   echo "obj-y += vortex_gki.o" >> "$KSRC/drivers/misc/Makefile"
+fi
+
+# --- INJECT VORTEXCORE GOVERNOR ---
+if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
+  log "Injecting VortexCore Custom Governor..."
+  cp "$WORKDIR/governor-vortexcore.c" "$KSRC/drivers/cpufreq/governor-vortexcore.c"
+  
+  if ! grep -q "governor-vortexcore.o" "$KSRC/drivers/cpufreq/Makefile"; then
+    echo "obj-\$(CONFIG_CPU_FREQ_GOV_VORTEXCORE) += governor-vortexcore.o" >> "$KSRC/drivers/cpufreq/Makefile"
+    log "VortexCore added to cpufreq Makefile."
+  fi
+  
+  if ! grep -q "CPU_FREQ_GOV_VORTEXCORE" "$KSRC/drivers/cpufreq/Kconfig"; then
+    cat << 'KCONF_EOF' >> "$KSRC/drivers/cpufreq/Kconfig"
+
+config CPU_FREQ_GOV_VORTEXCORE
+    tristate "VortexCore CPU frequency policy governor"
+    depends on CPU_FREQ
+    help
+      VortexCore governor balances performance and efficiency for gaming and daily use.
+
+      If in doubt, say N.
+KCONF_EOF
+    log "VortexCore added to cpufreq Kconfig."
+  fi
 fi
 
 # --- INJECT VORTEXMAX GOVERNOR ---
@@ -319,7 +324,7 @@ if susfs_included; then
       patch -p1 < $KERNEL_PATCHES/susfs/namespace.c_fix.patch || true
       patch -p1 < $KERNEL_PATCHES/Susfs/task_mmu.c_fix.patch || true
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c4) -eq 6658 ]; then
-      patch -p1 < $KERNEL_PATCHES/Susfs/task_mmu.c_fix-k6.6.58.patch || true
+      patch -p1 < $KERNEL_PATCHES/susfs/task_mmu.c_fix-k6.6.58.patch || true
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c2) -eq 61 ]; then
       patch -p1 < $KERNEL_PATCHES/susfs/fs_proc_base.c-fix-k6.1.patch || true
       
@@ -442,26 +447,17 @@ text=$(
 📛 *KernelSU*: ${KSU}
 ඞ *SuSFS*: $(susfs_included && echo "$SUSFS_VERSION" || echo "None")
 🔰 *Compiler*: $COMPILER_STRING
-🔧 *VORTEX HOOK*: $( [ "$KVER" == "5.10" ] && echo "1.0 [ENABLED]" || echo "N/A" )
 EOF
 )
 
 ## Build GKI
 log "Generating config..."
-make ${MAKE_ARGS[@]} $KERNEL_DEFconfig
+make ${MAKE_ARGS[@]} $KERNEL_DEFCONFIG
 
 log "Enabling VorteX kernel dependencies..."
 config --enable CONFIG_TCP_CONG_WESTWOOD
 config --enable CONFIG_DEVFREQ_GOV_SCHEDUTIL
 config --enable CONFIG_CPU_FREQ_GOV_VORTEXCORE
-
-# --- [CRITICAL] ENABLE VORTEX HOOK 1.0 FOR GKI 5.10 ---
-if [ "$KVER" == "5.10" ]; then
-  log "⚡ Enabling VORTEX HOOK 1.0 (MANDATORY for GKI 5.10)..."
-  config --enable CONFIG_VORTEX_HOOK
-  config --enable CONFIG_VORTEX_LEGACY_COMPAT
-  log "[✅] CONFIG_VORTEX_HOOK=y enforced successfully."
-fi
 
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   config --enable CONFIG_ANDROID_LOW_MEMORY_KILLER
