@@ -576,7 +576,7 @@ static unsigned int apply_transition_limit(unsigned int requested,
     
     if (requested > cur_freq) {
         /* Increasing */
-        if ((requested - current_cur_freq) <= max_delta)
+        if ((requested - cur_freq) <= max_delta)
             return requested;
         return cur_freq + max_delta;
     } else {
