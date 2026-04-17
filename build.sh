@@ -118,52 +118,29 @@ KCONF_EOF
   fi
 fi
 
-# --- INJECT VORTEXMAX GOVERNOR (FIXED & COMPLETE) ---
+# --- INJECT VORTEXMAX GOVERNOR (FIXED - NO RECURSIVE DEP) ---
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  log "Injecting VortexMax Ultra Standalone Governor v3.0..."
+  log "Injecting VortexMax Custom Governor..."
   cp "$WORKDIR/governor-vortexmax.c" "$KSRC/drivers/cpufreq/governor-vortexmax.c"
   
-  # Patch Makefile untuk VortexMax
   if ! grep -q "governor-vortexmax.o" "$KSRC/drivers/cpufreq/Makefile"; then
     echo "obj-\$(CONFIG_CPU_FREQ_GOV_VORTEXMAX) += governor-vortexmax.o" >> "$KSRC/drivers/cpufreq/Makefile"
     log "VortexMax added to cpufreq Makefile."
-  else
-    log "VortexMax already exists in Makefile."
   fi
   
-  # Patch Kconfig untuk VortexMax (dengan depends on INPUT yang WAJIB)
   if ! grep -q "CPU_FREQ_GOV_VORTEXMAX" "$KSRC/drivers/cpufreq/Kconfig"; then
     cat << 'KCONF_VMAX_EOF' >> "$KSRC/drivers/cpufreq/Kconfig"
 
 config CPU_FREQ_GOV_VORTEXMAX
-    tristate "'VortexMax' Ultra Standalone Gaming Governor"
+    tristate "VortexMax CPU frequency policy governor"
     depends on CPU_FREQ
-    depends on INPUT
-    select THERMAL if THERMAL
     help
-      VortexMax v3.0 Ultra Standalone - Zero Dependency Gaming Governor.
-      
-      Features:
-      - Touch Boost Pro (input_handler integration)
-      - IO Boost Auto (burst detection)
-      - Wake Boost (CPU wake from idle)
-      - Smart Ramp-Up v2 (momentum scaling)
-      - Dynamic Floor Guard (adaptive min freq)
-      - Hysteresis Band (anti-oscillation)
-      - Load Predictor v2 (EMA + trend analysis)
-      - Gaming Mode AI (pattern recognition)
-      - Thermal Guard Pro (kernel thermal callback)
-      - Max Hold Plus (anti-parachute)
-      - Transition Smoothness (rate limiter)
-      
-      Architecture: Pure kernel space, no external scripts needed.
-      Works out-of-the-box after flashing kernel zip.
-      
-      If in doubt, say Y for gaming performance.
+      VortexMax v3.0 Ultra Standalone Gaming Governor.
+      Features: TouchBoost, IOBoost, WakeBoost, SmartRamp, GamingAI, ThermalGuard.
+
+      If in doubt, say N.
 KCONF_VMAX_EOF
-    log "VortexMax added to cpufreq Kconfig with full dependency chain."
-  else
-    log "VortexMax already exists in Kconfig."
+    log "VortexMax added to cpufreq Kconfig."
   fi
 fi
 
@@ -476,7 +453,7 @@ EOF
 
 ## Build GKI
 log "Generating config..."
-make ${MAKE_ARGS[@]} $KERNEL_DEFCONFIG
+make ${MAKE_ARGS[@]} $KERNEL_DEFconfig
 
 log "Enabling VorteX kernel dependencies..."
 config --enable CONFIG_TCP_CONG_WESTWOOD
