@@ -942,7 +942,7 @@ static struct input_handler vortexmax_input_handler = {
  * Optional: Reacts to kernel thermal events (if available)
  * ===================================================================== */
 
-#ifdef CONFIG_THERMAL
+#if IS_ENABLED(CONFIG_THERMAL) && (LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0))
 static int vortexmax_thermal_notify(struct notifier_block *nb,
                                      unsigned long event, void *data)
 {
@@ -1071,7 +1071,7 @@ static int vortexmax_start(struct cpufreq_policy *policy)
         /* Register input handler for touch boost */
         input_register_handler(&vortexmax_input_handler);
         
-#ifdef CONFIG_THERMAL
+#if IS_ENABLED(CONFIG_THERMAL) && (LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0))
         /* Register thermal notifier */
         vortexmax_thermal_notifier.notifier_call = vortexmax_thermal_notify;
         register_thermal_notifier(&vortexmax_thermal_notifier);
@@ -1106,7 +1106,7 @@ static void vortexmax_stop(struct cpufreq_policy *policy)
         cancel_work_sync(&touch_boost_work);
         input_unregister_handler(&vortexmax_input_handler);
         
-#ifdef CONFIG_THERMAL
+#if IS_ENABLED(CONFIG_THERMAL) && (LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0))
         unregister_thermal_notifier(&vortexmax_thermal_notifier);
 #endif
         
@@ -1163,7 +1163,7 @@ static void __exit vortexmax_module_exit(void)
     if (vortexmax_initialized) {
         cancel_work_sync(&touch_boost_work);
         input_unregister_handler(&vortexmax_input_handler);
-#ifdef CONFIG_THERMAL
+#if IS_ENABLED(CONFIG_THERMAL) && (LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0))
         unregister_thermal_notifier(&vortexmax_thermal_notifier);
 #endif
         vortexmax_initialized = false;
