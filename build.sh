@@ -459,6 +459,10 @@ config --enable CONFIG_TCP_CONG_WESTWOOD
 config --enable CONFIG_DEVFREQ_GOV_SCHEDUTIL
 config --enable CONFIG_CPU_FREQ_GOV_VORTEXCORE
 config --enable CONFIG_CPU_FREQ_GOV_VORTEXMAX
+config --enable CONFIG_CPU_FREQ=y
+config --enable CONFIG_INPUT=y
+config --enable CONFIG_THERMAL=y
+config --enable CONFIG_THERMAL_OF=y
 
 
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
