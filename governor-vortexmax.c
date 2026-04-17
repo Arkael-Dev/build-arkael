@@ -832,7 +832,7 @@ static void vortexmax_do_touch_boost(struct work_struct *work)
  * vortexmax_input_event() - Callback for input events
  * Registered with kernel input subsystem - catches touch/mouse events
  */
-static int vortexmax_input_event(struct input_handle *handle,
+static void vortexmax_input_event(struct input_handle *handle,
                                    unsigned int type,
                                    unsigned int code,
                                    int value)
