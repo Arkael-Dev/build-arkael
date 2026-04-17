@@ -852,7 +852,7 @@ static void vortexmax_input_event(struct input_handle *handle,
         }
     }
     
-    return 0; /* Don't consume the event - let others see it too */
+    return; // Don.t consume the event - let others see it too */
 }
 
 static int vortexmax_input_connect(struct input_handler *handler,
