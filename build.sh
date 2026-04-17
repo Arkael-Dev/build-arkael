@@ -120,22 +120,22 @@ fi
 
 # --- INJECT VORTEXMAX GOVERNOR ---
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  log "Injecting VortexMax Custom Governor..."
+  log "Injecting VortexCore Custom Governor..."
   cp "$WORKDIR/governor-vortexmax.c" "$KSRC/drivers/cpufreq/governor-vortexmax.c"
   
   if ! grep -q "governor-vortexmax.o" "$KSRC/drivers/cpufreq/Makefile"; then
     echo "obj-\$(CONFIG_CPU_FREQ_GOV_VORTEXMAX) += governor-vortexmax.o" >> "$KSRC/drivers/cpufreq/Makefile"
-    log "VortexMax added to cpufreq Makefile."
+    log "VortexCore added to cpufreq Makefile."
   fi
   
   if ! grep -q "CPU_FREQ_GOV_VORTEXMAX" "$KSRC/drivers/cpufreq/Kconfig"; then
     cat << 'KCONF_EOF' >> "$KSRC/drivers/cpufreq/Kconfig"
 
 config CPU_FREQ_GOV_VORTEXMAX
-    tristate "VortexMax CPU frequency policy governor"
+    tristate "VortexCore CPU frequency policy governor"
     depends on CPU_FREQ
     help
-      VortexMax governor optimized for maximum performance with anti-parachute hold.
+      VortexCore governor balances performance and efficiency for gaming.
 
       If in doubt, say N.
 KCONF_EOF
@@ -452,13 +452,14 @@ EOF
 
 ## Build GKI
 log "Generating config..."
-make ${MAKE_ARGS[@]} $KERNEL_DEFconfig
+make ${MAKE_ARGS[@]} $KERNEL_DEFCONFIG
 
 log "Enabling VorteX kernel dependencies..."
 config --enable CONFIG_TCP_CONG_WESTWOOD
 config --enable CONFIG_DEVFREQ_GOV_SCHEDUTIL
 config --enable CONFIG_CPU_FREQ_GOV_VORTEXCORE
 config --enable CONFIG_CPU_FREQ_GOV_VORTEXMAX
+
 
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   config --enable CONFIG_ANDROID_LOW_MEMORY_KILLER
