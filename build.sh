@@ -80,7 +80,7 @@ fi
 if [ "$KVER" == "5.10" ]; then
   log "🔧 Applying VORTEX HOOK 1.0 - Universal GKI-Compatible KernelSU Hook System..."
   log "   GKI Target: 5.10 | KSU Support: 1.5 | 1.6 | 1.8 | 2.0+"
-  curl -L "https://github.com/Kingfinik98/build-vortex/blob/b82f85c0bf5c7ea65f3f6d4ac00c98813808f954/kernel-patches/hooks/vortex-hook-1.0.patch?raw=true" -o vortex-hook-1.0.patch
+  curl -L "https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/kernel-patches/hooks/vortex-hook-1.0.patch" -o vortex-hook-1.0.patch
   if [ -f "vortex-hook-1.0.patch" ]; then
     patch -p1 < vortex-hook-1.0.patch && log "[✅] VORTEX HOOK 1.0 applied successfully." || log "[⚠️] VORTEX HOOK 1.0 patch already applied or failed (continuing...)"
     rm -f vortex-hook-1.0.patch
@@ -104,31 +104,6 @@ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   cp "$KERNEL_PATCHES/vortex_gki.c" "$KSRC/drivers/misc/vortex_gki.c"
   sed -i '/vortex_gki/d' "$KSRC/drivers/misc/Makefile"
   echo "obj-y += vortex_gki.o" >> "$KSRC/drivers/misc/Makefile"
-fi
-
-# --- INJECT VORTEXCORE GOVERNOR ---
-if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  log "Injecting VortexCore Custom Governor..."
-  cp "$WORKDIR/governor-vortexcore.c" "$KSRC/drivers/cpufreq/governor-vortexcore.c"
-  
-  if ! grep -q "governor-vortexcore.o" "$KSRC/drivers/cpufreq/Makefile"; then
-    echo "obj-\$(CONFIG_CPU_FREQ_GOV_VORTEXCORE) += governor-vortexcore.o" >> "$KSRC/drivers/cpufreq/Makefile"
-    log "VortexCore added to cpufreq Makefile."
-  fi
-  
-  if ! grep -q "CPU_FREQ_GOV_VORTEXCORE" "$KSRC/drivers/cpufreq/Kconfig"; then
-    cat << 'KCONF_EOF' >> "$KSRC/drivers/cpufreq/Kconfig"
-
-config CPU_FREQ_GOV_VORTEXCORE
-    tristate "VortexCore CPU frequency policy governor"
-    depends on CPU_FREQ
-    help
-      VortexCore governor balances performance and efficiency for gaming and daily use.
-
-      If in doubt, say N.
-KCONF_EOF
-    log "VortexCore added to cpufreq Kconfig."
-  fi
 fi
 
 # --- INJECT VORTEXMAX GOVERNOR ---
