@@ -93,55 +93,27 @@ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   echo "obj-y += vortex_gki.o" >> "$KSRC/drivers/misc/Makefile"
 fi
 
-# --- INJECT VORTEXCORE GOVERNOR ---
+# --- INJECT VORTEX DUAL-GOVERNOR SYSTEM ---
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  log "Injecting VortexCore Custom Governor..."
+  log "Injecting Vortex Dual-Governor System..."
   cp "$WORKDIR/governor-vortexcore.c" "$KSRC/drivers/cpufreq/governor-vortexcore.c"
+  rm -f "$KSRC/drivers/cpufreq/governor-vortexmax.c"
   
-  if ! grep -q "governor-vortexcore.o" "$KSRC/drivers/cpufreq/Makefile"; then
-    echo "obj-\$(CONFIG_CPU_FREQ_GOV_VORTEXCORE) += governor-vortexcore.o" >> "$KSRC/drivers/cpufreq/Makefile"
-    log "VortexCore added to cpufreq Makefile."
-  fi
-  
-  if ! grep -q "CPU_FREQ_GOV_VORTEXCORE" "$KSRC/drivers/cpufreq/Kconfig"; then
-    cat << 'KCONF_EOF' >> "$KSRC/drivers/cpufreq/Kconfig"
+  sed -i '/vortex/d' "$KSRC/drivers/cpufreq/Makefile"
+  echo 'obj-$(CONFIG_CPU_FREQ_GOV_VORTEXCORE) += governor-vortexcore.o' >> "$KSRC/drivers/cpufreq/Makefile"
+
+  sed -i '/CPU_FREQ_GOV_VORTEXCORE\|CPU_FREQ_GOV_VORTEXMAX/d' "$KSRC/drivers/cpufreq/Kconfig"
+  cat >> "$KSRC/drivers/cpufreq/Kconfig" << 'KCONF_EOF'
 
 config CPU_FREQ_GOV_VORTEXCORE
-    tristate "VortexCore CPU frequency policy governor"
+    tristate "Vortex Dual Governor (vortexcore + vortexmax)"
     depends on CPU_FREQ
     help
-      VortexCore governor balances performance and efficiency for gaming and daily use.
-
-      If in doubt, say N.
+      vortexcore : Lightweight, battery saver, daily use
+      vortexmax  : Full-featured, gaming, performance
+      Select via FKM / Kernel Adiutor / TWRP after flash.
+      If in doubt, say Y.
 KCONF_EOF
-    log "VortexCore added to cpufreq Kconfig."
-  fi
-fi
-
-# --- INJECT VORTEXMAX GOVERNOR (FIXED - NO RECURSIVE DEP) ---
-if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  log "Injecting VortexMax Custom Governor..."
-  cp "$WORKDIR/governor-vortexmax.c" "$KSRC/drivers/cpufreq/governor-vortexmax.c"
-  
-  if ! grep -q "governor-vortexmax.o" "$KSRC/drivers/cpufreq/Makefile"; then
-    echo "obj-\$(CONFIG_CPU_FREQ_GOV_VORTEXMAX) += governor-vortexmax.o" >> "$KSRC/drivers/cpufreq/Makefile"
-    log "VortexMax added to cpufreq Makefile."
-  fi
-  
-  if ! grep -q "CPU_FREQ_GOV_VORTEXMAX" "$KSRC/drivers/cpufreq/Kconfig"; then
-    cat << 'KCONF_VMAX_EOF' >> "$KSRC/drivers/cpufreq/Kconfig"
-
-config CPU_FREQ_GOV_VORTEXMAX
-    tristate "VortexMax CPU frequency policy governor"
-    depends on CPU_FREQ
-    help
-      VortexMax v3.0 Ultra Standalone Gaming Governor.
-      Features: TouchBoost, IOBoost, WakeBoost, SmartRamp, GamingAI, ThermalGuard.
-
-      If in doubt, say N.
-KCONF_VMAX_EOF
-    log "VortexMax added to cpufreq Kconfig."
-  fi
 fi
 
 # --- PATCH inject.sh ---
