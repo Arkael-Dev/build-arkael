@@ -334,7 +334,7 @@ EOF
 
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c3) -eq 510 ]; then
       if [ "$KSU" != "vortexsu" ]; then
-        patch -p1 < $KERNEL_PATCHES/Susfs/pershoot-susfs-k5.10.patch || true
+        patch -p1 < $KERNEL_PATCHES/susfs/pershoot-susfs-k5.10.patch || true
       fi
     fi
 
