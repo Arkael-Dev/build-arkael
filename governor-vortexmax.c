@@ -117,6 +117,8 @@ module_param_named(max_hold_cycles, max_hold_cycles, uint, 0644);
 static unsigned int thermal_limit_pct = 90;
 module_param_named(thermal_limit_pct, thermal_limit_pct, uint, 0644);
 static unsigned int thermal_counter_threshold = 12;
+static bool thermal_hard_limit = false;
+module_param_named(thermal_hard_limit, thermal_hard_limit, bool, 0644);
 module_param(thermal_counter_threshold, uint, 0644);
 
 /* --- Adaptive Sampling Rate (AI Controlled) --- */
@@ -147,6 +149,8 @@ module_param_named(transition_smooth_enabled, transition_smooth_enabled, bool, 0
 static unsigned int ai_learning_rate = 7; /* 1-10, higher = faster learning */
 module_param(ai_learning_rate, uint, 0644);
 static unsigned int gaming_sustain_cycles = 15;
+static unsigned int gaming_load_threshold = 70;
+module_param(gaming_load_threshold, uint, 0644);
 module_param(gaming_sustain_cycles, uint, 0644);
 static unsigned int burst_detection_threshold = 30; /* Load jump to detect burst */
 module_param(burst_detection_threshold, uint, 0644);
@@ -187,7 +191,7 @@ struct vortex_ai_state {
     /* Stability guard */
     unsigned int freq_change_count;
     unsigned int direction_changes;
-    unsigned int freq_history[stability_window];
+    unsigned int freq_history[5];
     bool force_smoothing;
 };
 
