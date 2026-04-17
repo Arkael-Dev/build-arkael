@@ -393,7 +393,7 @@ static void ai_update_efficiency_score(struct vortex_ai_state *ai,
     unsigned int index;
     
     /* Map frequency to bucket (0 = min, FREQ_BUCKETS-1 = max) */
-    if (max_freq == 0) return;
+    if (max_freq == 0 || freq == 0) return;
     
     index = (freq * (FREQ_BUCKETS - 1)) / max_freq;
     if (index >= FREQ_BUCKETS) index = FREQ_BUCKETS - 1;
@@ -629,6 +629,7 @@ static unsigned int get_frequency_floor(struct cpufreq_policy *policy,
         default:                floor_pct = freq_floor_idle_pct; break;
     }
     
+    if (policy->max == 0) return policy->min;
     return (policy->max * floor_pct) / 100;
 }
 
@@ -640,6 +641,7 @@ static unsigned int apply_hysteresis(unsigned int requested,
     unsigned int band_pct, band, lower, upper;
     
     band_pct = going_up ? hysteresis_up_pct : hysteresis_down_pct;
+    if (cur_freq == 0) return requested;
     band = (cur_freq * band_pct) / 100;
     
     lower = (cur_freq > band) ? (cur_freq - band) : min_freq;
@@ -657,6 +659,7 @@ static unsigned int smart_ramp_up(unsigned int cur_freq,
 {
     unsigned int step, new_freq;
     
+    if (target_max == 0 || cur_freq > target_max) return target_max;
     step = (target_max * ramp_up_step_pct) / 200; /* Halved for stability */
     
     if (ramp_up_momentum && trend == 1)
@@ -1063,7 +1066,11 @@ static void vortexmax_work_handler(struct work_struct *work)
 {
     struct vortexmax_policy_info *vpinfo =
         container_of(work, struct vortexmax_policy_info, work.work);
-    struct cpufreq_policy *policy = vpinfo->policy;
+    struct cpufreq_policy *policy;
+
+    if (!vpinfo || !vpinfo->policy) return;
+
+    policy = vpinfo->policy;
 
     vortexmax_eval_freq(policy);
     
@@ -1137,13 +1144,22 @@ static int vortexmax_start(struct cpufreq_policy *policy)
         memset(info->ai.freq_history, 0, sizeof(info->ai.freq_history));
     }
     
+    bool need_init = false;
+
     spin_lock(&vortexmax_lock);
     if (!vortexmax_initialized) {
-        INIT_WORK(&touch_boost_work, vortexmax_do_touch_boost);
-        input_register_handler(&vortexmax_input_handler);
-        vortexmax_initialized = true;
+        need_init = true;
     }
     spin_unlock(&vortexmax_lock);
+
+    if (need_init) {
+        INIT_WORK(&touch_boost_work, vortexmax_do_touch_boost);
+        if (input_register_handler(&vortexmax_input_handler) != 0)
+            pr_err("VortexMax: input handler failed\\n");
+        spin_lock(&vortexmax_lock);
+        vortexmax_initialized = true;
+        spin_unlock(&vortexmax_lock);
+    }
     
     atomic_inc(&active_governors);
     
@@ -1158,10 +1174,13 @@ static int vortexmax_start(struct cpufreq_policy *policy)
 
 static void vortexmax_stop(struct cpufreq_policy *policy)
 {
+    struct vortexmax_policy_info *vpinfo = policy->governor_data;
+
+    if (!vpinfo) return;
+
     cancel_delayed_work_sync(
-        &((struct vortexmax_policy_info *)policy->governor_data)->work
+        &vpinfo->work
     );
-    
     if (atomic_dec_and_test(&active_governors)) {
         spin_lock(&vortexmax_lock);
         cancel_work_sync(&touch_boost_work);
