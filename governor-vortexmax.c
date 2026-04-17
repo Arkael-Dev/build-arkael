@@ -136,9 +136,9 @@ static bool thermal_hard_limit = false; /* Soft limit by default */
 module_param_named(thermal_hard_limit, thermal_hard_limit, bool, 0644);
 
 /* --- Sampling Rate Parameters --- */
-static unsigned int sample_rate_boost_ms = 4;     /* During boost */
+static unsigned int sample_rate_boost_ms = 8;     /* During boost */
 module_param(sample_rate_boost_ms, uint, 0644);
-static unsigned int sample_rate_active_ms = 8;    /* Active use */
+static unsigned int sample_rate_active_ms = 12;    /* Active use */
 module_param(sample_rate_active_ms, uint, 0644);
 static unsigned int sample_rate_normal_ms = 16;   /* Normal */
 module_param(sample_rate_normal_ms, uint, 0644);
@@ -154,7 +154,7 @@ static bool wake_boost_enabled = true;
 module_param_named(wake_boost_enabled, wake_boost_enabled, bool, 0644);
 
 /* --- Transition Rate Limiter --- */
-static unsigned int max_freq_change_per_ms = 100; /* Max kHz change per ms */
+static unsigned int max_freq_change_per_ms = 40; /* Max kHz change per ms */
 module_param(max_freq_change_per_ms, uint, 0644);
 static bool transition_smooth_enabled = true;
 module_param_named(transition_smooth_enabled, transition_smooth_enabled, bool, 0644);
@@ -485,7 +485,7 @@ static unsigned int apply_hysteresis(unsigned int requested,
     band_pct = going_up ? hysteresis_up_pct : hysteresis_down_pct;
     band = (cur_freq * band_pct) / 100;
     
-    (cur_freq > band) ? (current - band) : min_freq;
+    (cur_freq > band) ? (cur_freq - band) : min_freq;
     upper = cur_freq + band;
     
     if (requested >= lower && requested <= upper)
@@ -506,7 +506,7 @@ static unsigned int smart_ramp_up(unsigned int cur_freq,
     unsigned int step, new_freq;
     
     /* Base step from parameter */
-    step = (target_max * ramp_up_step_pct) / 100;
+    step = (target_max * ramp_up_step_pct) / 200;
     
     /* Momentum multiplier based on trend */
     if (ramp_up_momentum && trend == 1) {
@@ -679,6 +679,8 @@ static void vortexmax_eval_freq(struct cpufreq_policy *policy)
     info->prev_cpu_wall = now_ns;
     info->prev_cpu_idle = idle_time;
 
+    if (delta_wall < 1000000ULL) /* < 1ms invalid */
+        return;
     if (delta_wall == 0 || delta_idle > delta_wall)
         raw_load = 0;
     else
@@ -788,6 +790,7 @@ apply_final:
     /* Apply frequency change */
     if (freq_target != info->target_freq) {
         info->target_freq = freq_target;
+    freq_target = clamp(freq_target, policy->min, policy->max);
         __cpufreq_driver_target(policy, freq_target, CPUFREQ_RELATION_L);
     }
 
@@ -816,7 +819,7 @@ static void vortexmax_do_touch_boost(struct work_struct *work)
     struct vortexmax_cpu_info *info;
     
     /* Update timestamp on ALL CPUs for synchronous boost */
-    for_each_possible_cpu(cpu) {
+    for_each_online_cpu(cpu) {
         info = &per_cpu(vortexmax_info, cpu);
         info->last_touch_time = local_clock();
         /* Mark as active on touch */
@@ -969,7 +972,7 @@ static int vortexmax_thermal_notify(struct notifier_block *nb,
         unsigned int cpu;
         struct vortexmax_cpu_info *info;
         
-        for_each_possible_cpu(cpu) {
+        for_each_online_cpu(cpu) {
             info = &per_cpu(vortexmax_info, cpu);
             /* Increment thermal counter to trigger guard */
             if (info->thermal_counter < thermal_counter_threshold)
