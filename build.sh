@@ -132,7 +132,7 @@ if [ "$KVER" == "6.1" ]; then
     if grep -q "QCA_WCN3988" "$TARGET_FILE"; then
       log "[INFO] Patch already applied: QCA_WCN3988 exists."
     else
-      sed -i '/QCA_WCN3998,/a\  QCA_WCN3988,' "$TARGET_FILE"
+      sed -i '/QCA_WCN3998,/a \ QCA_WCN3988,' "$TARGET_FILE"
       log "[SUCCESS] Patch btqca applied successfully."
     fi
   else
@@ -334,7 +334,19 @@ EOF
 
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c3) -eq 510 ]; then
       if [ "$KSU" != "vortexsu" ]; then
-        patch -p1 < $KERNEL_PATCHES/susfs/pershoot-susfs-k5.10.patch || true
+        if [ ! -f "$KERNEL_PATCHES/Susfs/pershoot-susfs-k5.10.patch" ]; then
+          log "Downloading pershoot-susfs-k5.10.patch from GitHub..."
+          mkdir -p "$KERNEL_PATCHES/Susfs"
+          wget -qO "$KERNEL_PATCHES/Susfs/pershoot-susfs-k5.10.patch" \
+            "https://raw.githubusercontent.com/Kingfinik98/build-vortex/6.x/kernel-patches/susfs/pershoot-susfs-k5.10.patch" \
+            || log "[WARN] Failed to download pershoot-susfs-k5.10.patch"
+        fi
+        
+        if [ -f "$KERNEL_PATCHES/Susfs/pershoot-susfs-k5.10.patch" ]; then
+          patch -p1 < $KERNEL_PATCHES/Susfs/pershoot-susfs-k5.10.patch && log "pershoot-susfs-k5.10.patch applied." || log "pershoot-susfsfs-k5.10.patch failed or not needed."
+        else
+          log "[WARN] pershoot-susfs-k5.10.patch not available, skipping."
+        fi
       fi
     fi
 
@@ -431,7 +443,7 @@ log "Enabling VorteX kernel dependencies..."
 config --enable CONFIG_TCP_CONG_WESTWOOD
 config --enable CONFIG_DEVFREQ_GOV_SCHEDUTIL
 config --enable CONFIG_CPU_FREQ_GOV_VORTEXCORE
-config --enable CONFIG_CPU_FREQ_GOV_VORTEXMAX
+config --disable CONFIG_CPU_FREQ_GOV_VORTEXMAX 2>/dev/null || true
 config --enable CONFIG_CPU_FREQ=y
 config --enable CONFIG_INPUT=y
 config --enable CONFIG_THERMAL=y
