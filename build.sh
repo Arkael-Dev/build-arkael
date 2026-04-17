@@ -118,28 +118,52 @@ KCONF_EOF
   fi
 fi
 
-# --- INJECT VORTEXMAX GOVERNOR ---
+# --- INJECT VORTEXMAX GOVERNOR (FIXED & COMPLETE) ---
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  log "Injecting VortexCore Custom Governor..."
+  log "Injecting VortexMax Ultra Standalone Governor v3.0..."
   cp "$WORKDIR/governor-vortexmax.c" "$KSRC/drivers/cpufreq/governor-vortexmax.c"
   
+  # Patch Makefile untuk VortexMax
   if ! grep -q "governor-vortexmax.o" "$KSRC/drivers/cpufreq/Makefile"; then
     echo "obj-\$(CONFIG_CPU_FREQ_GOV_VORTEXMAX) += governor-vortexmax.o" >> "$KSRC/drivers/cpufreq/Makefile"
-    log "VortexCore added to cpufreq Makefile."
+    log "VortexMax added to cpufreq Makefile."
+  else
+    log "VortexMax already exists in Makefile."
   fi
   
+  # Patch Kconfig untuk VortexMax (dengan depends on INPUT yang WAJIB)
   if ! grep -q "CPU_FREQ_GOV_VORTEXMAX" "$KSRC/drivers/cpufreq/Kconfig"; then
-    cat << 'KCONF_EOF' >> "$KSRC/drivers/cpufreq/Kconfig"
+    cat << 'KCONF_VMAX_EOF' >> "$KSRC/drivers/cpufreq/Kconfig"
 
 config CPU_FREQ_GOV_VORTEXMAX
-    tristate "VortexCore CPU frequency policy governor"
+    tristate "'VortexMax' Ultra Standalone Gaming Governor"
     depends on CPU_FREQ
+    depends on INPUT
+    select THERMAL if THERMAL
     help
-      VortexCore governor balances performance and efficiency for gaming.
-
-      If in doubt, say N.
-KCONF_EOF
-    log "VortexMax added to cpufreq Kconfig."
+      VortexMax v3.0 Ultra Standalone - Zero Dependency Gaming Governor.
+      
+      Features:
+      - Touch Boost Pro (input_handler integration)
+      - IO Boost Auto (burst detection)
+      - Wake Boost (CPU wake from idle)
+      - Smart Ramp-Up v2 (momentum scaling)
+      - Dynamic Floor Guard (adaptive min freq)
+      - Hysteresis Band (anti-oscillation)
+      - Load Predictor v2 (EMA + trend analysis)
+      - Gaming Mode AI (pattern recognition)
+      - Thermal Guard Pro (kernel thermal callback)
+      - Max Hold Plus (anti-parachute)
+      - Transition Smoothness (rate limiter)
+      
+      Architecture: Pure kernel space, no external scripts needed.
+      Works out-of-the-box after flashing kernel zip.
+      
+      If in doubt, say Y for gaming performance.
+KCONF_VMAX_EOF
+    log "VortexMax added to cpufreq Kconfig with full dependency chain."
+  else
+    log "VortexMax already exists in Kconfig."
   fi
 fi
 
@@ -452,7 +476,7 @@ EOF
 
 ## Build GKI
 log "Generating config..."
-make ${MAKE_ARGS[@]} $KERNEL_DEFCONFIG
+make ${MAKE_ARGS[@]} $KERNEL_DEFconfig
 
 log "Enabling VorteX kernel dependencies..."
 config --enable CONFIG_TCP_CONG_WESTWOOD
