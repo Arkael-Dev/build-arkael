@@ -1,4 +1,3 @@
-cat > governor-vortexmax.c << 'VORTEXMAXEOF'
 // SPDX-License-Identifier: GPL-2.0
 /*
  * VortexMax CPU Governor v3.0 (Ultra Standalone Edition)
@@ -477,20 +476,20 @@ static unsigned int get_frequency_floor(struct cpufreq_policy *policy,
  * Only allows frequency change if outside dead zone
  */
 static unsigned int apply_hysteresis(unsigned int requested,
-                                      unsigned int current,
+                                      unsigned int cur_freq,
                                       unsigned int min_freq,
                                       bool going_up)
 {
     unsigned int band_pct, band, lower, upper;
     
     band_pct = going_up ? hysteresis_up_pct : hysteresis_down_pct;
-    band = (current * band_pct) / 100;
+    band = (cur_freq * band_pct) / 100;
     
-    lower = (current > band) ? (current - band) : min_freq;
-    upper = current + band;
+    (cur_freq > band) ? (current - band) : min_freq;
+    upper = cur_freq + band;
     
     if (requested >= lower && requested <= upper)
-        return current; /* Stay put - within hysteresis band */
+        return cur_freq; /* Stay put - within hysteresis band */
     
     return requested;
 }
@@ -499,7 +498,7 @@ static unsigned int apply_hysteresis(unsigned int requested,
  * smart_ramp_up() - Aggressive but controlled frequency increase
  * Implements momentum: accelerates if load trend is increasing
  */
-static unsigned int smart_ramp_up(unsigned int current,
+static unsigned int smart_ramp_up(unsigned int cur_freq,
                                    unsigned int target_max,
                                    unsigned int load,
                                    int trend)
@@ -520,7 +519,7 @@ static unsigned int smart_ramp_up(unsigned int current,
         step += step / 2; /* Another 1.5x for extreme load */
     }
     
-    new_freq = current + step;
+    new_freq = cur_freq + step;
     
     if (new_freq > target_max)
         new_freq = target_max;
@@ -532,16 +531,16 @@ static unsigned int smart_ramp_up(unsigned int current,
  * smooth_decay() - Gradual frequency reduction
  * Slower decay in gaming mode to prevent stutter
  */
-static unsigned int smooth_decay(unsigned int current,
+static unsigned int smooth_decay(unsigned int cur_freq,
                                   unsigned int floor,
                                   struct vortexmax_cpu_info *info)
 {
     unsigned int diff, step;
     
-    if (current <= floor)
+    if (cur_freq <= floor)
         return floor;
     
-    diff = current - floor;
+    diff = cur_freq - floor;
     
     /* Base decay rate */
     step = max(floor / 100, diff / 35);
@@ -553,8 +552,8 @@ static unsigned int smooth_decay(unsigned int current,
         step = max(1, step / 2); /* 2x slower for active */
     }
     
-    if (current > floor + step)
-        return current - step;
+    if (cur_freq > floor + step)
+        return cur_freq - step;
     
     return floor;
 }
@@ -564,7 +563,7 @@ static unsigned int smooth_decay(unsigned int current,
  * Prevents too-fast transitions that can cause instability
  */
 static unsigned int apply_transition_limit(unsigned int requested,
-                                            unsigned int current,
+                                            unsigned int cur_freq,
                                             unsigned int sample_ms)
 {
     unsigned int max_delta;
@@ -575,16 +574,16 @@ static unsigned int apply_transition_limit(unsigned int requested,
     /* Maximum allowed change per sampling period */
     max_delta = max_freq_change_per_ms * sample_ms;
     
-    if (requested > current) {
+    if (requested > cur_freq) {
         /* Increasing */
-        if ((requested - current) <= max_delta)
+        if ((requested - current_cur_freq) <= max_delta)
             return requested;
-        return current + max_delta;
+        return cur_freq + max_delta;
     } else {
         /* Decreasing */
-        if ((current - requested) <= max_delta)
+        if ((cur_freq - requested) <= max_delta)
             return requested;
-        return current - max_delta;
+        return cur_freq - max_delta;
     }
 }
 
@@ -833,7 +832,7 @@ static void vortexmax_do_touch_boost(struct work_struct *work)
  * vortexmax_input_event() - Callback for input events
  * Registered with kernel input subsystem - catches touch/mouse events
  */
-static bool vortexmax_input_event(struct input_handle *handle,
+static int vortexmax_input_event(struct input_handle *handle,
                                    unsigned int type,
                                    unsigned int code,
                                    int value)
@@ -853,7 +852,7 @@ static bool vortexmax_input_event(struct input_handle *handle,
         }
     }
     
-    return false; /* Don't consume the event - let others see it too */
+    return 0; /* Don't consume the event - let others see it too */
 }
 
 static int vortexmax_input_connect(struct input_handler *handler,
@@ -948,9 +947,9 @@ static int vortexmax_thermal_notify(struct notifier_block *nb,
                                      unsigned long event, void *data)
 {
     struct thermal_zone_device *tz = data;
-    int temp;
+    int temp = 0;
     
-    if (event != THERMAL_EVENT_TEMP_SAMPLING)
+    if (event != THERMAL_EVENT_TEMP_SAMPLE)
         return NOTIFY_DONE;
     
     if (!tz)
@@ -961,7 +960,7 @@ static int vortexmax_thermal_notify(struct notifier_block *nb,
         strncmp(tz->type, "soc_thermal", 11) != 0)
         return NOTIFY_DONE;
     
-    temp = thermal_zone_get_temp(tz);
+    temp = thermal_zone_get_temp(tz, &temp);
     if (temp <= 0 || temp == THERMAL_TEMP_INVALID)
         return NOTIFY_DONE;
     
@@ -1187,4 +1186,3 @@ MODULE_DESCRIPTION("VortexMax v3.0 Ultra Standalone - Zero Dependency Gaming Gov
 MODULE_LICENSE("GPL");
 MODULE_VERSION("3.0");
 
-VORTEXMAXEOF
