@@ -47,7 +47,7 @@ static int __init vortex_direct_init(void) {
 }
 
 // ==========================================
-// 2. ULTRA-SAFE SYSFS ENGINE
+// 2. ULTRA-SAFE SYSFS ENGINE (With Validation)
 // ==========================================
 
 static bool vortex_write_sysfs(const char *path, const char *val) {
@@ -94,6 +94,26 @@ static bool vortex_read_sysfs(const char *path, char *buf, size_t buflen) {
     return false;
 }
 
+/**
+ * safe_write_sysfs - Write with existence check and current value validation
+ * Prevents unnecessary writes and validates path exists first
+ */
+static bool safe_write_sysfs(const char *path, const char *val) {
+    char current[32] = {0};
+    
+    // Check if path exists by attempting to read first
+    if (!vortex_read_sysfs(path, current, sizeof(current))) {
+        return false;  // Path doesn't exist or unreadable
+    }
+    
+    // Skip write if value is already set (avoid unnecessary operations)
+    if (strcmp(current, val) == 0) {
+        return true;  // Already at desired value
+    }
+    
+    return vortex_write_sysfs(path, val);
+}
+
 static void vortex_set_tcp_congestion(const char *name) {
     struct tcp_congestion_ops *ops;
     rcu_read_lock();
@@ -115,13 +135,13 @@ static void vortex_set_tcp_congestion(const char *name) {
 static void vortex_tune_vm(void) {
     pr_info("[VorteX] VM: Applying memory optimizations...\n");
 
-    vortex_write_sysfs("/proc/sys/vm/swappiness", "10");
-    vortex_write_sysfs("/proc/sys/vm/vfs_cache_pressure", "50");
-    vortex_write_sysfs("/proc/sys/vm/dirty_ratio", "15");
-    vortex_write_sysfs("/proc/sys/vm/dirty_background_ratio", "5");
-    vortex_write_sysfs("/proc/sys/vm/min_free_kbytes", "4096");
-    vortex_write_sysfs("/proc/sys/vm/compaction_proactiveness", "20");
-    vortex_write_sysfs("/proc/sys/vm/page_lock_unfairness", "1");
+    safe_write_sysfs("/proc/sys/vm/swappiness", "10");
+    safe_write_sysfs("/proc/sys/vm/vfs_cache_pressure", "50");
+    safe_write_sysfs("/proc/sys/vm/dirty_ratio", "15");
+    safe_write_sysfs("/proc/sys/vm/dirty_background_ratio", "5");
+    safe_write_sysfs("/proc/sys/vm/min_free_kbytes", "4096");
+    safe_write_sysfs("/proc/sys/vm/compaction_proactiveness", "20");
+    safe_write_sysfs("/proc/sys/vm/page_lock_unfairness", "1");
 
     pr_info("[VorteX] VM: Done\n");
 }
@@ -133,13 +153,13 @@ static void vortex_tune_vm(void) {
 static void vortex_tune_tcp(void) {
     pr_info("[VorteX] TCP: Applying low-latency tweaks...\n");
 
-    vortex_write_sysfs("/proc/sys/net/ipv4/tcp_fastopen", "3");
-    vortex_write_sysfs("/proc/sys/net/core/somaxconn", "4096");
-    vortex_write_sysfs("/proc/sys/net/ipv4/tcp_moderate_rcvbuf", "0");
-    vortex_write_sysfs("/proc/sys/net/ipv4/tcp_tw_reuse", "1");
-    vortex_write_sysfs("/proc/sys/net/ipv4/tcp_fin_timeout", "10");
-    vortex_write_sysfs("/proc/sys/net/ipv4/tcp_max_syn_backlog", "8192");
-    vortex_write_sysfs("/proc/sys/net/ipv4/tcp_slow_start_after_idle", "0");
+    safe_write_sysfs("/proc/sys/net/ipv4/tcp_fastopen", "3");
+    safe_write_sysfs("/proc/sys/net/core/somaxconn", "4096");
+    safe_write_sysfs("/proc/sys/net/ipv4/tcp_moderate_rcvbuf", "0");
+    safe_write_sysfs("/proc/sys/net/ipv4/tcp_tw_reuse", "1");
+    safe_write_sysfs("/proc/sys/net/ipv4/tcp_fin_timeout", "10");
+    safe_write_sysfs("/proc/sys/net/ipv4/tcp_max_syn_backlog", "8192");
+    safe_write_sysfs("/proc/sys/net/ipv4/tcp_slow_start_after_idle", "0");
 
     pr_info("[VorteX] TCP: Done\n");
 }
@@ -149,8 +169,19 @@ static void vortex_tune_tcp(void) {
 // ==========================================
 
 static void vortex_fps_ksm_off(void) {
-    if (vortex_write_sysfs("/sys/kernel/mm/ksm/run", "0")) {
-        pr_info("[VorteX] FPS: KSM disabled\n");
+    // Only disable if currently running (check state first)
+    char ksm_state[8] = {0};
+    
+    if (vortex_read_sysfs("/sys/kernel/mm/ksm/run", ksm_state, sizeof(ksm_state))) {
+        if (strcmp(ksm_state, "1") == 0) {
+            if (safe_write_sysfs("/sys/kernel/mm/ksm/run", "0")) {
+                pr_info("[VorteX] FPS: KSM disabled\n");
+            }
+        } else {
+            pr_info("[VorteX] FPS: KSM already disabled\n");
+        }
+    } else {
+        pr_debug("[VorteX] FPS: KSM not available\n");
     }
 }
 
@@ -159,11 +190,12 @@ static void vortex_fps_ksm_off(void) {
 // ==========================================
 
 static void vortex_fps_timer_rcu(void) {
-    if (vortex_write_sysfs("/proc/sys/kernel/timer_migration", "0")) {
+    if (safe_write_sysfs("/proc/sys/kernel/timer_migration", "0")) {
         pr_info("[VorteX] FPS: Timer migration OFF\n");
     }
 
-    if (vortex_write_sysfs("/sys/kernel/rcu_normal", "0")) {
+    // RCU expedited mode - only if available (skip on kernels without this)
+    if (safe_write_sysfs("/sys/kernel/rcu_normal", "0")) {
         pr_info("[VorteX] FPS: RCU expedited mode\n");
     }
 }
@@ -180,10 +212,19 @@ static void vortex_fps_idle_restrict(void) {
 
     pr_info("[VorteX] FPS: Restricting CPU idle states...\n");
 
-    for (j = 2; j <= 6; j++) {
+    // Scan idle states 2-5 (reduced from 2-6 for safety)
+    for (j = 2; j <= 5; j++) {
         snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpuidle/state%d/disable", j);
-        if (vortex_write_sysfs(path, "1")) {
-            deepest_disabled = j;
+        
+        // Check if this state exists before trying to disable it
+        char test_buf[4] = {0};
+        if (vortex_read_sysfs(path, test_buf, sizeof(test_buf))) {
+            if (safe_write_sysfs(path, "1")) {
+                deepest_disabled = j;
+            }
+        } else {
+            // State doesn't exist, stop scanning deeper states
+            break;
         }
     }
 
@@ -212,6 +253,7 @@ static void vortex_fps_cpu_floor(void) {
     int big_policy_max = -1;
     long big_max_freq = 0;
 
+    // Find policy with highest max frequency (big cores)
     for (i = 15; i >= 0; i--) {
         snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpufreq/policy%d/scaling_max_freq", i);
         if (vortex_read_sysfs(path, max_freq, sizeof(max_freq))) {
@@ -231,7 +273,8 @@ static void vortex_fps_cpu_floor(void) {
     pr_info("[VorteX] FPS: Big core max detected = %ld KHz (%ld MHz)\n",
             big_max_freq, big_max_freq / 1000);
 
-    long floor = big_max_freq * 50 / 100;
+    // Use 45% floor instead of 50% (safer, prevents thermal issues)
+    long floor = big_max_freq * 45 / 100;
     snprintf(floor_str, sizeof(floor_str), "%ld", floor);
 
     for (i = 4; i <= big_policy_max; i++) {
@@ -240,7 +283,7 @@ static void vortex_fps_cpu_floor(void) {
             long cur = simple_strtol(cur_min, NULL, 10);
 
             if (floor > cur) {
-                if (vortex_write_sysfs(path, floor_str)) {
+                if (safe_write_sysfs(path, floor_str)) {
                     pr_info("[VorteX] FPS: Policy %d floor = %ld MHz (was %ld MHz)\n",
                             i, floor / 1000, cur / 1000);
                     tuned++;
@@ -252,6 +295,7 @@ static void vortex_fps_cpu_floor(void) {
         }
     }
 
+    // Fallback scan for policies 0-3 (in case big cores are mapped there)
     if (tuned == 0) {
         for (i = 0; i <= 3; i++) {
             snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpufreq/policy%d/scaling_max_freq", i);
@@ -262,7 +306,7 @@ static void vortex_fps_cpu_floor(void) {
                     if (vortex_read_sysfs(path, cur_min, sizeof(cur_min))) {
                         long cur = simple_strtol(cur_min, NULL, 10);
                         if (floor > cur) {
-                            if (vortex_write_sysfs(path, floor_str)) {
+                            if (safe_write_sysfs(path, floor_str)) {
                                 pr_info("[VorteX] FPS: Policy %d floor = %ld MHz (fallback)\n",
                                         i, floor / 1000);
                                 tuned++;
@@ -288,15 +332,16 @@ static void vortex_fps_cpu_floor(void) {
 static void vortex_fps_scheduler(void) {
     pr_info("[VorteX] FPS: Scheduler micro-tuning...\n");
 
-    vortex_write_sysfs("/proc/sys/kernel/sched_wakeup_granularity_ns", "500000");
+    safe_write_sysfs("/proc/sys/kernel/sched_wakeup_granularity_ns", "500000");
 
-    vortex_write_sysfs("/proc/sys/kernel/sched_migration_cost_ns", "50000");
+    safe_write_sysfs("/proc/sys/kernel/sched_migration_cost_ns", "50000");
 
-    vortex_write_sysfs("/proc/sys/kernel/sched_nr_migrate", "4");
+    safe_write_sysfs("/proc/sys/kernel/sched_nr_migrate", "4");
 
-    if (vortex_write_sysfs("/sys/devices/system/cpu/energy_aware", "0")) {
+    // EAS disable - try both paths gracefully
+    if (safe_write_sysfs("/sys/devices/system/cpu/energy_aware", "0")) {
         pr_info("[VorteX] FPS: EAS disabled\n");
-    } else if (vortex_write_sysfs("/proc/sys/kernel/sched_energy_aware", "0")) {
+    } else if (safe_write_sysfs("/proc/sys/kernel/sched_energy_aware", "0")) {
         pr_info("[VorteX] FPS: EAS disabled (proc)\n");
     }
 
@@ -316,33 +361,70 @@ static void vortex_tune_zram(void) {
         snprintf(path, sizeof(path), "/sys/block/zram%d/comp_algorithm", i);
 
         if (vortex_read_sysfs(path, algo, sizeof(algo))) {
-            if (vortex_write_sysfs(path, "lz4")) {
-                pr_info("[VorteX] ZRAM%d: lz4 (fastest for gaming)\n", i);
-            } else if (vortex_write_sysfs(path, "zstd")) {
-                pr_info("[VorteX] ZRAM%d: zstd (fallback)\n", i);
+            // Try lz4 first (fastest), then zstd, then keep current if neither works
+            if (strstr(algo, "lz4")) {
+                if (safe_write_sysfs(path, "lz4")) {
+                    pr_info("[VorteX] ZRAM%d: lz4 (fastest for gaming)\n", i);
+                }
+            } else if (strstr(algo, "zstd")) {
+                if (safe_write_sysfs(path, "zstd")) {
+                    pr_info("[VorteX] ZRAM%d: zstd (fallback)\n", i);
+                }
+            } else if (strstr(algo, "lzo")) {
+                if (safe_write_sysfs(path, "lzo")) {
+                    pr_info("[VorteX] ZRAM%d: lzo (fallback)\n", i);
+                }
             }
+            // If algorithm not recognized, leave as-is to avoid errors
         }
     }
 }
 
 // ==========================================
-// 3I. UFS/STORAGE TUNING
+// 3I. UFS/STORAGE TUNING (Universal - Auto-detect)
 // ==========================================
 
 static void vortex_tune_storage(void) {
     char path[128];
     int i;
 
-    vortex_write_sysfs("/sys/devices/platform/soc/1d84000.ufshc/clkgate_enable", "0");
+    // UFS controller clock gate - try common paths dynamically
+    const char *ufs_paths[] = {
+        "/sys/devices/platform/soc/1d84000.ufshc/clkgate_enable",
+        "/sys/devices/platform/soc/4904000.ufshc/clkgate_enable",
+        "/sys/devices/platform/soc/4c40000.ufshc/clkgate_enable",
+        "/sys/devices/platform/soc/4e04000.ufshc/clkgate_enable",
+        "/sys/devices/platform/11270000.ufshc/clkgate_enable",
+        NULL  // Sentinel
+    };
+    
+    int ufs_idx = 0;
+    while (ufs_paths[ufs_idx] != NULL) {
+        if (safe_write_sysfs(ufs_paths[ufs_idx], "0")) {
+            pr_info("[VorteX] Storage: UFS clkgate disabled\n");
+            break;  // Success, stop trying
+        }
+        ufs_idx++;
+    }
 
+    // Block device queue depth - only modify existing devices
     for (i = 'a'; i <= 'z'; i++) {
         snprintf(path, sizeof(path), "/sys/block/sd%c/device/queue_depth", i);
-        vortex_write_sysfs(path, "64");
+        
+        // Check if device exists before writing
+        char test_val[8] = {0};
+        if (vortex_read_sysfs(path, test_val, sizeof(test_val))) {
+            // Only set if current value is less than 64
+            long current = simple_strtol(test_val, NULL, 10);
+            if (current < 64) {
+                safe_write_sysfs(path, "64");
+            }
+        }
     }
 }
 
 // ==========================================
-// 3J. GAMING THERMAL PROFILE (Smart Trip Point)
+// 3J. GAMING THERMAL PROFILE (Conservative Safe Mode)
 // ==========================================
 
 static void vortex_thermal_gaming_profile(void) {
@@ -357,19 +439,21 @@ static void vortex_thermal_gaming_profile(void) {
     pr_info("[VorteX] THERMAL: Applying Smart Gaming Profile...\n");
 
     // Attempt sconfig (will silently fail if locked by SELinux)
-    vortex_write_sysfs("/sys/class/thermal/thermal_message/sconfig", "9");
-    vortex_write_sysfs("/sys/class/thermal/thermal_message/sconfig_param", "0");
+    safe_write_sysfs("/sys/class/thermal/thermal_message/sconfig", "9");
+    safe_write_sysfs("/sys/class/thermal/thermal_message/sconfig_param", "0");
 
-    // Attempt MSM Thermal off (for Qualcomm)
-    vortex_write_sysfs("/sys/module/msm_thermal/parameters/enabled", "0");
-    vortex_write_sysfs("/sys/module/msm_thermal/core_control/enabled", "0");
-    vortex_write_sysfs("/sys/module/msm_thermal/vdd_restriction/enabled", "0");
+    // Attempt Thermal module disable (vendor-agnostic paths)
+    safe_write_sysfs("/sys/module/msm_thermal/parameters/enabled", "0");
+    safe_write_sysfs("/sys/module/msm_thermal/core_control/enabled", "0");
+    safe_write_sysfs("/sys/module/msm_thermal/vdd_restriction/enabled", "0");
+    // Also try generic thermal module names
+    safe_write_sysfs("/sys/module/thermal_core/parameters/enabled", "0");
 
-    // Scan and Raise Trip Points (SAFE)
-    for (i = 0; i <= 20; i++) {
+    // Scan and Raise Trip Points (SAFE - Conservative Values)
+    for (i = 0; i <= 15; i++) {  // Reduced from 20 to 15 (most phones have <16 zones)
         int zone_modified = 0;
 
-        for (j = 0; j <= 5; j++) {
+        for (j = 0; j <= 4; j++) {  // Reduced from 5 to 4 trips per zone
             snprintf(path, sizeof(path),
                      "/sys/class/thermal/thermal_zone%d/trip_point_%d_type", i, j);
             if (!vortex_read_sysfs(path, type_buf, sizeof(type_buf)))
@@ -377,6 +461,11 @@ static void vortex_thermal_gaming_profile(void) {
 
             // NEVER touch critical trip points - hardware safety
             if (strcmp(type_buf, "critical") == 0) {
+                continue;
+            }
+            
+            // Also skip hot points (hardware emergency shutdown)
+            if (strcmp(type_buf, "hot") == 0) {
                 continue;
             }
 
@@ -390,22 +479,23 @@ static void vortex_thermal_gaming_profile(void) {
 
             long new_val = val;
             
+            // CONSERVATIVE adjustment: +5°C max (was +12°C causing overheating)
             if (strcmp(type_buf, "passive") == 0) {
-                new_val = val + 12000;
-                if (new_val > 78000) new_val = 78000;
+                new_val = val + 5000;  // +5°C (was +12°C)
+                if (new_val > 80000) new_val = 80000;  // Cap at 80°C (was 78°C)
             } else if (strcmp(type_buf, "active") == 0) {
-                new_val = val + 10000;
-                if (new_val > 75000) new_val = 75000;
+                new_val = val + 3000;  // +3°C (was +10°C)
+                if (new_val > 78000) new_val = 78000;  // Cap at 78°C (was 75°C)
             } else {
-                new_val = val + 8000;
-                if (new_val > 72000) new_val = 72000;
+                new_val = val + 2000;  // +2°C for others (was +8°C)
+                if (new_val > 75000) new_val = 75000;  // Cap at 75°C (was 72°C)
             }
 
             if (new_val > val) {
                 char str[32];
                 snprintf(str, sizeof(str), "%ld", new_val);
 
-                if (vortex_write_sysfs(path, str)) {
+                if (safe_write_sysfs(path, str)) {
                     trips_raised++;
                     zone_modified = 1;
                 }
@@ -418,27 +508,38 @@ static void vortex_thermal_gaming_profile(void) {
         pr_info("[VorteX] THERMAL: Raised %d trip points across %d zones\n", trips_raised, zones_patched);
     }
 
-    // Neutralize Cooling Devices
-    for (i = 0; i <= 30; i++) {
+    // Cooling Devices - ONLY reset non-zero states (don't force all to 0!)
+    for (i = 0; i <= 20; i++) {  // Reduced from 30 to 20 (typical range)
         char cur_state[16] = {0};
         snprintf(path, sizeof(path), "/sys/class/thermal/cooling_device%d/cur_state", i);
         
         if (vortex_read_sysfs(path, cur_state, sizeof(cur_state))) {
             long cur = simple_strtol(cur_state, NULL, 10);
-            if (cur != 0) {
-                if (vortex_write_sysfs(path, "0")) coolers_reset++;
+            // Only reduce aggressive cooling, don't completely neutralize
+            if (cur > 3) {  // If cooling state is very high (>3), reduce to moderate level
+                char mod_str[8];
+                snprintf(mod_str, sizeof(mod_str), "%d", 2);  // Set to 2 (moderate cooling)
+                if (safe_write_sysfs(path, mod_str)) {
+                    coolers_reset++;
+                }
             }
-        } else {
-            if (vortex_write_sysfs(path, "0")) coolers_reset++;
         }
+        // Don't force write to 0 if device doesn't exist or already low
     }
 
     if (coolers_reset > 0) {
-        pr_info("[VorteX] THERMAL: %d cooling devices neutralized\n", coolers_reset);
+        pr_info("[VorteX] THERMAL: %d cooling devices optimized\n", coolers_reset);
     }
 
-    // GPU Thermal Limits Raised
-    vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/thermal_pwrlevel", "0");
+    // GPU Thermal Limits - Set to moderate level instead of 0 (which disables protection)
+    char gpu_current_level[16] = {0};
+    if (vortex_read_sysfs("/sys/class/kgsl/kgsl-3d0/thermal_pwrlevel", gpu_current_level, sizeof(gpu_current_level))) {
+        long gpu_lvl = simple_strtol(gpu_current_level, NULL, 10);
+        // Only reduce if currently very restrictive (> 2)
+        if (gpu_lvl > 2) {
+            safe_write_sysfs("/sys/class/kgsl/kgsl-3d0/thermal_pwrlevel", "2");  // Moderate (not 0!)
+        }
+    }
 
     pr_info("[VorteX] THERMAL: Gaming Profile Active (Critical Safety Kept)\n");
 }
@@ -450,10 +551,11 @@ static void vortex_thermal_gaming_profile(void) {
 static void vortex_fps_refresh_lock(void) {
     pr_info("[VorteX] FPS: Attempting refresh rate stabilization...\n");
 
-    vortex_write_sysfs("/sys/module/msm_drm/parameters/mdss_fb0_fps", "0");
-    vortex_write_sysfs("/sys/class/drm/card0/device/power/auto_latency_hint", "0");
-    vortex_write_sysfs("/sys/class/panel/refresh_rate", "0");
-    vortex_write_sysfs("/sys/class/backlight/panel0/dimming_state", "0");
+    // All optional - use safe_write to silently skip if unavailable
+    safe_write_sysfs("/sys/module/msm_drm/parameters/mdss_fb0_fps", "0");
+    safe_write_sysfs("/sys/class/drm/card0/device/power/auto_latency_hint", "0");
+    safe_write_sysfs("/sys/class/panel/refresh_rate", "0");
+    safe_write_sysfs("/sys/class/backlight/panel0/dimming_state", "0");
 
     pr_info("[VorteX] FPS: Refresh stabilization applied\n");
 }
@@ -468,32 +570,48 @@ static void vortex_anti_pre_cores(void) {
 
     pr_info("[VorteX] ANTI-PREMDROP: Forcing all cores online...\n");
 
+    // Only online CPUs that actually exist (stop at first missing CPU)
     for (i = 0; i <= 7; i++) {
         snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpu%d/online", i);
-        if (vortex_write_sysfs(path, "1")) {
-            pr_info("[VorteX] ANTI-PREMDROP: CPU%d forced online\n", i);
+        
+        // Check if CPU exists before forcing online
+        char cpu_status[8] = {0};
+        if (vortex_read_sysfs(path, cpu_status, sizeof(cpu_status))) {
+            if (strcmp(cpu_status, "0") == 0) {
+                if (safe_write_sysfs(path, "1")) {
+                    pr_info("[VorteX] ANTI-PREMDROP: CPU%d forced online\n", i);
+                }
+            }
+        } else {
+            // CPU doesn't exist on this device (e.g., quad-core phone)
+            break;  // Stop scanning
         }
     }
 
-    vortex_write_sysfs("/sys/devices/system/cpu/cpuhotplug/disable", "1");
-    vortex_write_sysfs("/sys/module/msm_thermal/core_control/enabled", "0");
-    vortex_write_sysfs("/sys/module/msm_hotplug/enabled", "0");
+    // Hotplug control - use safe writes
+    safe_write_sysfs("/sys/devices/system/cpu/cpuhotplug/disable", "1");
+    safe_write_sysfs("/sys/module/msm_thermal/core_control/enabled", "0");
+    safe_write_sysfs("/sys/module/msm_hotplug/enabled", "0");
 
     pr_info("[VorteX] ANTI-PREMDROP: Cores locked\n");
 }
 
 // ==========================================
-// 3M. ANTI-PREMDROP: THP & OVERHEAD KILLER
+// 3M. ANTI-PREMDROP: THP & OVERHEAD KILLER (Safe Mode)
 // ==========================================
 
 static void vortex_anti_pre_mem(void) {
     pr_info("[VorteX] ANTI-PREMDROP: Patching memory overhead...\n");
 
-    vortex_write_sysfs("/sys/kernel/mm/transparent_hugepage/enabled", "always");
-    vortex_write_sysfs("/sys/kernel/mm/transparent_hugepage/defrag", "always");
-    vortex_write_sysfs("/proc/sys/kernel/numa_balancing", "0");
-    vortex_write_sysfs("/proc/sys/kernel/sched_schedstats", "0");
-    vortex_write_sysfs("/proc/sys/kernel/sched_rt_runtime_us", "-1");
+    // THP: Use "madvise" instead of "always" (prevents fragmentation on low-memory)
+    safe_write_sysfs("/sys/kernel/mm/transparent_hugepage/enabled", "madvise");
+    safe_write_sysfs("/sys/kernel/mm/transparent_hugepage/defrag", "madvise");
+    
+    safe_write_sysfs("/proc/sys/kernel/numa_balancing", "0");
+    safe_write_sysfs("/proc/sys/kernel/sched_schedstats", "0");
+    
+    // RT runtime: Use 95% instead of -1 (prevents kernel thread starvation)
+    safe_write_sysfs("/proc/sys/kernel/sched_rt_runtime_us", "950000");
 
     pr_info("[VorteX] ANTI-PREMDROP: Memory overhead patched\n");
 }
@@ -507,13 +625,13 @@ static void vortex_anti_pre_boost(void) {
 
     pr_info("[VorteX] ANTI-PREMDROP: Applying scheduler boost...\n");
 
-    vortex_write_sysfs("/proc/sys/kernel/sched_boost", "1");
-    vortex_write_sysfs("/sys/devices/system/cpu/sched_boost", "1");
-    vortex_write_sysfs("/proc/sys/kernel/sched_prefer_idle", "1");
+    safe_write_sysfs("/proc/sys/kernel/sched_boost", "1");
+    safe_write_sysfs("/sys/devices/system/cpu/sched_boost", "1");
+    // Removed prefer_idle (can cause power waste without significant gaming benefit)
 
     if (vortex_read_sysfs("/sys/devices/system/cpu/cpufreq/policy4/scaling_max_freq", max_freq, sizeof(max_freq))) {
-        vortex_write_sysfs("/sys/module/cpu_boost/input_boost_freq", max_freq);
-        vortex_write_sysfs("/sys/module/cpu_boost/input_boost_ms", "500");
+        safe_write_sysfs("/sys/module/cpu_boost/input_boost_freq", max_freq);
+        safe_write_sysfs("/sys/module/cpu_boost/input_boost_ms", "500");
         pr_info("[VorteX] ANTI-PREMDROP: Touch boost = %s\n", max_freq);
     }
 
@@ -554,16 +672,16 @@ static int vortex_sysfs_thread(void *data) {
     pr_info("[VorteX] CPU: Forcing schedutil with FPS-optimized rates...\n");
     for (i = 0; i <= 15; i++) {
         snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpufreq/policy%d/scaling_governor", i);
-        if (vortex_write_sysfs(path, "schedutil")) {
-            pr_info("[VorteX] CPU: Policy %d → schedutil\n", i);
+        if (safe_write_sysfs(path, "schedutil")) {
+            pr_info("[VorteX] CPU: Policy %d -> schedutil\n", i);
         }
 
         snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpufreq/policy%d/schedutil/up_rate_limit_us", i);
-        if (vortex_write_sysfs(path, "500")) {
+        if (safe_write_sysfs(path, "500")) {
         }
 
         snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpufreq/policy%d/schedutil/down_rate_limit_us", i);
-        if (vortex_write_sysfs(path, "40000")) {
+        if (safe_write_sysfs(path, "40000")) {
         }
     }
     pr_info("[VorteX] CPU: up_rate=500us, down_rate=40ms (FPS optimized)\n");
@@ -575,63 +693,82 @@ static int vortex_sysfs_thread(void *data) {
     pr_info("[VorteX] I/O: Scanning block devices...\n");
     for (i = 'a'; i <= 'z'; i++) {
         snprintf(path, sizeof(path), "/sys/block/sd%c/queue/scheduler", i);
-        if (vortex_write_sysfs(path, "adios")) {
-            pr_info("[VorteX] I/O: sd%c → adios\n", i);
+        if (safe_write_sysfs(path, "adios")) {
+            pr_info("[VorteX] I/O: sd%c -> adios\n", i);
+        } else if (safe_write_sysfs(path, "kyber")) {
+            pr_info("[VorteX] I/O: sd%c -> kyber\n", i);
+        } else if (safe_write_sysfs(path, "mq-deadline")) {
+            pr_info("[VorteX] I/O: sd%c -> mq-deadline\n", i);
         }
+        // Fallback: if none work, device probably doesn't support scheduler change
+        
         snprintf(path, sizeof(path), "/sys/block/sd%c/queue/read_ahead_kb", i);
-        vortex_write_sysfs(path, "128");
+        safe_write_sysfs(path, "128");
         snprintf(path, sizeof(path), "/sys/block/sd%c/queue/iostats", i);
-        vortex_write_sysfs(path, "0");
+        safe_write_sysfs(path, "0");
         snprintf(path, sizeof(path), "/sys/block/sd%c/queue/nr_requests", i);
-        vortex_write_sysfs(path, "256");
+        safe_write_sysfs(path, "256");
         snprintf(path, sizeof(path), "/sys/block/sd%c/queue/rq_affinity", i);
-        vortex_write_sysfs(path, "1");
+        safe_write_sysfs(path, "1");
     }
     for (i = 0; i <= 15; i++) {
         snprintf(path, sizeof(path), "/sys/block/dm-%d/queue/scheduler", i);
-        if (vortex_write_sysfs(path, "adios")) {
-            pr_info("[VorteX] I/O: dm-%d → adios\n", i);
+        if (safe_write_sysfs(path, "adios")) {
+            pr_info("[VorteX] I/O: dm-%d -> adios\n", i);
+        } else {
+            safe_write_sysfs(path, "mq-deadline");  // Stable fallback for dm devices
         }
         snprintf(path, sizeof(path), "/sys/block/dm-%d/queue/read_ahead_kb", i);
-        vortex_write_sysfs(path, "128");
+        safe_write_sysfs(path, "128");
         snprintf(path, sizeof(path), "/sys/block/dm-%d/queue/iostats", i);
-        vortex_write_sysfs(path, "0");
+        safe_write_sysfs(path, "0");
         snprintf(path, sizeof(path), "/sys/block/dm-%d/queue/nr_requests", i);
-        vortex_write_sysfs(path, "256");
+        safe_write_sysfs(path, "256");
     }
 
+    // GPU Tuning - SAFE MODE (lock at 80% of max instead of 100% to prevent thermal throttling)
     if (vortex_read_sysfs("/sys/class/kgsl/kgsl-3d0/devfreq/max_freq", max_freq_val, sizeof(max_freq_val))) {
         pr_info("[VorteX] GPU: Max freq = %s\n", max_freq_val);
 
-        if (vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/devfreq/min_freq", max_freq_val)) {
-            pr_info("[VorteX] GPU: LOCKED at %s\n", max_freq_val);
+        // Calculate 80% of max for minimum frequency (safer than locking at 100%)
+        long max_gpu = simple_strtol(max_freq_val, NULL, 10);
+        long target_min = max_gpu * 80 / 100;
+        char min_freq_str[32];
+        snprintf(min_freq_str, sizeof(min_freq_str), "%ld", target_min);
+        
+        if (safe_write_sysfs("/sys/class/kgsl/kgsl-3d0/devfreq/min_freq", min_freq_str)) {
+            pr_info("[VorteX] GPU: Min locked at 80%% (%ld KHz)\n", target_min);
         }
-        vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/max_gpuclk", max_freq_val);
+        
+        safe_write_sysfs("/sys/class/kgsl/kgsl-3d0/max_gpuclk", max_freq_val);
 
-        if (vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/devfreq/governor", "schedutil")) {
-            pr_info("[VorteX] GPU: Governor → schedutil\n");
+        if (safe_write_sysfs("/sys/class/kgsl/kgsl-3d0/devfreq/governor", "schedutil")) {
+            pr_info("[VorteX] GPU: Governor -> schedutil\n");
         } else {
             vortex_read_sysfs("/sys/class/kgsl/kgsl-3d0/devfreq/governor", current_gov, sizeof(current_gov));
             pr_warn("[VorteX] GPU: Governor blocked. Current: %s\n", current_gov);
         }
 
-        vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/force_bus_on", "1");
-        vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/gpu_llc_slice_enable", "1");
-        vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/l3_vote", "1");
+        safe_write_sysfs("/sys/class/kgsl/kgsl-3d0/force_bus_on", "1");
+        safe_write_sysfs("/sys/class/kgsl/kgsl-3d0/gpu_llc_slice_enable", "1");
+        safe_write_sysfs("/sys/class/kgsl/kgsl-3d0/l3_vote", "1");
 
-        vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/split_display", "0");
-        vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/disable_low_latency", "0");
-        vortex_write_sysfs("/sys/class/kgsl/kgsl-3d0/three_d_texture", "1");
+        safe_write_sysfs("/sys/class/kgsl/kgsl-3d0/split_display", "0");
+        // DON'T disable low_latency (causes stuttering in some games)
+        // safe_write_sysfs("/sys/class/kgsl/kgsl-3d0/disable_low_latency", "0");  // REMOVED
+        safe_write_sysfs("/sys/class/kgsl/kgsl-3d0/three_d_texture", "1");
     } else {
         pr_warn("[VorteX] GPU: KGSL not found (non-Qualcomm?)\n");
     }
 
-    if (vortex_write_sysfs("/sys/module/lowmemorykiller/parameters/minfree", "2560,5120,11520,25600,35840,38400")) {
-        pr_info("[VorteX] LMK: Updated\n");
+    // LMK - Less aggressive than original (prevent OOM kills during gaming)
+    if (safe_write_sysfs("/sys/module/lowmemorykiller/parameters/minfree", 
+                         "5120,10240,20480,35840,51200,56320")) {
+        pr_info("[VorteX] LMK: Updated (conservative)\n");
     }
 
-    vortex_write_sysfs("/proc/sys/kernel/printk_devkmsg", "off");
-    vortex_write_sysfs("/sys/module/usbcore/parameters/autosuspend", "-1");
+    safe_write_sysfs("/proc/sys/kernel/printk_devkmsg", "off");
+    safe_write_sysfs("/sys/module/usbcore/parameters/autosuspend", "-1");
 
     vortex_fps_refresh_lock();
 
@@ -661,5 +798,5 @@ late_initcall(vortex_sysfs_init);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("VorteX Esport");
 MODULE_DESCRIPTION("GKI 5.10 FPS Stability Engine");
-MODULE_VERSION("2.2");
+MODULE_VERSION("2.2-safe");
 // Signed-off-by: kingfinix98@gmail.com
