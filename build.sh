@@ -113,30 +113,6 @@ KCONF_EOF
   fi
 fi
 
-#if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  #log "Injecting VortexMax Custom Governor..."
-  #cp "$WORKDIR/governor-vortexmax.c" "$KSRC/drivers/cpufreq/governor-vortexmax.c"
-  
-  #if ! grep -q "governor-vortexmax.o" "$KSRC/drivers/cpufreq/Makefile"; then
-    #echo "obj-\$(CONFIG_CPU_FREQ_GOV_VORTEXMAX) += governor-vortexmax.o" >> "$KSRC/drivers/cpufreq/Makefile"
-    #log "VortexMax added to cpufreq Makefile."
-  #fi
-  
-  #if ! grep -q "CPU_FREQ_GOV_VORTEXMAX" "$KSRC/drivers/cpufreq/Kconfig"; then
-    #cat << 'KCONF_EOF' >> "$KSRC/drivers/cpufreq/Kconfig"
-
-#config CPU_FREQ_GOV_VORTEXMAX
-    #tristate "VortexMax CPU frequency policy governor"
-    #depends on CPU_FREQ
-    #help
-      #VortexMax governor balances performance and efficiency for gaming.
-
-      #If in doubt, say N.
-#KCONF_EOF
-    #log "VortexMax added to cpufreq Kconfig."
-  #fi
-#fi
-
 log "Applying inject.sh patch..."
 wget -qO Inject_300hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/Inject_300hz.sh
 bash Inject_300hz.sh
@@ -339,7 +315,7 @@ if susfs_included; then
   if [ "$KSU" != "vortexsu" ] || ([ "$KSU" == "vortexsu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ])); then
     log "Applying kernel-side susfs patches (Standard Method)"
     SUSFS_DIR="$WORKDIR/susfs"
-    SUSFS_PATCHES="${SUSFS_DIR}/kernel_patches"
+    SUSFS_PATCHES="${SUS_DIR}/kernel_patches"
     if [ "$KVER" == "6.6" ]; then
       SUSFS_BRANCH=gki-android15-6.6
     elif [ "$KVER" == "6.1" ]; then
@@ -360,9 +336,18 @@ if susfs_included; then
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c2) -eq 61 ]; then
       patch -p1 < $KERNEL_PATCHES/susfs/fs_proc_base.c-fix-k6.1.patch || true
       
-      NS_INJECT_FILE="$WORKDIR/.ns_inject_tmp"
-      
-      cat << 'EOF' > "$NS_INJECT_FILE"
+      # ============================================
+      # FIX REMOVED: Manual inject HAPUS untuk GKI 6.1 & 6.6
+      # Dev branch sudah provide semua definisi static key yang dibutuhkan
+      # Tidak perlu inject manual lagi untuk menghindari conflict!
+      # ============================================
+      log "[INFO] Using SuSFS dev branch definitions (no manual inject needed for GKI 6.x)"
+    
+    elif [ $(echo "$LINUX_VERSION_CODE" | head -c3) -eq 510 ]; then
+      if [ "$KSU" != "vortexsu" ]; then
+        NS_INJECT_FILE="$WORKDIR/.ns_inject_tmp"
+        
+        cat << 'EOF' > "$NS_INJECT_FILE"
 
 #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 #include <linux/susfs_def.h>
@@ -382,18 +367,14 @@ static DEFINE_IDA(susfs_mnt_group_ida);
 
 EOF
 
-      if ! grep -q "static DEFINE_IDA(susfs_mnt_id_ida);" ./fs/namespace.c; then
-        sed -i '/#include "internal.h"/r '"$NS_INJECT_FILE" ./fs/namespace.c
-        log "SUSFS definitions injected successfully."
-      else
-        log "SUSFS definitions already exist."
-      fi
-      
-      rm -f "$NS_INJECT_FILE"
-
-    elif [ $(echo "$LINUX_VERSION_CODE" | head -c3) -eq 510 ]; then
-      if [ "$KSU" != "vortexsu" ]; then
-        patch -p1 < $KERNEL_PATCHES/susfs/pershoot-susfs-k5.10.patch || true
+        if ! grep -q "static DEFINE_IDA(susfs_mnt_id_ida);" ./fs/namespace.c; then
+          sed -i '/#include "internal.h"/r '"$NS_INJECT_FILE" ./fs/namespace.c
+          log "SUSFS definitions injected successfully (GKI 5.10 style)."
+        else
+          log "SUSFS definitions already exist."
+        fi
+        
+        rm -f "$NS_INJECT_FILE"
       fi
     fi
 
@@ -497,12 +478,12 @@ fi
 
 if [ "$DEFCONFIG_TO_MERGE" ]; then
   log "Merging configs..."
-  if [ -f "scripts/kconfig/merge_config.sh" ]; then
+  if [ -f "scripts/kconfig/fix.config.sh" ]; then
     for config in $DEFCONFIG_TO_MERGE; do
-      make ${MAKE_ARGS[@]} scripts/kconfig/merge_config.sh $config
+      make ${MAKE_ARGS[@]} scripts/kconfig/fix.config.sh $config
     done
   else
-    error "scripts/kconfig/merge_config.sh does not exist in the kernel source"
+    error "scripts/kconfig/fix.config.sh does not exist in the kernel source"
   fi
   make ${MAKE_ARGS[@]} olddefconfig
 fi
@@ -580,7 +561,7 @@ fi
 if [ $LAST_BUILD == "true" ] && [ $STATUS != "BETA" ]; then
   (
     echo "LINUX_VERSION=$LINUX_VERSION"
-    echo "SUSFS_VERSION=$(curl -s https://gitlab.com/simonpunk/susfs4ksu/raw/gki-android15-6.6/kernel_patches/include/linux/susfs.h | grep -E '^#define SUSFS_VERSION' | cut -d ' ' -f3 | sed 's/"//g')"
+    echo "SUSFS_VERSION=$(curl -s https://gitlab.com/simonpunk/susfs4ksu/raw/gki-android15-6.6/kernel_patches/include/linux/susfs.h | grep -E '^#define SUSFS_VERSION' | cut -d ' -f3 | sed 's/"//g')"
     echo "KERNEL_NAME=$KERNEL_NAME"
     echo "RELEASE_REPO=$(simplify_gh_url "$GKI_RELEASES_REPO")"
   ) >> $WORKDIR/artifacts/info.txt
