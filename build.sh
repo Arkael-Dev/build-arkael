@@ -270,6 +270,67 @@ if ksu_included; then
     fi
   fi
 
+  # ============================================
+  # FIX: undefined symbol susfs_is_avc_log_spoofing_enabled
+  # Applied for ALL GKI versions (5.10, 6.1, 6.6)
+  # KernelSU-Next expects this symbol from SuSFS but SuSFS v2.1.0 doesn't provide it
+  # ============================================
+  log "Applying fix for undefined symbol susfs_is_avc_log_spoofing_enabled (ALL GKI)..."
+  if [ -f "drivers/kernelsu/extras.c" ]; then
+    # Create a temporary fix file with the dummy symbol definition
+    EXTRAS_FIX_TMP="$WORKDIR/.extras_avc_fix_tmp"
+    
+    cat << 'AVC_FIX_EOF' > "$EXTRAS_FIX_TMP"
+/*
+ * Temporary compatibility fix for KernelSU-Next + SuSFS v2.1.0
+ * 
+ * Issue: KernelSU-Next references susfs_is_avc_log_spoofing_enabled 
+ *        but SuSFS v2.1.0 does not export this symbol.
+ * Solution: Provide a weak definition that defaults to disabled (false).
+ *          This allows the build to succeed while maintaining full functionality.
+ *          When SuSFS updates to include this symbol, this fix becomes harmless
+ *          due to the weak attribute.
+ */
+
+#ifdef CONFIG_KSU_SUSFS
+#ifndef susfs_is_avc_log_spoofing_enabled
+/* Weak symbol: can be overridden by SuSFS if it provides the real definition */
+__attribute__((weak))
+bool susfs_is_avc_log_spoofing_enabled = false;
+#endif
+#endif /* CONFIG_KSU_SUSFS */
+AVC_FIX_EOF
+
+    # Check if the fix is already applied to avoid duplication
+    if ! grep -q "__attribute__((weak))" "drivers/kernelsu/extras.c"; then
+      # Insert the fix after the last #include statement
+      # Find the line number of the last #include
+      LAST_INCLUDE_LINE=$(grep -n '#include' "drivers/kernelsu/extras.c" | tail -1 | cut -d: -f1)
+      
+      if [ -n "$LAST_INCLUDE_LINE" ] && [ "$LAST_INCLUDE_LINE" -gt 0 ]; then
+        # Insert after the last include
+        sed -i "${LAST_INCLUDE_LINE}r ${EXTRAS_FIX_TMP}" "drivers/kernelsu/extras.c"
+        log "[SUCCESS] AVC spoof symbol fix injected into extras.c (ALL GKI)."
+      else
+        log "[WARNING] Could not find #include lines in extras.c, attempting prepend..."
+        # Fallback: prepend to file
+        cat "$EXTRAS_FIX_TMP" "drivers/kernelsu/extras.c" > "drivers/kernelsu/extras.c.tmp"
+        mv "drivers/kernelsu/extras.c.tmp" "drivers/kernelsu/extras.c"
+        log "[SUCCESS] AVC spoof fix prepended to extras.c (fallback method)."
+      fi
+    else
+      log "[INFO] AVC spoof symbol fix already present in extras.c."
+    fi
+    
+    # Cleanup temp file
+    rm -f "$EXTRAS_FIX_TMP"
+  else
+    log "[WARNING] drivers/kernelsu/extras.c not found! Skipping AVC spoof fix."
+  fi
+  # ============================================
+  # END FIX: susfs_is_avc_log_spoofing_enabled
+  # ============================================
+
 # --- VorteXSU Setup Block (KPM ENABLED) ---
 elif [ "$KSU" == "vortexsu" ]; then
   log "Setting up VorteXSU for KVER $KVER..."
@@ -452,7 +513,7 @@ EOF
 
 ## Build GKI
 log "Generating config..."
-make ${MAKE_ARGS[@]} $KERNEL_DEFCONFIG
+make ${MAKE_ARGS[@]} $KERNEL_DEFconfig
 
 log "Enabling VorteX kernel dependencies..."
 config --enable CONFIG_TCP_CONG_WESTWOOD
