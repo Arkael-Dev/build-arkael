@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="https://readme-typing-svg.herokuapp.com?color=00F7FF&center=true&vCenter=true&size=20&width=420&lines=Performance+%2B+Stability;Clean+%26+Optimized+Kernel;Real+Kernel+Developer"/>
+  <img src="https://readme-typing-svg.herokuapp.com?color=00F7FF&center=true&vCenter=true&size=20&width=420&lines=Optimization+%2B+Stability;Clean+%26+Optimized+Kernel;Real+Kernel+Developer"/>
 </p>
 
 ---
