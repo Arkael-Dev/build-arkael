@@ -6,7 +6,6 @@
 # */
 ##!/usr/bin/env bash
 
-# Constants
 WORKDIR="$(pwd)"
 if [ "$KVER" == "6.6" ]; then
   RELEASE="v0.3"
@@ -39,7 +38,7 @@ elif [ "$KVER" == "6.1" ]; then
   ANYKERNEL_BRANCH="master"
   KERNEL_BRANCH="android14-6.1-staging"
 elif [ "$KVER" == "5.10" ]; then
-  KERNEL_REPO="https://github.com/ramabondanp/android_kernel_common-5.10.git"
+  KERNEL_REPO="https://github.com/Kingfinik98/kernel-common-android12-5.10.git"
   ANYKERNEL_BRANCH="master"
   KERNEL_BRANCH="android12-5.10-stg-damon"
 fi
@@ -68,7 +67,6 @@ LINUX_VERSION=$(make kernelversion)
 LINUX_VERSION_CODE=${LINUX_VERSION//./}
 DEFCONFIG_FILE=$(find ./arch/arm64/configs -name "$KERNEL_DEFCONFIG")
 
-# --- PATCH INFINIX GT 20 PRO CAM (GKI 5.10 ONLY) ---
 if [ "$KVER" == "5.10" ]; then
   log "📸 Applying Infinix GT 20 Pro Camera Fix..."
   curl -L "https://github.com/ramabondanp/android_kernel_common-5.10/commit/4fe04b60009e.patch" -o infinix_cam.patch
@@ -76,7 +74,6 @@ if [ "$KVER" == "5.10" ]; then
   rm infinix_cam.patch
 fi
 
-# --- PATCH DRIVER SKIAVK (GKI 5.10 ONLY) ---
 if [ "$KVER" == "5.10" ]; then
   log "Placing Driver Adreno SkiaVK libgsl.so..."
   mkdir -p $WORKDIR/vendor/lib64
@@ -84,7 +81,6 @@ if [ "$KVER" == "5.10" ]; then
   log "libgsl.so placed successfully"
 fi
 
-# --- INJECT VORTEX GPU TUNING ---
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   log "Injecting VorteX Ultra-Safe Kernel Patch..."
   mkdir -p "$KSRC/drivers/misc"
@@ -93,7 +89,6 @@ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   echo "obj-y += vortex_gki.o" >> "$KSRC/drivers/misc/Makefile"
 fi
 
-# --- INJECT VORTEXCORE GOVERNOR ---
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   log "Injecting VortexCore Custom Governor..."
   cp "$WORKDIR/governor-vortexcore.c" "$KSRC/drivers/cpufreq/governor-vortexcore.c"
@@ -118,9 +113,8 @@ KCONF_EOF
   fi
 fi
 
-# --- INJECT VORTEXMAX GOVERNOR ---
 #if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  #log "Injecting VortexCore Custom Governor..."
+  #log "Injecting VortexMax Custom Governor..."
   #cp "$WORKDIR/governor-vortexmax.c" "$KSRC/drivers/cpufreq/governor-vortexmax.c"
   
   #if ! grep -q "governor-vortexmax.o" "$KSRC/drivers/cpufreq/Makefile"; then
@@ -132,10 +126,10 @@ fi
     #cat << 'KCONF_EOF' >> "$KSRC/drivers/cpufreq/Kconfig"
 
 #config CPU_FREQ_GOV_VORTEXMAX
-    #tristate "VortexCore CPU frequency policy governor"
+    #tristate "VortexMax CPU frequency policy governor"
     #depends on CPU_FREQ
     #help
-      #VortexCore governor balances performance and efficiency for gaming.
+      #VortexMax governor balances performance and efficiency for gaming.
 
       #If in doubt, say N.
 #KCONF_EOF
@@ -143,13 +137,11 @@ fi
   #fi
 #fi
 
-# --- PATCH inject.sh ---
 log "Applying inject.sh patch..."
 wget -qO Inject_300hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/Inject_300hz.sh
 bash Inject_300hz.sh
 rm Inject_300hz.sh
 
-# --- PATCH WIFI SM8650 & FIX BTQCA (GKI 6.1 ONLY) ---
 if [ "$KVER" == "6.1" ]; then
   log "Applying WiFi SM8650 patch..."
   curl -LSs https://github.com/OnePlus-12-Development/android_kernel_qcom_sm8650/commit/3e0cb08.patch | patch -p1 --forward || log "WiFi SM8650 patch skipped or already applied."
@@ -167,7 +159,6 @@ if [ "$KVER" == "6.1" ]; then
   fi
 fi
 
-# --- ADD KSU INJECT SCRIPT ---
 log "Injecting custom KSU & SuSFS configs from GitHub..."
 export KSU
 export KSU_SUSFS
@@ -182,7 +173,6 @@ elif [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
 fi
 cd $WORKDIR
 
-# Set Kernel variant (3 VARIANTS ONLY: yes, vortexsu, no)
 log "Setting Kernel variant..."
 case "$KSU" in
   "yes") VARIANT="KSU" ;;
@@ -194,7 +184,6 @@ susfs_included && VARIANT+="+SuSFS"
 AK3_ZIP_NAME=${AK3_ZIP_NAME//KVER/$LINUX_VERSION}
 AK3_ZIP_NAME=${AK3_ZIP_NAME//VARIANT/$VARIANT}
 
-# Download Clang
 CLANG_DIR="$WORKDIR/clang"
 CLANG_BIN="${CLANG_DIR}/bin"
 if [ -z "$CLANG_BRANCH" ]; then
@@ -219,7 +208,6 @@ else
   git clone --depth=1 -q "$CLANG_URL" -b "$CLANG_BRANCH" "$CLANG_DIR"
 fi
 
-# Clone GNU Assembler
 log "Cloning GNU Assembler..."
 GAS_DIR="$WORKDIR/gas"
 git clone --depth=1 -q \
@@ -233,7 +221,6 @@ COMPILER_STRING=$(clang -v 2>&1 | head -n 1 | sed 's/(https..*//' | sed 's/ vers
 
 cd $KSRC
 
-## KernelSU setup
 if ksu_included; then
   for KSU_PATH in drivers/staging/kernelsu drivers/kernelsu KernelSU KernelSU-Next; do
     if [ -d $KSU_PATH ]; then
@@ -270,68 +257,58 @@ if ksu_included; then
     fi
   fi
 
-  # ============================================
-  # FIX: undefined symbol susfs_is_avc_log_spoofing_enabled
-  # Applied for ALL GKI versions (5.10, 6.1, 6.6)
-  # KernelSU-Next expects this symbol from SuSFS but SuSFS v2.1.0 doesn't provide it
-  # ============================================
-  log "Applying fix for undefined symbol susfs_is_avc_log_spoofing_enabled (ALL GKI)..."
+  log "Applying AVC spoof compatibility fix (ALL GKI)..."
   if [ -f "drivers/kernelsu/extras.c" ]; then
-    # Create a temporary fix file with the dummy symbol definition
     EXTRAS_FIX_TMP="$WORKDIR/.extras_avc_fix_tmp"
     
-    cat << 'AVC_FIX_EOF' > "$EXTRAS_FIX_TMP"
-/*
- * Temporary compatibility fix for KernelSU-Next + SuSFS v2.1.0
- * 
- * Issue: KernelSU-Next references susfs_is_avc_log_spoofing_enabled 
- *        but SuSFS v2.1.0 does not export this symbol.
- * Solution: Provide a weak definition that defaults to disabled (false).
- *          This allows the build to succeed while maintaining full functionality.
- *          When SuSFS updates to include this symbol, this fix becomes harmless
- *          due to the weak attribute.
- */
-
+    if grep -q "susfs_avc_log_spoofing_key_true" "drivers/kernelsu/extras.c"; then
+      cat << 'AVC_STATIC_KEY_EOF' > "$EXTRAS_FIX_TMP"
+#ifdef CONFIG_KSU_SUSFS
+#ifndef susfs_avc_log_spoofing_key_true
+__attribute__((weak))
+struct static_key_true susfs_avc_log_spoofing_key_true = STATIC_KEY_TRUE_INIT;
+#endif
+#endif
+AVC_STATIC_KEY_EOF
+      log "Detected Static Key pattern, applying weak definition fix..."
+    elif grep -q "susfs_is_avc_log_spoofing_enabled" "drivers/kernelsu/extras.c"; then
+      cat << 'AVC_BOOL_EOF' > "$EXTRAS_FIX_TMP"
 #ifdef CONFIG_KSU_SUSFS
 #ifndef susfs_is_avc_log_spoofing_enabled
-/* Weak symbol: can be overridden by SuSFS if it provides the real definition */
 __attribute__((weak))
 bool susfs_is_avc_log_spoofing_enabled = false;
 #endif
-#endif /* CONFIG_KSU_SUSFS */
-AVC_FIX_EOF
-
-    # Check if the fix is already applied to avoid duplication
-    if ! grep -q "__attribute__((weak))" "drivers/kernelsu/extras.c"; then
-      # Insert the fix after the last #include statement
-      # Find the line number of the last #include
-      LAST_INCLUDE_LINE=$(grep -n '#include' "drivers/kernelsu/extras.c" | tail -1 | cut -d: -f1)
-      
-      if [ -n "$LAST_INCLUDE_LINE" ] && [ "$LAST_INCLUDE_LINE" -gt 0 ]; then
-        # Insert after the last include
-        sed -i "${LAST_INCLUDE_LINE}r ${EXTRAS_FIX_TMP}" "drivers/kernelsu/extras.c"
-        log "[SUCCESS] AVC spoof symbol fix injected into extras.c (ALL GKI)."
-      else
-        log "[WARNING] Could not find #include lines in extras.c, attempting prepend..."
-        # Fallback: prepend to file
-        cat "$EXTRAS_FIX_TMP" "drivers/kernelsu/extras.c" > "drivers/kernelsu/extras.c.tmp"
-        mv "drivers/kernelsu/extras.c.tmp" "drivers/kernelsu/extras.c"
-        log "[SUCCESS] AVC spoof fix prepended to extras.c (fallback method)."
-      fi
+#endif
+AVC_BOOL_EOF
+      log "Detected Boolean pattern, applying weak definition fix..."
     else
-      log "[INFO] AVC spoof symbol fix already present in extras.c."
+      log "[INFO] No SUSFS AVC spoof symbols found in extras.c, skipping fix."
+      rm -f "$EXTRAS_FIX_TMP"
+      EXTRAS_FIX_TMP=""
     fi
     
-    # Cleanup temp file
-    rm -f "$EXTRAS_FIX_TMP"
+    if [ -n "$EXTRAS_FIX_TMP" ] && [ -f "$EXTRAS_FIX_TMP" ]; then
+      if ! grep -q "__attribute__((weak))" "drivers/kernelsu/extras.c"; then
+        LAST_INCLUDE_LINE=$(grep -n '#include' "drivers/kernelsu/extras.c" | tail -1 | cut -d: -f1)
+        
+        if [ -n "$LAST_INCLUDE_LINE" ] && [ "$LAST_INCLUDE_LINE" -gt 0 ]; then
+          sed -i "${LAST_INCLUDE_LINE}r ${EXTRAS_FIX_TMP}" "drivers/kernelsu/extras.c"
+          log "[SUCCESS] AVC spoof fix injected into extras.c."
+        else
+          cat "$EXTRAS_FIX_TMP" "drivers/kernelsu/extras.c" > "drivers/kernelsu/extras.c.tmp"
+          mv "drivers/kernelsu/extras.c.tmp" "drivers/kernelsu/extras.c"
+          log "[SUCCESS] AVC spoof fix prepended to extras.c."
+        fi
+      else
+        log "[INFO] AVC spoof fix already present in extras.c."
+      fi
+      
+      rm -f "$EXTRAS_FIX_TMP"
+    fi
   else
     log "[WARNING] drivers/kernelsu/extras.c not found! Skipping AVC spoof fix."
   fi
-  # ============================================
-  # END FIX: susfs_is_avc_log_spoofing_enabled
-  # ============================================
 
-# --- VorteXSU Setup Block (KPM ENABLED) ---
 elif [ "$KSU" == "vortexsu" ]; then
   log "Setting up VorteXSU for KVER $KVER..."
   
@@ -358,13 +335,7 @@ elif [ "$KSU" == "vortexsu" ]; then
   fi
 fi
 
-# ============================================
-# WILDKSU DIHAPUS (Error kompilasi sucompat.c)
-# ============================================
-
-# SUSFS (Standard Logic for KernelSU yes & VorteXSU 6.1/6.6)
 if susfs_included; then
-  # Skip standard SUSFS if already handled by VorteXSU 5.10 custom method
   if [ "$KSU" != "vortexsu" ] || ([ "$KSU" == "vortexsu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ])); then
     log "Applying kernel-side susfs patches (Standard Method)"
     SUSFS_DIR="$WORKDIR/susfs"
@@ -455,7 +426,6 @@ else
   config --disable CONFIG_KSU_SUSFS
 fi
 
-# set localversion
 if [ $TODO == "kernel" ]; then
   LATEST_COMMIT_HASH=$(git rev-parse --short HEAD)
   if [ $STATUS == "BETA" ]; then
@@ -511,9 +481,7 @@ text=$(
 EOF
 )
 
-## Build GKI
 log "Generating config..."
-# ✅ FIXED: Corrected typo from $KERNEL_DEFconfig to $KERNEL_DEFCONFIG
 make ${MAKE_ARGS[@]} $KERNEL_DEFCONFIG
 
 log "Enabling VorteX kernel dependencies..."
@@ -554,7 +522,6 @@ else
   $KMI_CHECK "$KSRC/android/abi_gki_aarch64.xml" "$MODULE_SYMVERS" || true
 fi
 
-# --- KPM SECTION (ONLY VORTEXSU) ---
 log "Applying KPM Patch..."
 if [ "$KSU" == "vortexsu" ]; then
   cd $OUTDIR/arch/arm64/boot
@@ -578,7 +545,6 @@ else
 fi
 cd $WORKDIR
 
-## Post-compiling stuff
 cd $WORKDIR
 
 log "Cloning anykernel from $(simplify_gh_url "$ANYKERNEL_REPO")"
