@@ -2,7 +2,7 @@
 /*
  * VortexMax CPU Governor v4.0 (AI Adaptive Core Edition)
  * Engineered for GKI 5.10 / 6.1 / 6.6 (ARM64 Hybrid API)
- * 
+ * Notes; still in the development stage, not fully fixed, 
  * ══════════════════════════════════════════════════════════════════
  * V4.0 AI ADAPTIVE CORE - FEATURE MATRIX
  * ══════════════════════════════════════════════════════════════════
