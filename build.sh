@@ -343,7 +343,7 @@ if susfs_included; then
     if [ "$KVER" == "6.6" ]; then
       SUSFS_BRANCH=gki-android15-6.6
     elif [ "$KVER" == "6.1" ]; then
-      SUSFS_BRANCH=gki-android14-6.1-dev
+      SUSFS_BRANCH=gki-android14-6.1
     elif [ "$KVER" == "5.10" ]; then
       SUSFS_BRANCH=gki-android12-5.10
     fi
