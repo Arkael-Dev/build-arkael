@@ -1,5 +1,4 @@
-#/*!
-# * © 2024-2026 Kingfinik98 (VorteX_E-Sport). All Rights Reserved.
+# * © 2025-2026 Kingfinik98 (VorteX_E-Sport). All Rights Reserved.
 # * Original Author: Kingfinik98
 # * Original Repository: https://github.com/Kingfinik98/build-vortex
 # * Signed-off-by: kingfinix98@gmail.com
@@ -74,13 +73,6 @@ if [ "$KVER" == "5.10" ]; then
   rm infinix_cam.patch
 fi
 
-if [ "$KVER" == "5.10" ]; then
-  log "Placing Driver Adreno SkiaVK libgsl.so..."
-  mkdir -p $WORKDIR/vendor/lib64
-  curl -LSs "https://raw.githubusercontent.com/Kingfinik98/build-vortex/6.x/system/vendor/lib64/libgsl.so" -o $WORKDIR/vendor/lib64/libgsl.so
-  log "libgsl.so placed successfully"
-fi
-
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   log "Injecting VorteX Ultra-Safe Kernel Patch..."
   mkdir -p "$KSRC/drivers/misc"
@@ -112,30 +104,6 @@ KCONF_EOF
     log "VortexCore added to cpufreq Kconfig."
   fi
 fi
-
-#if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  #log "Injecting VortexMax Custom Governor..."
-  #cp "$WORKDIR/governor-vortexmax.c" "$KSRC/drivers/cpufreq/governor-vortexmax.c"
-  
-  #if ! grep -q "governor-vortexmax.o" "$KSRC/drivers/cpufreq/Makefile"; then
-    #echo "obj-\$(CONFIG_CPU_FREQ_GOV_VORTEXMAX) += governor-vortexmax.o" >> "$KSRC/drivers/cpufreq/Makefile"
-    #log "VortexMax added to cpufreq Makefile."
-  #fi
-  
-  #if ! grep -q "CPU_FREQ_GOV_VORTEXMAX" "$KSRC/drivers/cpufreq/Kconfig"; then
-    #cat << 'KCONF_EOF' >> "$KSRC/drivers/cpufreq/Kconfig"
-
-#config CPU_FREQ_GOV_VORTEXMAX
-    #tristate "VortexMax CPU frequency policy governor"
-    #depends on CPU_FREQ
-    #help
-      #VortexMax governor balances performance and efficiency for gaming.
-
-      #If in doubt, say N.
-#KCONF_EOF
-    #log "VortexMax added to cpufreq Kconfig."
-  #fi
-#fi
 
 log "Applying inject.sh patch..."
 wget -qO Inject_300hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/Inject_300hz.sh
