@@ -367,17 +367,16 @@ if susfs_included; then
 #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 #include <linux/susfs_def.h>
 extern bool susfs_is_current_ksu_domain(void);
-extern bool susfs_is_current_zygote_domain(void);
-extern bool susfs_is_boot_completed_triggered;
-extern bool susfs_is_sdcard_android_data_decrypted;
+extern struct static_key_false susfs_set_sdcard_android_data_decrypted_key_false;
+
+#define CL_COPY_MNT_NS BIT(25)
 
 static DEFINE_IDA(susfs_mnt_id_ida);
 static DEFINE_IDA(susfs_mnt_group_ida);
 
-#define DEFAULT_KSU_MNT_ID 100000
-#define DEFAULT_KSU_MNT_GROUP_ID 100000
-#define VFSMOUNT_MNT_FLAGS_KSU_UNSHARED_MNT BIT(24)
-#define CL_COPY_MNT_NS BIT(25)
+#define DEFAULT_KSU_MNT_ID 500000
+#define DEFAULT_KSU_MNT_GROUP_ID 5000
+#define VFSMOUNT_MNT_FLAGS_KSU_UNSHARED_MNT 0x80000000
 #endif
 
 EOF
