@@ -113,30 +113,6 @@ KCONF_EOF
   fi
 fi
 
-#if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  #log "Injecting VortexMax Custom Governor..."
-  #cp "$WORKDIR/governor-vortexmax.c" "$KSRC/drivers/cpufreq/governor-vortexmax.c"
-  
-  #if ! grep -q "governor-vortexmax.o" "$KSRC/drivers/cpufreq/Makefile"; then
-    #echo "obj-\$(CONFIG_CPU_FREQ_GOV_VORTEXMAX) += governor-vortexmax.o" >> "$KSRC/drivers/cpufreq/Makefile"
-    #log "VortexMax added to cpufreq Makefile."
-  #fi
-  
-  #if ! grep -q "CPU_FREQ_GOV_VORTEXMAX" "$KSRC/drivers/cpufreq/Kconfig"; then
-    #cat << 'KCONF_EOF' >> "$KSRC/drivers/cpufreq/Kconfig"
-
-#config CPU_FREQ_GOV_VORTEXMAX
-    #tristate "VortexMax CPU frequency policy governor"
-    #depends on CPU_FREQ
-    #help
-      #VortexMax governor balances performance and efficiency for gaming.
-
-      #If in doubt, say N.
-#KCONF_EOF
-    #log "VortexMax added to cpufreq Kconfig."
-  #fi
-#fi
-
 log "Applying inject.sh patch..."
 wget -qO Inject_300hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/Inject_300hz.sh
 bash Inject_300hz.sh
@@ -359,7 +335,14 @@ if susfs_included; then
       patch -p1 < $KERNEL_PATCHES/susfs/task_mmu.c_fix-k6.6.58.patch || true
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c2) -eq 61 ]; then
       patch -p1 < $KERNEL_PATCHES/susfs/fs_proc_base.c-fix-k6.1.patch || true
-      
+    fi
+    
+    # ============================================
+    # FIX: Static Key Style for GKI 6.1 and 6.6
+    # Replaces old boolean-style declarations with proper static key definitions
+    # Required by SuSFS v2.1.0 + KernelSU-Next v3.2.0
+    # ============================================
+    if [ $(echo "$LINUX_VERSION_CODE" | head -c2) -eq 61 ] || [ $(echo "$LINUX_VERSION_CODE" | head -c1) -eq 6 ]; then
       NS_INJECT_FILE="$WORKDIR/.ns_inject_tmp"
       
       cat << 'EOF' > "$NS_INJECT_FILE"
@@ -367,9 +350,9 @@ if susfs_included; then
 #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 #include <linux/susfs_def.h>
 extern bool susfs_is_current_ksu_domain(void);
-extern bool susfs_is_current_zygote_domain(void);
-extern bool susfs_is_boot_completed_triggered;
-extern bool susfs_is_sdcard_android_data_decrypted;
+extern struct static_key_false susfs_set_sdcard_android_data_decrypted_key_false;
+
+#define CL_COPY_MNT_NS BIT(25)
 
 static DEFINE_IDA(susfs_mnt_id_ida);
 static DEFINE_IDA(susfs_mnt_group_ida);
@@ -377,20 +360,18 @@ static DEFINE_IDA(susfs_mnt_group_ida);
 #define DEFAULT_KSU_MNT_ID 100000
 #define DEFAULT_KSU_MNT_GROUP_ID 100000
 #define VFSMOUNT_MNT_FLAGS_KSU_UNSHARED_MNT BIT(24)
-#define CL_COPY_MNT_NS BIT(25)
 #endif
 
 EOF
 
-      if ! grep -q "static DEFINE_IDA(susfs_mnt_id_ida);" ./fs/namespace.c; then
+      if ! grep -q "susfs_set_sdcard_android_data_decrypted_key_false" ./fs/namespace.c; then
         sed -i '/#include "internal.h"/r '"$NS_INJECT_FILE" ./fs/namespace.c
-        log "SUSFS definitions injected successfully."
+        log "[SUCCESS] SUSFS GKI 6.x definitions injected (static key style)."
       else
-        log "SUSFS definitions already exist."
+        log "[INFO] SUSFS definitions already exist."
       fi
       
       rm -f "$NS_INJECT_FILE"
-
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c3) -eq 510 ]; then
       if [ "$KSU" != "vortexsu" ]; then
         patch -p1 < $KERNEL_PATCHES/susfs/pershoot-susfs-k5.10.patch || true
