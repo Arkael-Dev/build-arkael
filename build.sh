@@ -37,9 +37,9 @@ elif [ "$KVER" == "6.1" ]; then
   ANYKERNEL_BRANCH="master"
   KERNEL_BRANCH="android14-6.1-staging"
 elif [ "$KVER" == "5.10" ]; then
-  KERNEL_REPO="https://github.com/ramabondanp/android_kernel_common-5.10.git"
+  KERNEL_REPO="https://github.com/Kingfinik98/kernel-common-android12-5.10.git"
   ANYKERNEL_BRANCH="master"
-  KERNEL_BRANCH="android12-5.10-staging"
+  KERNEL_BRANCH="vortex-basse"
 fi
 DEFCONFIG_TO_MERGE=""
 GKI_RELEASES_REPO="https://github.com/Kingfinik98/build-vortex/releases"
