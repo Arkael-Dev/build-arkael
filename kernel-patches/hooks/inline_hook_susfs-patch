@@ -1,10 +1,3 @@
-# =====================================================
-#   VORTEXSU - SUSFS INLINE HOOK PATCH (PROPER FORMAT)
-#   Source: github.com/Kingfinik98/VortexSU
-#   Compatible: KernelSU-Next, Kernel 5.10/6.1/6.6
-#   Apply with: git apply vortexsu-susfs-inline-hook.patch
-# =====================================================
-
 diff --git a/drivers/kernelsu/Kconfig b/drivers/kernelsu/Kconfig
 index abc1234..def5678 100644
 --- a/drivers/kernelsu/Kconfig
