@@ -306,10 +306,10 @@ fi
 if susfs_included; then
   if [ "$KSU" != "vortexsu" ] || ([ "$KSU" == "vortexsu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ])); then
     log "Applying kernel-side susfs patches (Standard Method)"
-      # === VorteXSU Inline Hook SUSFS Patch ===
-  if [ -f "$KERNEL_PATCHES/hooks/inline_hook_susfs.patch" ]; then
-    log "Applying VorteXSU SUSFS inline hook patch..."
-    patch -p1 < "$KERNEL_PATCHES/hooks/inline_hook_susfs.patch" || log "[WARN] inline_hook_susfs.patch failed or already applied"
+      # === Manual Hooks SUSFS Patch ===
+  if [ -f "$KERNEL_PATCHES/hooks/kernel-patches/hooks/manual-hook-v1.6.patch" ]; then
+    log "Applying Manual hook patch..."
+    patch -p1 < "$KERNEL_PATCHES/hooks/manual-hook-v1.6.patch" || log "[WARN] Manual hooks patch failed or already applied"
   fi
   # ============================================
     SUSFS_DIR="$WORKDIR/susfs"
