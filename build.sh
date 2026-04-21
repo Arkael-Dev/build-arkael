@@ -44,7 +44,7 @@ fi
 DEFCONFIG_TO_MERGE=""
 GKI_RELEASES_REPO="https://github.com/Kingfinik98/build-vortex/releases"
 
-CLANG_URL="https://github.com/greenforce-project/greenforce_clang/releases/download/20260410/gf-clang-22.1.4-20260410.tar.gz"
+CLANG_URL="https://github.com/greenforce-project/greenforce_clang/releases/download/20260418/gf-clang-23.0.0-20260418.tar.gz"
 CLANG_BRANCH=""
 AK3_ZIP_NAME="$KERNEL_NAME-REL-KVER-VARIANT-BUILD_DATE.zip"
 OUTDIR="$WORKDIR/out"
