@@ -3,7 +3,7 @@
 # * Original Repository: https://github.com/Kingfinik98/build-vortex
 # * Signed-off-by: kingfinix98@gmail.com
 # */
-#!/usr/bin/env bash
+##!/usr/bin/env bash
 
 WORKDIR="$(pwd)"
 if [ "$KVER" == "6.6" ]; then
@@ -37,9 +37,9 @@ elif [ "$KVER" == "6.1" ]; then
   ANYKERNEL_BRANCH="master"
   KERNEL_BRANCH="android14-6.1-staging"
 elif [ "$KVER" == "5.10" ]; then
-  KERNEL_REPO="https://android.googlesource.com/kernel/common"
+  KERNEL_REPO="https://github.com/ramabondanp/android_kernel_common-5.10.git"
   ANYKERNEL_BRANCH="master"
-  KERNEL_BRANCH="android12-5.10-lts"
+  KERNEL_BRANCH="android12-5.10-staging"
 fi
 DEFCONFIG_TO_MERGE=""
 GKI_RELEASES_REPO="https://github.com/Kingfinik98/build-vortex/releases"
@@ -130,41 +130,6 @@ fi
 log "Injecting custom KSU & SuSFS configs from GitHub..."
 export KSU
 export KSU_SUSFS
-
-# ============================================================
-# 🩹 [PATCH MODULE & DRM] XIAOMI COMPATIBILITY FIX (GKI 5.10 ONLY)
-# ============================================================
-if [ "$KVER" == "5.10" ]; then
-  log "🩹 [9/10] Menerapkan patch kompatibilitas untuk perangkat Xiaomi"
-  
-  # Fix: Module symbol version disagreement warning → return 1 (force load)
-  if [ -f "kernel/module.c" ]; then
-    sed -i '/pr_warn.*disagrees about version of symbol.*/,+1 s/.*/return 1;/' kernel/module.c
-    log "[✅] kernel/module.c patched: Symbol version check bypassed for Xiaomi compat."
-  else
-    log "[⚠️] kernel/module.c not found, skipping module patch."
-  fi
-  
-  # Fix: Remove drm_atomic_check_valid_clones function definition
-  if [ -f "drivers/gpu/drm/drm_atomic_helper.c" ]; then
-    sed -i '/^static int drm_atomic_check_valid_clones/,/^}/d' drivers/gpu/drm/drm_atomic_helper.c
-    log "[✅] drivers/gpu/drm/drm_atomic_helper.c: drm_atomic_check_valid_clones definition removed."
-  else
-    log "[⚠️] drivers/gpu/drm/drm_atomic_helper.c not found, skipping DRM helper patch."
-  fi
-  
-  # Fix: Remove calls to drm_atomic_check_valid_clones
-  if [ -f "drivers/gpu/drm/drm_atomic_helper.c" ]; then
-    sed -i '/ret = drm_atomic_check_valid_clones/,/return ret;/d' drivers/gpu/drm/drm_atomic_helper.c
-    log "[✅] drivers/gpu/drm/drm_atomic_helper.c: drm_atomic_check_valid_clones calls removed."
-  else
-    log "[⚠️] drivers/gpu/drm/drm_atomic_helper.c not found, skipping DRM call patch."
-  fi
-  
-  log "✅ Perbaikan selesai - Xiaomi Compat Module & DRM patches applied for GKI 5.10"
-fi
-# ============================================================
-
 if [ "$KVER" == "5.10" ]; then
   wget -qO inject.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/gki_defconfig.sh
   bash inject.sh
@@ -484,7 +449,7 @@ EOF
 )
 
 log "Generating config..."
-make ${MAKE_ARGS[@]} $KERNEL_DEFconfig
+make ${MAKE_ARGS[@]} $KERNEL_DEFCONFIG
 
 log "Enabling VorteX kernel dependencies..."
 config --enable CONFIG_TCP_CONG_WESTWOOD
