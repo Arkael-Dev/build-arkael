@@ -365,7 +365,6 @@ EOF
       fi
       patch -p1 < $KERNEL_PATCHES/susfs/pershoot-susfs-k5.10.patch || true
       fi
-    fi
 
     if [ $(echo "$LINUX_VERSION_CODE" | head -c1) -eq 6 ]; then
       if [ "$KSU" == "yes" ]; then
