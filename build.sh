@@ -281,7 +281,7 @@ elif [ "$KSU" == "vortexsu" ]; then
   log "Setting up VorteXSU for KVER $KVER..."
   
   log "Running VorteX setup from main branch..."
-  curl -LSs "https://raw.githubusercontent.com/Kingfinik98/VortexSU/main/kernel/setup.sh" | bash -s main
+  curl -LSs "https://raw.githubusercontent.com/Kingfinik98/VorteX/refs/heads/main/kernel/setup.sh" | bash -s main
   if [ "$KVER" == "5.10" ]; then
     log "Applying SUSFS patches for GKI 5.10 (VorteX Method)..."
     SUSFS_BRANCH="gki-android12-5.10"
@@ -460,6 +460,8 @@ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   config --enable CONFIG_ANDROID_LOW_MEMORY_KILLER
   config --enable CONFIG_KSM
   config --enable CONFIG_CPU_IDLE
+  config --disable CONFIG_KSU_INIT_RC_HOOK
+  config --disable CONFIG_KSU_INPUT_HOOK
 fi
 
 if [ "$DEFCONFIG_TO_MERGE" ]; then
