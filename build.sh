@@ -242,9 +242,9 @@ AVC_STATIC_KEY_EOF
     elif grep -q "susfs_is_avc_log_spoofing_enabled" "drivers/kernelsu/extras.c"; then
       cat << 'AVC_BOOL_EOF' > "$EXTRAS_FIX_TMP"
 #ifdef CONFIG_KSU_SUSFS
-#ifndef susfs_is_avc_log_spoofing_enabled
+#ifndef susfs_is_avc_log_spoofing_key_true
 __attribute__((weak))
-bool susfs_is_avc_log_spoofing_enabled = false;
+DEFINE_STATIC_KEY_FALSE(susfs_is_avc_log_spoofing_key_true);
 #endif
 #endif
 AVC_BOOL_EOF
@@ -335,7 +335,7 @@ if susfs_included; then
 #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 #include <linux/susfs_def.h>
 extern bool susfs_is_current_ksu_domain(void);
-extern struct static_key_false susfs_set_sdcard_android_data_decrypted_key_false;
+extern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;
 
 #define CL_COPY_MNT_NS BIT(25)
 
