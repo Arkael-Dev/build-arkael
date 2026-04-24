@@ -361,6 +361,10 @@ EOF
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c3) -eq 510 ]; then
       if [ "$KSU" != "vortexsu" ]; then
         log "Applying sucompat stat fix for GKI 5.10..."
+        patch -p1 < $KERNEL_PATCHES/susfs/fix-sucompat-stat-k510.patch || log "[WARN] sucompat patch failed"
+      fi
+      if [ "$KSU" != "vortexsu" ]; then
+        log "Applying sucompat stat fix for GKI 5.10..."
         patch -p1 < $KERNEL_PATCHES/susfs/fix-sucompat-stat-k510.patch || true
       fi
       if [ "$KSU" != "vortexsu" ]; then
