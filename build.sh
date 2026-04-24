@@ -281,7 +281,7 @@ elif [ "$KSU" == "vortexsu" ]; then
   log "Setting up VorteXSU for KVER $KVER..."
   
   log "Running VorteX setup from main branch..."
-  curl -LSs "https://raw.githubusercontent.com/Kingfinik98/VorteX/refs/heads/main/kernel/setup.sh" | bash -s main
+  curl -LSs "https://raw.githubusercontent.com/Kingfinik98/VortexSU/main/kernel/setup.sh" | bash -s main
   if [ "$KVER" == "5.10" ]; then
     log "Applying SUSFS patches for GKI 5.10 (VorteX Method)..."
     SUSFS_BRANCH="gki-android12-5.10"
