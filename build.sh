@@ -29,9 +29,9 @@ else
 fi
 
 if [ "$KVER" == "6.6" ]; then
-  KERNEL_REPO="https://github.com/ramabondanp/android_kernel_common-6.6.git"
+  KERNEL_REPO="https://github.com/Kingfinik98/gki-clo.git"
   ANYKERNEL_BRANCH="master"
-  KERNEL_BRANCH="android15-6.6-staging"
+  KERNEL_BRANCH="6.6.77-base"
 elif [ "$KVER" == "6.1" ]; then
   KERNEL_REPO="https://github.com/ramabondanp/android_kernel_common-6.1.git"
   ANYKERNEL_BRANCH="master"
