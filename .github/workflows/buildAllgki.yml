@@ -1,7 +1,7 @@
 #/*!
-# * © 2026 Kingfinik98 (VorteX_E-Sport). All Rights Reserved.
+# * © 2026 Kingfinik98. All Rights Reserved.
 # * Original Author: Kingfinik98
-# * Original Repository: https://github.com/Kingfinik98/build-vortex
+# * Original Repository: https://github.com/Kingfinik98/build-arkael
 # * Signed-off-by: kingfinix98@gmail.com
 # */
 
@@ -16,8 +16,6 @@ on:
         type: choice
         options:
           - 'full'
-          - 'ksu_only'
-          - 'minimal'
 
 env:
   MAN_DISABLE: true
@@ -51,8 +49,8 @@ jobs:
             last_build: "false"
 
           - kernel_version: "5.10"
-            variant_name: "VorteXSU"
-            ksu: "vortexsu"
+            variant_name: "SukiSU"
+            ksu: "sukisu"
             ksu_susfs: "true"
             last_build: "false"
 
@@ -76,8 +74,8 @@ jobs:
             last_build: "false"
 
           - kernel_version: "6.1"
-            variant_name: "VorteXSU"
-            ksu: "vortexsu"
+            variant_name: "SukiSU"
+            ksu: "sukisu"
             ksu_susfs: "true"
             last_build: "false"
 
@@ -101,8 +99,8 @@ jobs:
             last_build: "false"
 
           - kernel_version: "6.6"
-            variant_name: "VorteXSU"
-            ksu: "vortexsu"
+            variant_name: "SukiSU"
+            ksu: "sukisu"
             ksu_susfs: "true"
             last_build: "true"
 
@@ -117,7 +115,7 @@ jobs:
           echo "STATUS=RELEASE" >> $GITHUB_ENV
           echo "TRIGGER=workflow_dispatch" >> $GITHUB_ENV
           echo "=========================================="
-          echo "  🚀 VORTEX_E-SPORT BUILD SYSTEM"
+          echo "  🚀 ARKAEL KERNEL BUILD SYSTEM"
           echo "=========================================="
           echo "  Kernel   : ${{ matrix.kernel_version }}"
           echo "  Variant  : ${{ matrix.variant_name }}"
@@ -190,7 +188,7 @@ jobs:
           merge-multiple: true
 
       # =====================================================================
-      # ✅ NEW: Debug & Flatten Artifact Structure
+      # ✅ Debug & Flatten Artifact Structure
       # =====================================================================
       - name: 🔍 Inspect & Prepare Artifacts
         run: |
@@ -249,7 +247,7 @@ jobs:
               [[ -n "$key" && -n "$value" ]] && echo "$key=$value" >> $GITHUB_ENV
             done < "$INFO_FILE"
           else
-            echo "KERNEL_NAME=VorteX_E-Sport" >> $GITHUB_ENV
+            echo "KERNEL_NAME=Arkael-Kernel" >> $GITHUB_ENV
             echo "RELEASE=v0.3" >> $GITHUB_ENV
             echo "LINUX_VERSION=unknown" >> $GITHUB_ENV
             echo "SUSFS_VERSION=N/A" >> $GITHUB_ENV
@@ -258,7 +256,7 @@ jobs:
       - name: 🏷️ Generate Release Tag
         run: |
           TIMESTAMP=$(date +%Y%m%d-%H%M)
-          KERNEL_NAME="${KERNEL_NAME:-VorteX_E-Sport}"
+          KERNEL_NAME="${KERNEL_NAME:-Arkael-Kernel}"
           RELEASE_TAG="${KERNEL_NAME}-AllGKI-${TIMESTAMP}"
           echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
           echo "BUILD_TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
@@ -266,7 +264,7 @@ jobs:
       - name: 📝 Prepare Release Notes
         run: |
           cat > release_notes.md << 'EOF'
-          ## 🐧 VorteX_E-Sport - All GKI Release
+          ## 🐧 Arkael Kernel - All GKI Release
           
           ### 📋 Build Information
           
@@ -282,22 +280,22 @@ jobs:
           ### 📦 Available Variants
           
           #### 🔵 GKI 5.10 (Android 12/12.1)
-          - `VorteX_E-Sport-*-5.10-VNL.zip` - Vanilla (No Root)
-          - `VorteX_E-Sport-*-5.10-KSU.zip` - Standard KernelSU
-          - `VorteX_E-Sport-*-5.10-KSU+SuSFS.zip` - KernelSU + Hidden Root
-          - `VorteX_E-Sport-*-5.10-VorteXSU+SuSFS.zip` - VorteXSU (KPM Patch)
+          - `Arkael-*-5.10-VNL.zip` - Vanilla (No Root)
+          - `Arkael-*-5.10-KSU.zip` - Standard KernelSU
+          - `Arkael-*-5.10-KSU+SuSFS.zip` - KernelSU + Hidden Root
+          - `Arkael-*-5.10-SukiSU+SuSFS.zip` - SukiSU-Ultra (KPM Patch)
           
           #### 🟢 GKI 6.1 (Android 14)
-          - `VorteX_E-Sport-*-6.1-VNL.zip` - Vanilla (No Root)
-          - `VorteX_E-Sport-*-6.1-KSU.zip` - Standard KernelSU
-          - `VorteX_E-Sport-*-6.1-KSU+SuSFS.zip` - KernelSU + Hidden Root
-          - `VorteX_E-Sport-*-6.1-VorteXSU+SuSFS.zip` - VorteXSU (KPM Patch)
+          - `Arkael-*-6.1-VNL.zip` - Vanilla (No Root)
+          - `Arkael-*-6.1-KSU.zip` - Standard KernelSU
+          - `Arkael-*-6.1-KSU+SuSFS.zip` - KernelSU + Hidden Root
+          - `Arkael-*-6.1-SukiSU+SuSFS.zip` - SukiSU-Ultra (KPM Patch)
           
           #### 🟣 GKI 6.6 (Android 15)
-          - `VorteX_E-Sport-*-6.6-VNL.zip` - Vanilla (No Root)
-          - `VorteX_E-Sport-*-6.6-KSU.zip` - Standard KernelSU
-          - `VorteX_E-Sport-*-6.6-KSU+SuSFS.zip` - KernelSU + Hidden Root
-          - `VorteX_E-Sport-*-6.6-VorteXSU+SuSFS.zip` - VorteXSU (KPM Patch)
+          - `Arkael-*-6.6-VNL.zip` - Vanilla (No Root)
+          - `Arkael-*-6.6-KSU.zip` - Standard KernelSU
+          - `Arkael-*-6.6-KSU+SuSFS.zip` - KernelSU + Hidden Root
+          - `Arkael-*-6.6-SukiSU+SuSFS.zip` - SukiSU-Ultra (KPM Patch)
           
           ---
           
@@ -314,7 +312,7 @@ jobs:
           | Variant | KPM Patch | SuSFS Support | Description |
           |---------|-----------|---------------|-------------|
           | **KSU** | ❌ | ✅ Optional | Standard KernelSU-Next |
-          | **VorteXSU** | ✅ | ✅ Recommended | Custom KPM-based root |
+          | **SukiSU** | ✅ | ✅ Recommended | SukiSU-Ultra KPM-based root |
           | **VNL** | ❌ | ❌ | No root (vanilla) |
           
           ---
@@ -322,7 +320,7 @@ jobs:
           ### 📱 Installation
           
           1. Download ZIP file according to your chosen variant
-          2 Flash via AnyKernel3 / Recovery / KernelFlash / fkm
+          2. Flash via AnyKernel3 / Recovery / KernelFlash / fkm
           3. Reboot device
           
           > ⚠️ **Backup your data before flashing!**
@@ -331,17 +329,17 @@ jobs:
           
           ### 💬 Support
           
-          - 📞 Telegram: [VorteX_E-Sport](https://t.me/vortexgki)
-          - 🌐 GitHub: [Kingfinik98/build-vortex](https://github.com/Kingfinik98/build-vortex)
+          - 📞 Telegram: [Arkael Kernel](https://t.me/arkaelkernel)
+          - 🌐 GitHub: [Kingfinik98/build-arkael](https://github.com/Kingfinik98/build-arkael)
           
           ---
           
-          *Built with ❤️ by Kingfinik98 (VorteX_E-Sport)*
-          *© 2026 All Rights Reserved*
+          *Built with ❤️ by Kingfinik98*
+          *© 2025-2026 Arkael Kernel. All Rights Reserved*
           EOF
           
-          # ✅ BUGFIX #001: Safe sed substitution with pipe delimiter
-          sed -i "s|{KERNEL_NAME}|${KERNEL_NAME:-VorteX_E-Sport}|g" release_notes.md
+          # Safe sed substitution with pipe delimiter
+          sed -i "s|{KERNEL_NAME}|${KERNEL_NAME:-Arkael-Kernel}|g" release_notes.md
           sed -i "s|{TIMESTAMP}|${BUILD_TIMESTAMP:-$(date +%Y%m%d-%H%M)}|g" release_notes.md
           sed -i "s|{LINUX_VERSION}|${LINUX_VERSION:-Multiple}|g" release_notes.md
           sed -i "s|{SUSFS_VERSION}|${SUSFS_VERSION:-N/A}|g" release_notes.md
@@ -368,18 +366,13 @@ jobs:
       # =====================================================================
       # ✅ BUGFIX #002: Fixed Subshell Loop & Variable Typo
       # =====================================================================
-      # Changes:
-      # - Replaced pipe-based loop with process substitution (< <())
-      # - Fixed variable typo: filesize -> FILESIZE
-      # - Counters now accurately tracked outside loop
-      # =====================================================================
       
       - name: 🚀 Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          REPO="${REPO:-Kingfinik98/build-vortex}"
+          REPO="${REPO:-Kingfinik98/build-arkael}"
           
           echo "=========================================="
           echo "  🚀 CREATING GITHUB RELEASE"
@@ -392,13 +385,13 @@ jobs:
           # Step 1: Create release FIRST (without assets)
           gh release create "${RELEASE_TAG}" \
             --repo "${REPO}" \
-            --title "🐧 VorteX_E-Sport - All GKI (${BUILD_TIMESTAMP})" \
+            --title "🐧 Arkael Kernel - All GKI (${BUILD_TIMESTAMP})" \
             --notes-file release_notes.md \
             || {
               echo "⚠️ Release already exists or creation failed, trying to update..."
               gh release edit "${RELEASE_TAG}" \
                 --repo "${REPO}" \
-                --title "🐧 VorteX_E-Sport - All GKI (${BUILD_TIMESTAMP})" \
+                --title "🐧 Arkael Kernel - All GKI (${BUILD_TIMESTAMP})" \
                 --notes-file release_notes.md \
                 2>/dev/null || true
             }
@@ -410,17 +403,15 @@ jobs:
           FAIL_COUNT=0
           
           # Step 3: Upload assets using PROCESS SUBSTITUTION (not pipe!)
-          # This ensures variables are preserved in current shell
           echo ""
           echo "📤 Uploading assets..."
           
           if [ -d "release_files" ]; then
-            # ✅ BUGFIX #002: Use < <() instead of | to avoid subshell
+            # Use < <() instead of | to avoid subshell
             while IFS= read -r f; do
               FILENAME=$(basename "$f")
               FILESIZE=$(ls -lh "$f" | awk '{print $5}')
               
-              # ✅ BUGFIX #002: Fixed typo - use uppercase FILESIZE
               echo -n "  📤 Uploading ${FILENAME} (${FILESIZE})... "
               
               if gh release upload "${RELEASE_TAG}" \
@@ -463,21 +454,21 @@ jobs:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         run: |
-          REPO="${REPO:-Kingfinik98/build-vortex}"
+          REPO="${REPO:-Kingfinik98/build-arkael}"
           LINK="https://github.com/${REPO}/releases/tag/${RELEASE_TAG}"
           TOTAL_ZIPS=$(find release_files -name "*.zip" 2>/dev/null | wc -l)
-          MSG="*🐧 VORTEX_E-SPORT - ALL GKI RELEASE* 🚀
+          MSG="*🐧 ARKAEL KERNEL - ALL GKI RELEASE* 🚀
           
           ✅ *Status*: SUCCESS
           📦 *Builds*: ${TOTAL_ZIPS} ZIPs
           🐧 *Kernels*: 5.10, 6.1, 6.6
           📅 *Date*: ${BUILD_TIMESTAMP}
-          🔐 *Root*: KSU, VorteXSU, VNL
+          🔐 *Root*: KSU, SukiSU, VNL
           
           ———————————————
           📥 [DOWNLOAD](${LINK})
           ———————————————
-          _© 2026 VorteX_E-Sport_"
+          _© 2025-2026 Arkael Kernel_"
           curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${TG_CHAT_ID}" \
             -d "parse_mode=markdown" \
@@ -502,4 +493,4 @@ jobs:
           echo "| **Total Assets** | \`${TOTAL}\` files |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📥 Download Link" >> $GITHUB_STEP_SUMMARY
-          echo "[🔗 View Release](https://github.com/Kingfinik98/build-vortex/releases/tag/${RELEASE_TAG})" >> $GITHUB_STEP_SUMMARY
+          echo "[🔗 View Release](https://github.com/Kingfinik98/build-arkael/releases/tag/${RELEASE_TAG})" >> $GITHUB_STEP_SUMMARY
