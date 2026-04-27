@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 
-# ==========================================
-# © 2025-2026 Kingfinik98. All Rights Reserved.
-# Original Author: Kingfinik98
-# Original Repository: https://github.com/Kingfinik98/build-arkael
-# Signed-off-by: kingfinix98@gmail.com
-# ==========================================
+# * © 2025-2026 Kingfinik98. All Rights Reserved.
+# * Original Author: Kingfinik98
+# * Original Repository: https://github.com/Kingfinik98/build-arkael
+# * Signed-off-by: kingfinix98@gmail.com
+# */
 
 WORKDIR="$(pwd)"
 if [ "$KVER" == "6.6" ]; then
@@ -76,7 +75,7 @@ if [ "$KVER" == "5.10" ]; then
 fi
 
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  log "Injecting Arkael Ultra-Safe Kernel Patch..."
+  log "Injecting VorteX Ultra-Safe Kernel Patch..."
   mkdir -p "$KSRC/drivers/misc"
   cp "$KERNEL_PATCHES/vortex_gki.c" "$KSRC/drivers/misc/vortex_gki.c"
   sed -i '/vortex_gki/d' "$KSRC/drivers/misc/Makefile"
@@ -279,13 +278,13 @@ AVC_BOOL_EOF
     log "[WARNING] drivers/kernelsu/extras.c not found! Skipping AVC spoof fix."
   fi
 
-elif [ "$KSU" == "sukisu" ]; then
+elif [ "$KSU" == "vortexsu" ]; then
   log "Setting up VorteXSU for KVER $KVER..."
   
   log "Running VorteX setup from main branch..."
-  curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/refs/heads/main/kernel/setup.sh" | bash -s main
+  curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/refs/heads/builtin/kernel/setup.sh" | bash -s builtin
   if [ "$KVER" == "5.10" ]; then
-    log "Applying SUSFS patches for GKI 5.10 (VorteX Method)..."
+    log "Applying SUSFS patches for GKI 5.10 (SukiSU Method)..."
     SUSFS_BRANCH="gki-android12-5.10"
     git clone https://gitlab.com/simonpunk/susfs4ksu/ -b $SUSFS_BRANCH sus
     rm -rf sus/.git
@@ -306,7 +305,7 @@ elif [ "$KSU" == "sukisu" ]; then
 fi
 
 if susfs_included; then
-  if [ "$KSU" != "sukisu" ] || ([ "$KSU" == "sukisu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ])); then
+  if [ "$KSU" != "vortexsu" ] || ([ "$KSU" == "vortexsu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ])); then
     log "Applying kernel-side susfs patches (Standard Method)"
     SUSFS_DIR="$WORKDIR/susfs"
     SUSFS_PATCHES="${SUSFS_DIR}/kernel_patches"
@@ -455,7 +454,7 @@ EOF
 log "Generating config..."
 make ${MAKE_ARGS[@]} $KERNEL_DEFconfig
 
-log "Enabling Arkael kernel dependencies..."
+log "Enabling VorteX kernel dependencies..."
 config --enable CONFIG_TCP_CONG_WESTWOOD
 config --enable CONFIG_DEVFREQ_GOV_SCHEDUTIL
 config --enable CONFIG_CPU_FREQ_GOV_VORTEXCORE
@@ -496,7 +495,7 @@ else
 fi
 
 log "Applying KPM Patch..."
-if [ "$KSU" == "sukisu" ]; then
+if [ "$KSU" == "vortexsu" ]; then
   cd $OUTDIR/arch/arm64/boot
   if [ -f Image ]; then
     echo "✅ Image found, applying KPM patch for ${VARIANT}..."
