@@ -495,7 +495,7 @@ else
 fi
 
 log "Applying KPM Patch..."
-if [ "$KSU" == "vortexsu" ]; then
+if [ "$KSU" == "sukisu" ]; then
   cd $OUTDIR/arch/arm64/boot
   if [ -f Image ]; then
     echo "✅ Image found, applying KPM patch for ${VARIANT}..."
