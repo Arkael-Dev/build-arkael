@@ -40,7 +40,7 @@ on:
         options:
           - "no"           # Vanilla - No Root
           - "yes"          # KernelSU-Next (Standard)
-          - "vortexsu"     # VorteXSU (KPM Enabled)
+          - "sukisu"     #  (KPM Enabled)
 
       KSU_SUSFS:
         description: '🛡️ Enable SuSFS (Hide Root)?'
