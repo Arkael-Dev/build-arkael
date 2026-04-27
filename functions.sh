@@ -67,7 +67,7 @@ Each version includes:
 
 ———————————————
 _Built with ❤️ by @Kingfinik98_
-_© 2024-2026 VorteX_E-Sport_"
+_© 2025-2026 Arkaelkernel"
 
   curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
     -d "chat_id=${TG_CHAT_ID}" -d "parse_mode=markdown" \
@@ -95,7 +95,7 @@ simplify_gh_url() { echo "$1" | sed "s|https://github.com/||g" | sed "s|.git||g"
 get_variant_name() {
   case "$KSU" in
     "yes")      echo "KSU" ;;
-    "vortexsu") echo "VorteXSU" ;;
+    "arkael") echo "Arkael" ;;
     "no")       echo "VNL" ;;
     *)         echo "Unknown" ;;
   esac
