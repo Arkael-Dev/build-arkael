@@ -14,9 +14,9 @@ elif [ "$KVER" == "6.1" ]; then
   RELEASE="v0.1"
 fi
 
-KERNEL_NAME="VorteX_E-Sport"
-USER="VorteX"
-HOST="VorteX"
+KERNEL_NAME="Arkael"
+USER="Zeroz"
+HOST="ZeroZ"
 TIMEZONE="Asia/Jakarta"
 ANYKERNEL_REPO="https://github.com/Kingfinik98/AnyKernel3"
 
