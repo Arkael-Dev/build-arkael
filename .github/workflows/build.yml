@@ -40,7 +40,6 @@ on:
         options:
           - "no"           # Vanilla - No Root
           - "yes"          # KernelSU-Next (Standard)
-          - "vortexsu"     # VorteXSU (KPM Enabled)
           - "sukisu"       # SukiSU-Ultra (KPM Enabled)
 
       KSU_SUSFS:
@@ -163,7 +162,7 @@ jobs:
           fi
 
           # ==========================================
-          # KERNELSU VARIANT VALIDATION (4 VARIANTS)
+          # KERNELSU VARIANT VALIDATION (3 VARIANTS ONLY)
           # ==========================================
           echo ""
           echo "--- Validating KSU Variant ---"
@@ -171,9 +170,6 @@ jobs:
           case "$KSU" in
             "yes")
               _info "Variant: Standard KernelSU-Next"
-              ;;
-            "vortexsu")
-              _info "Variant: VorteXSU (KPM Enabled)"
               ;;
             "sukisu")
               _info "Variant: SukiSU-Ultra (KPM Enabled)"
@@ -183,7 +179,7 @@ jobs:
               ;;
             *)
               _error "Invalid KSU value: '$KSU'"
-              _info "Valid options: yes, vortexsu, sukisu, no"
+              _info "Valid options: yes, sukisu, no"
               ;;
           esac
 
@@ -198,15 +194,9 @@ jobs:
               _error "Cannot enable SuSFS without KernelSU (KSU=no)"
           fi
           
-          # VorteXSU strongly recommend SuSFS
-          if [[ $KSU == "vortexsu" && $KSU_SUSFS != "true" ]]; then
-              _warn "VorteXSU variant works best with SuSFS enabled!"
-              _info "Consider setting KSU_SUSFS=true for optimal root hiding"
-          fi
-          
-          # SukiSU recommend SuSFS
+          # SukiSU-Ultra strongly recommend SuSFS
           if [[ $KSU == "sukisu" && $KSU_SUSFS != "true" ]]; then
-              _warn "SukiSU variant works best with SuSFS enabled!"
+              _warn "SukiSU-Ultra variant works best with SuSFS enabled!"
               _info "Consider setting KSU_SUSFS=true for optimal root hiding"
           fi
           
@@ -263,11 +253,6 @@ jobs:
           # ==========================================
           echo ""
           echo "--- Variant Specific Information ---"
-          
-          if [[ $KSU == "vortexsu" ]]; then
-            _info "⚡ VorteXSU will use KPM patch"
-            _info "   Output ZIP will contain: VorteXSU+SuSFS (if enabled)"
-          fi
           
           if [[ $KSU == "sukisu" ]]; then
             _info "⚡ SukiSU-Ultra will use KPM patch"
