@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:00F7FF,100:0051FF&height=180&section=header&text=VorteX%20GKI%20Kernel&fontSize=35&fontColor=ffffff&animation=fadeIn&fontAlignY=35"/>
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:00F7FF,100:0051FF&height=180&section=header&text=Arkael%20GKI%20Kernel&fontSize=35&fontColor=ffffff&animation=fadeIn&fontAlignY=35"/>
 </p>
 
 <p align="center">
@@ -83,7 +83,7 @@ is not development — it is **repackaging**.
 
 [![GitHub](https://img.shields.io/badge/AnyKernel3-181717?logo=github&logoColor=white)](https://github.com/Kingfinik98/AnyKernel3)
 
-[![GitHub](https://img.shields.io/badge/VortexSU-181717?logo=github&logoColor=white)](https://github.com/Kingfinik98/VortexSU)
+[![GitHub](https://img.shields.io/badge/ArkaelSU-181717?logo=github&logoColor=white)](https://github.com/Kingfinik98/VortexSU)
 
 [![GitHub](https://img.shields.io/badge/Base%20Source-181717?logo=github&logoColor=white)](https://github.com/linastorvaldz)
 
@@ -128,13 +128,13 @@ Special thanks:
 
 ## 📢 Community
 
-[![Telegram](https://img.shields.io/badge/Telegram-VorteX%20GKI-2AABEFF?logo=telegram&logoColor=white)](https://t.me/vortexgki)
+[![Telegram](https://img.shields.io/badge/Telegram-Arkael%20Kernel-2AABEFF?logo=telegram&logoColor=white)](https://t.me/arkaelkernel)
 
 ---
 
 ## 🧬 Signature
 
-VorteX-Kernel | KF98 | Original Work  
+Arkael-Kernel | KF98 | Original Work  
 
 If you see this elsewhere without proper credit,  
 it is a **rebranded copy**.
