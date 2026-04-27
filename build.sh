@@ -452,7 +452,7 @@ EOF
 )
 
 log "Generating config..."
-make ${MAKE_ARGS[@]} $KERNEL_DEFconfig
+make ${MAKE_ARGS[@]} $KERNEL_DEFCONFIG
 
 log "Enabling Arkael kernel dependencies..."
 config --enable CONFIG_TCP_CONG_WESTWOOD
