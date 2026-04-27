@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 #/*!
-# * © 2024-2026 Kingfinik98 (VorteX_E-Sport). All Rights Reserved.
+# * © 2024-2026 Kingfinik98. All Rights Reserved.
 # * Signed-off-by: kingfinix98@gmail.com
 # */
 
@@ -34,20 +34,20 @@ send_release_notification() {
   local RELEASE_TAG="${1:-unknown}"
   local TOTAL_ZIPS="${2:-0}"
   local BUILD_TIMESTAMP="${3:-$(date +%Y%m%d-%H%M)}"
-  local RELEASE_REPO="${RELEASE_REPO:-Kingfinik98/build-vortex}"
+  local RELEASE_REPO="${RELEASE_REPO:-Kingfinik98/build-arkael}"
   local RELEASE_LINK="https://github.com/${RELEASE_REPO}/releases/tag/${RELEASE_TAG}"
 
   if [[ -z "$TG_CHAT_ID" ]] || [[ -z "$TG_BOT_TOKEN" ]]; then
     return 1
   fi
 
-  local MESSAGE="*🐧 VORTEX_E-SPORT - ALL GKI RELEASE* 🚀
+  local MESSAGE="*🐧 ARKAEL KERNEL - ALL GKI RELEASE* 🚀
 
 ✅ *Build Status*: SUCCESS
 📦 *Total Variants*: ${TOTAL_ZIPS} ZIPs
 🐧 *Kernel Versions*: 5.10, 6.1, 6.6
 📅 *Build Date*: ${BUILD_TIMESTAMP}
-🔐 *Root Options*: KSU, VorteXSU, VNL
+🔐 *Root Options*: KSU, SukiSU, VNL
 
 ———————————————
 📥 *DOWNLOAD RELEASE*:
@@ -67,7 +67,7 @@ Each version includes:
 
 ———————————————
 _Built with ❤️ by @Kingfinik98_
-_© 2025-2026 Arkaelkernel"
+_© 2025-2026 Arkael Kernel_"
 
   curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
     -d "chat_id=${TG_CHAT_ID}" -d "parse_mode=markdown" \
@@ -81,12 +81,12 @@ install_ksu() {
   curl -LSs "$URL" | bash -s "$REF"
 }
 
-# Variant Detection (3 VARIANTS ONLY)
+# Variant Detection (3 VARIANTS ONLY + sukisu)
 ksu_included() { [ "$KSU" == "yes" ]; return $?; }
 
-kpm_enabled() { [ "$KSU" == "vortexsu" ]; return $?; }
+kpm_enabled() { [ "$KSU" == "vortexsu" ] || [ "$KSU" == "sukisu" ]; return $?; }
 
-is_ksu_variant() { [ "$KSU" == "yes" ] || [ "$KSU" == "vortexsu" ]; return $?; }
+is_ksu_variant() { [ "$KSU" == "yes" ] || [ "$KSU" == "vortexsu" ] || [ "$KSU" == "sukisu" ]; return $?; }
 
 susfs_included() { [ "$KSU_SUSFS" == "true" ]; return $?; }
 
@@ -94,10 +94,11 @@ simplify_gh_url() { echo "$1" | sed "s|https://github.com/||g" | sed "s|.git||g"
 
 get_variant_name() {
   case "$KSU" in
-    "yes")      echo "KSU" ;;
-    "sukisu") echo "SukiSU-Ultra" ;;
-    "no")       echo "VNL" ;;
-    *)         echo "Unknown" ;;
+    "yes")       echo "KSU" ;;
+    "vortexsu")  echo "VorteXSU" ;;
+    "sukisu")    echo "SukiSU-Ultra" ;;
+    "no")        echo "VNL" ;;
+    *)          echo "Unknown" ;;
   esac
 }
 
@@ -114,7 +115,7 @@ config() {
 log() { echo -e "[LOG] $(date '+%H:%M:%S') $*"; }
 
 error() {
-  local err_txt="*🔴 VorteX_E-Sport Build ERROR*\n\n❌ Error: $*\n📅 Time: $(date)\n🐧 Kernel: ${LINUX_VERSION:-unknown}\n📛 Variant: $(get_variant_name)"
+  local err_txt="*🔴 Arkael Build ERROR*\n\n❌ Error: $*\n📅 Time: $(date)\n🐧 Kernel: ${LINUX_VERSION:-unknown}\n📛 Variant: $(get_variant_name)"
   echo -e "[ERROR] $(date '+%H:%M:%S') $*"
   send_msg "$err_txt"
   [[ -n "$WORKDIR" ]] && [[ -f "$WORKDIR/build.log" ]] && upload_file "$WORKDIR/build.log"
@@ -137,7 +138,7 @@ matrix_log() {
   local KVER_LOG="${1:-$KVER}" VARIANT_LOG="${2:-$(get_variant_name)}"
   echo ""
   echo "=========================================="
-  echo "  🐧 MATRIX BUILD INFO"
+  echo "  🐧 ARKAEL BUILD INFO"
   echo "  📌 Kernel : ${KVER_LOG} | 🔐 Variant: ${VARIANT_LOG}"
   echo "  ⚡ KPM   : $(get_kpm_status) | 🛡️ SuSFS: $(get_susfs_status)"
   echo "=========================================="
@@ -147,10 +148,11 @@ matrix_log() {
 setup_ksu_variant() {
   log "Setting up KSU variant: $(get_variant_name)"
   case "$KSU" in
-    "yes")      log "Standard KSU variant." ;;
-    "vortexsu") log "VorteXSU variant (KPM Enabled)." ;;
-    "no")       log "Vanilla variant (No Root)." ;;
-    *)         warn "Unknown KSU variant: $KSU" ;;
+    "yes")       log "Standard KSU variant." ;;
+    "vortexsu")  log "VorteXSU variant (KPM Enabled)." ;;
+    "sukisu")    log "SukiSU-Ultra variant (KPM Enabled)." ;;
+    "no")        log "Vanilla variant (No Root)." ;;
+    *)          warn "Unknown KSU variant: $KSU" ;;
   esac
 }
 
@@ -180,7 +182,7 @@ LINUX_VERSION=${LINUX_VERSION:-unknown}
 SUSFS_VERSION=${SUSFS_VERSION:-N/A}
 KERNEL_NAME=${KERNEL_NAME:-Arkael-Kernel}
 RELEASE=${RELEASE:-v0.3}
-RELEASE_REPO=${RELEASE_REPO:-Kingfinik98/build-vortex}
+RELEASE_REPO=${RELEASE_REPO:-Kingfinik98/build-arkael}
 EOF
   log "Info file generated: $OUTPUT_PATH"
 }
@@ -214,7 +216,7 @@ validate_github_actions_env() {
 print_build_header() {
   echo ""
   echo "╔══════════════════════════════════════════════════╗"
-  echo "║       🐧 VORTEX_E-SPORT BUILD SYSTEM 🐧            ║"
+  echo "║          🐧 ARKAEL KERNEL BUILD SYSTEM 🐧         ║"
   echo "╠══════════════════════════════════════════════════╣"
   printf "║  Kernel: %-20s KPM: %-10s ║\n" "${KVER:-unknown}" "$(get_kpm_status)"
   printf "║  Variant: %-18s SuSFS: %-10s ║\n" "$(get_variant_name)" "$(get_susfs_status)"
