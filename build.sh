@@ -277,11 +277,11 @@ AVC_BOOL_EOF
     log "[WARNING] drivers/kernelsu/extras.c not found! Skipping AVC spoof fix."
   fi
 
-elif [ "$KSU" == "vortexsu" ]; then
+elif [ "$KSU" == "sukisu" ]; then
   log "Setting up VorteXSU for KVER $KVER..."
   
   log "Running VorteX setup from main branch..."
-  curl -LSs "https://raw.githubusercontent.com/Kingfinik98/VorteX/refs/heads/main/kernel/setup.sh" | bash -s main
+  curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/refs/heads/main/kernel/setup.sh" | bash -s main
   if [ "$KVER" == "5.10" ]; then
     log "Applying SUSFS patches for GKI 5.10 (VorteX Method)..."
     SUSFS_BRANCH="gki-android12-5.10"
@@ -304,7 +304,7 @@ elif [ "$KSU" == "vortexsu" ]; then
 fi
 
 if susfs_included; then
-  if [ "$KSU" != "vortexsu" ] || ([ "$KSU" == "vortexsu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ])); then
+  if [ "$KSU" != "sukisu" ] || ([ "$KSU" == "sukisu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ])); then
     log "Applying kernel-side susfs patches (Standard Method)"
     SUSFS_DIR="$WORKDIR/susfs"
     SUSFS_PATCHES="${SUSFS_DIR}/kernel_patches"
@@ -494,7 +494,7 @@ else
 fi
 
 log "Applying KPM Patch..."
-if [ "$KSU" == "vortexsu" ]; then
+if [ "$KSU" == "sukisu" ]; then
   cd $OUTDIR/arch/arm64/boot
   if [ -f Image ]; then
     echo "✅ Image found, applying KPM patch for ${VARIANT}..."
