@@ -282,7 +282,7 @@ elif [ "$KSU" == "sukisu" ]; then
   log "Setting up SukiSU-Ultra for KVER $KVER..."
   
   log "Running SukiSU setup from builtin branch..."
-  curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/refs/heads/builtin/kernel/setup.sh" | bash -s builtin
+  curl -LSs "https://raw.githubusercontent.com/Kingfinik98/VorteX/refs/heads/main/kernel/setup.sh" | bash -s main
   if [ "$KVER" == "5.10" ]; then
     log "Applying SUSFS patches for GKI 5.10 (SukiSU Method)..."
     SUSFS_BRANCH="gki-android12-5.10"
