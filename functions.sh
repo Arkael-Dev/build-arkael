@@ -95,7 +95,7 @@ simplify_gh_url() { echo "$1" | sed "s|https://github.com/||g" | sed "s|.git||g"
 get_variant_name() {
   case "$KSU" in
     "yes")      echo "KSU" ;;
-    "arkael") echo "Arkael" ;;
+    "sukisu") echo "SukiSU-Ultra" ;;
     "no")       echo "VNL" ;;
     *)         echo "Unknown" ;;
   esac
@@ -178,7 +178,7 @@ generate_info_file() {
   cat > "$OUTPUT_PATH" << EOF
 LINUX_VERSION=${LINUX_VERSION:-unknown}
 SUSFS_VERSION=${SUSFS_VERSION:-N/A}
-KERNEL_NAME=${KERNEL_NAME:-VorteX_E-Sport}
+KERNEL_NAME=${KERNEL_NAME:-Arkael-Kernel}
 RELEASE=${RELEASE:-v0.3}
 RELEASE_REPO=${RELEASE_REPO:-Kingfinik98/build-vortex}
 EOF
