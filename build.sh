@@ -1,9 +1,11 @@
-# * © 2025-2026 Kingfinik98 (VorteX_E-Sport). All Rights Reserved.
-# * Original Author: Kingfinik98
-# * Original Repository: https://github.com/Kingfinik98/build-vortex
-# * Signed-off-by: kingfinix98@gmail.com
-# */
-##!/usr/bin/env bash
+#!/usr/bin/env bash
+
+# ==========================================
+# © 2025-2026 Kingfinik98. All Rights Reserved.
+# Original Author: Kingfinik98
+# Original Repository: https://github.com/Kingfinik98/build-arkael
+# Signed-off-by: kingfinix98@gmail.com
+# ==========================================
 
 WORKDIR="$(pwd)"
 if [ "$KVER" == "6.6" ]; then
@@ -42,7 +44,7 @@ elif [ "$KVER" == "5.10" ]; then
   KERNEL_BRANCH="android12-5.10-staging"
 fi
 DEFCONFIG_TO_MERGE=""
-GKI_RELEASES_REPO="https://github.com/Kingfinik98/build-vortex/releases"
+GKI_RELEASES_REPO="https://github.com/Kingfinik98/build-arkael/releases"
 
 CLANG_URL="https://github.com/greenforce-project/greenforce_clang/releases/download/20260418/gf-clang-23.0.0-20260418.tar.gz"
 CLANG_BRANCH=""
@@ -74,7 +76,7 @@ if [ "$KVER" == "5.10" ]; then
 fi
 
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  log "Injecting VorteX Ultra-Safe Kernel Patch..."
+  log "Injecting Arkael Ultra-Safe Kernel Patch..."
   mkdir -p "$KSRC/drivers/misc"
   cp "$KERNEL_PATCHES/vortex_gki.c" "$KSRC/drivers/misc/vortex_gki.c"
   sed -i '/vortex_gki/d' "$KSRC/drivers/misc/Makefile"
@@ -106,7 +108,7 @@ KCONF_EOF
 fi
 
 log "Applying inject.sh patch..."
-wget -qO Inject_300hz.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/Inject_300hz.sh
+wget -qO Inject_300hz.sh https://raw.githubusercontent.com/Kingfinik98/build-arkael/refs/heads/6.x/inject_ksu/Inject_300hz.sh
 bash Inject_300hz.sh
 rm Inject_300hz.sh
 
@@ -131,11 +133,11 @@ log "Injecting custom KSU & SuSFS configs from GitHub..."
 export KSU
 export KSU_SUSFS
 if [ "$KVER" == "5.10" ]; then
-  wget -qO inject.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/gki_defconfig.sh
+  wget -qO inject.sh https://raw.githubusercontent.com/Kingfinik98/build-arkael/refs/heads/6.x/inject_ksu/gki_defconfig.sh
   bash inject.sh
   rm inject.sh
 elif [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  wget -qO inject.sh https://raw.githubusercontent.com/Kingfinik98/build-vortex/refs/heads/6.x/inject_ksu/gki-deconfig-6.1.sh
+  wget -qO inject.sh https://raw.githubusercontent.com/Kingfinik98/build-arkael/refs/heads/6.x/inject_ksu/gki-deconfig-6.1.sh
   bash inject.sh
   rm inject.sh
 fi
@@ -451,9 +453,9 @@ EOF
 )
 
 log "Generating config..."
-make ${MAKE_ARGS[@]} $KERNEL_DEFCONFIG
+make ${MAKE_ARGS[@]} $KERNEL_DEFconfig
 
-log "Enabling VorteX kernel dependencies..."
+log "Enabling Arkael kernel dependencies..."
 config --enable CONFIG_TCP_CONG_WESTWOOD
 config --enable CONFIG_DEVFREQ_GOV_SCHEDUTIL
 config --enable CONFIG_CPU_FREQ_GOV_VORTEXCORE
@@ -532,7 +534,7 @@ else
   AK3_ZIP_NAME=${AK3_ZIP_NAME//-BUILD_DATE/}
   AK3_ZIP_NAME=${AK3_ZIP_NAME//REL/$RELEASE}
   sed -i \
-    "s/kernel.string=.*.*/kernel.string=${KERNEL_NAME} ${RELEASE} ${LINUX_VERSION} ${VorteX} ${VARIANT}/g" \
+    "s/kernel.string=.*.*/kernel.string=${KERNEL_NAME} ${RELEASE} ${LINUX_VERSION} ${KERNEL_NAME} ${VARIANT}/g" \
     $WORKDIR/anykernel/anykernel.sh
 fi
 
@@ -561,7 +563,7 @@ if [ $STATUS == "BETA" ]; then
   upload_file "$WORKDIR/$AK3_ZIP_NAME" "$text"
   upload_file "$WORKDIR/build.log"
 else
-  send_msg "✅ Build Succeeded for $VorteX ${VARIANT} variant."
+  send_msg "✅ Build Succeeded for ${KERNEL_NAME} ${VARIANT} variant."
 fi
 
 exit 0
