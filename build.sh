@@ -75,7 +75,7 @@ if [ "$KVER" == "5.10" ]; then
 fi
 
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  log "Injecting VorteX Ultra-Safe Kernel Patch..."
+  log "Injecting Arkael Ultra-Safe Kernel Patch..."
   mkdir -p "$KSRC/drivers/misc"
   cp "$KERNEL_PATCHES/vortex_gki.c" "$KSRC/drivers/misc/vortex_gki.c"
   sed -i '/vortex_gki/d' "$KSRC/drivers/misc/Makefile"
@@ -145,7 +145,7 @@ cd $WORKDIR
 log "Setting Kernel variant..."
 case "$KSU" in
   "yes") VARIANT="KSU" ;;
-  "vortexsu") VARIANT="VorteXSU" ;;
+  "sukisu") VARIANT="SukiSU" ;;
   "no") VARIANT="VNL" ;;
 esac
 susfs_included && VARIANT+="+SuSFS"
@@ -278,10 +278,10 @@ AVC_BOOL_EOF
     log "[WARNING] drivers/kernelsu/extras.c not found! Skipping AVC spoof fix."
   fi
 
-elif [ "$KSU" == "vortexsu" ]; then
-  log "Setting up VorteXSU for KVER $KVER..."
+elif [ "$KSU" == "sukisu" ]; then
+  log "Setting up SukiSU-Ultra for KVER $KVER..."
   
-  log "Running VorteX setup from main branch..."
+  log "Running SukiSU setup from builtin branch..."
   curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/refs/heads/builtin/kernel/setup.sh" | bash -s builtin
   if [ "$KVER" == "5.10" ]; then
     log "Applying SUSFS patches for GKI 5.10 (SukiSU Method)..."
@@ -297,7 +297,7 @@ elif [ "$KSU" == "vortexsu" ]; then
     config --enable CONFIG_KPM
     config --enable CONFIG_KSU_MULTI_MANAGER_SUPPORT
     config --enable CONFIG_KSU_SUSFS
-    log "[✓] VorteXSU & SUSFS patched for $KVER."
+    log "[✓] SukiSU & SUSFS patched for $KVER."
   else
     config --enable CONFIG_KSU_SUSFS
     log "SUSFS config enabled for $KVER. Applying patches in Standard block..."
@@ -305,7 +305,7 @@ elif [ "$KSU" == "vortexsu" ]; then
 fi
 
 if susfs_included; then
-  if [ "$KSU" != "vortexsu" ] || ([ "$KSU" == "vortexsu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ])); then
+  if [ "$KSU" != "sukisu" ] || ([ "$KSU" == "sukisu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ])); then
     log "Applying kernel-side susfs patches (Standard Method)"
     SUSFS_DIR="$WORKDIR/susfs"
     SUSFS_PATCHES="${SUSFS_DIR}/kernel_patches"
@@ -360,7 +360,7 @@ EOF
       rm -f "$NS_INJECT_FILE"
 
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c3) -eq 510 ]; then
-      if [ "$KSU" != "vortexsu" ]; then
+      if [ "$KSU" != "sukisu" ]; then
         log "Fixing sucompat.c ksu_handle_stat for GKI 5.10..."
         bash $KERNEL_PATCHES/susfs/fix-sucompat-k510-sed.sh
       fi
@@ -380,8 +380,8 @@ EOF
         else
           patch -p1 < $KERNEL_PATCHES/Susfs/fix-statfs-crc-mismatch-susfs.patch || true
         fi
-      elif [ "$KSU" == "vortexsu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]); then
-        log "Applying manual statfs CRC fix for VorteXSU GKI $KVER..."
+      elif [ "$KSU" == "sukisu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]); then
+        log "Applying manual statfs CRC fix for SukiSU GKI $KVER..."
         sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
         sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
       fi
@@ -390,7 +390,7 @@ EOF
     SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
     config --enable CONFIG_KSU_SUSFS
   else
-    log "Skipping standard SUSFS patch (Handled by VorteXSU 5.10 custom method)."
+    log "Skipping standard SUSFS patch (Handled by SukiSU 5.10 custom method)."
   fi
 else
   config --disable CONFIG_KSU_SUSFS
@@ -454,7 +454,7 @@ EOF
 log "Generating config..."
 make ${MAKE_ARGS[@]} $KERNEL_DEFconfig
 
-log "Enabling VorteX kernel dependencies..."
+log "Enabling Arkael kernel dependencies..."
 config --enable CONFIG_TCP_CONG_WESTWOOD
 config --enable CONFIG_DEVFREQ_GOV_SCHEDUTIL
 config --enable CONFIG_CPU_FREQ_GOV_VORTEXCORE
