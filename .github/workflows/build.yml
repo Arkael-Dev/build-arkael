@@ -1,7 +1,7 @@
 #/*!
-# * © 2024-2026 Kingfinik98 (VorteX_E-Sport). All Rights Reserved.
+# * © 2025-2026 Kingfinik98. All Rights Reserved.
 # * Original Author: Kingfinik98
-# * Original Repository: https://github.com/Kingfinik98/build-vortex
+# * Original Repository: https://github.com/Kingfinik98/build-arkael
 # * Signed-off-by: kingfinix98@gmail.com
 # */
 
@@ -40,7 +40,8 @@ on:
         options:
           - "no"           # Vanilla - No Root
           - "yes"          # KernelSU-Next (Standard)
-          - "sukisu"     #  (KPM Enabled)
+          - "vortexsu"     # VorteXSU (KPM Enabled)
+          - "sukisu"       # SukiSU-Ultra (KPM Enabled)
 
       KSU_SUSFS:
         description: '🛡️ Enable SuSFS (Hide Root)?'
@@ -162,7 +163,7 @@ jobs:
           fi
 
           # ==========================================
-          # KERNELSU VARIANT VALIDATION (3 VARIANTS ONLY)
+          # KERNELSU VARIANT VALIDATION (4 VARIANTS)
           # ==========================================
           echo ""
           echo "--- Validating KSU Variant ---"
@@ -174,12 +175,15 @@ jobs:
             "vortexsu")
               _info "Variant: VorteXSU (KPM Enabled)"
               ;;
+            "sukisu")
+              _info "Variant: SukiSU-Ultra (KPM Enabled)"
+              ;;
             "no")
               _info "Variant: Vanilla (No Root)"
               ;;
             *)
               _error "Invalid KSU value: '$KSU'"
-              _info "Valid options: yes, vortexsu, no"
+              _info "Valid options: yes, vortexsu, sukisu, no"
               ;;
           esac
 
@@ -197,6 +201,12 @@ jobs:
           # VorteXSU strongly recommend SuSFS
           if [[ $KSU == "vortexsu" && $KSU_SUSFS != "true" ]]; then
               _warn "VorteXSU variant works best with SuSFS enabled!"
+              _info "Consider setting KSU_SUSFS=true for optimal root hiding"
+          fi
+          
+          # SukiSU recommend SuSFS
+          if [[ $KSU == "sukisu" && $KSU_SUSFS != "true" ]]; then
+              _warn "SukiSU variant works best with SuSFS enabled!"
               _info "Consider setting KSU_SUSFS=true for optimal root hiding"
           fi
           
@@ -257,6 +267,11 @@ jobs:
           if [[ $KSU == "vortexsu" ]]; then
             _info "⚡ VorteXSU will use KPM patch"
             _info "   Output ZIP will contain: VorteXSU+SuSFS (if enabled)"
+          fi
+          
+          if [[ $KSU == "sukisu" ]]; then
+            _info "⚡ SukiSU-Ultra will use KPM patch"
+            _info "   Output ZIP will contain: SukiSU+SuSFS (if enabled)"
           fi
           
           if [[ $KSU == "yes" ]]; then
@@ -337,7 +352,7 @@ jobs:
           TODO: ${{ inputs.TODO }}
         run: |
           echo "=========================================="
-          echo "  🚀 VORTEX_E-SPORT BUILD SYSTEM"
+          echo "  🚀 ARKAEL KERNEL BUILD SYSTEM"
           echo "=========================================="
           echo ""
           echo "📋 Build Configuration:"
@@ -348,7 +363,7 @@ jobs:
           echo "  • Status         : ${STATUS:-BETA}"
           echo ""
           echo "🔧 Toolchain:"
-          echo "  • Clang : GreenForce gf-clang-22.1.4"
+          echo "  • Clang : GreenForce gf-clang-23.0.0"
           echo "  • GAS    : AOSP Prebuilt"
           echo ""
           echo "⏰ Build started at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
