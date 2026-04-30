@@ -7,6 +7,20 @@
 # */
 
 WORKDIR="$(pwd)"
+
+# ========================================================================
+# 🎛️ ARKAEL BUILD OPTIONS (NEW: Governor & GKI Selection)
+# ========================================================================
+# Pilihan Governor: "vortexcore" atau "arkael"
+export GOVERNOR_CHOICE="${GOVERNOR_CHOICE:-vortexcore}"
+
+# Pilihan Vortex GKI File: default "vortex_gki.c" (bisa diganti jika ada varian lain)
+export VORTEX_GKI_FILE="${VORTEX_GKI_FILE:-vortex_gki.c}"
+
+log "🔧 Build Configuration:"
+log "   Governor Selected : ${GOVERNOR_CHOICE}"
+log "   Vortex GKI File   : ${VORTEX_GKI_FILE}"
+
 if [ "$KVER" == "6.6" ]; then
   RELEASE="v0.3"
 elif [ "$KVER" == "5.10" ]; then
@@ -26,7 +40,7 @@ if [ "$KVER" == "5.10" ]; then
 elif [ "$KVER" == "6.1" ]; then
   KERNEL_DEFCONFIG="gki_defconfig"
 else
-  KERNEL_DEFCONFIG="gki_defconfig"
+  KERNEL_DEFconfig="gki_defconfig"
 fi
 
 if [ "$KVER" == "6.6" ]; then
@@ -75,34 +89,61 @@ if [ "$KVER" == "5.10" ]; then
 fi
 
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  log "Injecting Arkael Ultra-Safe Kernel Patch..."
+  log "Injecting Arkael Ultra-Safe Kernel Patch (${VORTEX_GKI_FILE})..."
   mkdir -p "$KSRC/drivers/misc"
-  cp "$KERNEL_PATCHES/vortex_gki.c" "$KSRC/drivers/misc/vortex_gki.c"
+  cp "$KERNEL_PATCHES/${VORTEX_GKI_FILE}" "$KSRC/drivers/misc/vortex_gki.c"
   sed -i '/vortex_gki/d' "$KSRC/drivers/misc/Makefile"
   echo "obj-y += vortex_gki.o" >> "$KSRC/drivers/misc/Makefile"
 fi
 
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  log "Injecting VortexCore Custom Governor..."
-  cp "$WORKDIR/governor-vortexcore.c" "$KSRC/drivers/cpufreq/governor-vortexcore.c"
+  # ========================================================================
+  # 🎛️ DYNAMIC GOVERNOR SELECTION (NEW FEATURE)
+  # ========================================================================
+  case "${GOVERNOR_CHOICE,,}" in
+    "arkael")
+      log "🚀 Injecting Arkael Custom Governor..."
+      GOV_SOURCE_FILE="$WORKDIR/governor-arkael.c"
+      GOV_TARGET_NAME="governor-arkael"
+      GOV_CONFIG_NAME="ARKAEL"
+      GOV_DISPLAY_NAME="Arkael"
+      ;;
+    "vortexcore"|*)
+      log "⚡ Injecting VortexCore Custom Governor..."
+      GOV_SOURCE_FILE="$WORKDIR/governor-vortexcore.c"
+      GOV_TARGET_NAME="governor-vortexcore"
+      GOV_CONFIG_NAME="VORTEXCORE"
+      GOV_DISPLAY_NAME="VortexCore"
+      ;;
+  esac
   
-  if ! grep -q "governor-vortexcore.o" "$KSRC/drivers/cpufreq/Makefile"; then
-    echo "obj-\$(CONFIG_CPU_FREQ_GOV_VORTEXCORE) += governor-vortexcore.o" >> "$KSRC/drivers/cpufreq/Makefile"
-    log "VortexCore added to cpufreq Makefile."
+  # Validate source file exists
+  if [ ! -f "$GOV_SOURCE_FILE" ]; then
+    error "❌ Governor source file not found: $GOV_SOURCE_FILE"
   fi
   
-  if ! grep -q "CPU_FREQ_GOV_VORTEXCORE" "$KSRC/drivers/cpufreq/Kconfig"; then
-    cat << 'KCONF_EOF' >> "$KSRC/drivers/cpufreq/Kconfig"
+  # Copy selected governor to kernel source
+  cp "$GOV_SOURCE_FILE" "$KSRC/drivers/cpufreq/${GOV_TARGET_NAME}.c"
+  
+  # Add to Makefile if not exists
+  if ! grep -q "${GOV_TARGET_NAME}.o" "$KSRC/drivers/cpufreq/Makefile"; then
+    echo "obj-\$(CONFIG_CPU_FREQ_GOV_${GOV_CONFIG_NAME}) += ${GOV_TARGET_NAME}.o" >> "$KSRC/drivers/cpufreq/Makefile"
+    log "${GOV_DISPLAY_NAME} added to cpufreq Makefile."
+  fi
+  
+  # Add to Kconfig if not exists
+  if ! grep -q "CPU_FREQ_GOV_${GOV_CONFIG_NAME}" "$KSRC/drivers/cpufreq/Kconfig"; then
+    cat << KCONF_EOF >> "$KSRC/drivers/cpufreq/Kconfig"
 
-config CPU_FREQ_GOV_VORTEXCORE
-    tristate "VortexCore CPU frequency policy governor"
+config CPU_FREQ_GOV_${GOV_CONFIG_NAME}
+    tristate "${GOV_DISPLAY_NAME} CPU frequency policy governor"
     depends on CPU_FREQ
     help
-      VortexCore governor balances performance and efficiency for gaming and daily use.
+      ${GOV_DISPLAY_NAME} governor balances performance and efficiency for gaming and daily use.
 
       If in doubt, say N.
 KCONF_EOF
-    log "VortexCore added to cpufreq Kconfig."
+    log "${GOV_DISPLAY_NAME} added to cpufreq Kconfig."
   fi
 fi
 
@@ -391,10 +432,9 @@ EOF
     config --enable CONFIG_KSU_SUSFS
   else
     log "Skipping standard SUSFS patch (Handled by SukiSU 5.10 custom method)."
+  else
+    config --disable CONFIG_KSU_SUSFS
   fi
-else
-  config --disable CONFIG_KSU_SUSFS
-fi
 
 if [ $TODO == "kernel" ]; then
   LATEST_COMMIT_HASH=$(git rev-parse --short HEAD)
@@ -447,17 +487,29 @@ text=$(
 📅 *Build Date*: $KBUILD_BUILD_TIMESTAMP
 📛 *KernelSU*: ${KSU}
 ඞ *SuSFS*: $(susfs_included && echo "$SUSFS_VERSION" || echo "None")
-🔰 *Compiler*: $COMPILER_STRING
+🔰 *Governor*: ${GOVERNOR_CHOICE^^}
+🔧 *Compiler*: $COMPILER_STRING
 EOF
 )
 
 log "Generating config..."
-make ${MAKE_ARGS[@]} $KERNEL_DEFCONFIG
+make ${MAKE_ARGS[@]} $KERNEL_DEFconfig
 
 log "Enabling Arkael kernel dependencies..."
 config --enable CONFIG_TCP_CONG_WESTWOOD
 config --enable CONFIG_DEVFREQ_GOV_SCHEDUTIL
-config --enable CONFIG_CPU_FREQ_GOV_VORTEXCORE
+
+# Enable selected governor config dynamically
+case "${GOVERNOR_CHOICE,,}" in
+  "arkael")
+    config --enable CONFIG_CPU_FREQ_GOV_ARKAEL
+    log "✅ CONFIG_CPU_FREQ_GOV_ARKAEL enabled"
+    ;;
+  "vortexcore"|*)
+    config --enable CONFIG_CPU_FREQ_GOV_VORTEXCORE
+    log "✅ CONFIG_CPU_FREQ_GOV_VORTEXCORE enabled"
+    ;;
+esac
 
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   config --enable CONFIG_ANDROID_LOW_MEMORY_KILLER
@@ -562,7 +614,7 @@ if [ $STATUS == "BETA" ]; then
   upload_file "$WORKDIR/$AK3_ZIP_NAME" "$text"
   upload_file "$WORKDIR/build.log"
 else
-  send_msg "✅ Build Succeeded for ${KERNEL_NAME} ${VARIANT} variant."
+  send_msg "✅ Build Succeeded for ${KERNEL_NAME} ${VARIANT} variant (Governor: ${GOVERNOR_CHOICE^^})."
 fi
 
 exit 0
