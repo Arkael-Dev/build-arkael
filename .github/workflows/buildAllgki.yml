@@ -1,43 +1,32 @@
-#/*!
 # * © 2026 Kingfinik98. All Rights Reserved.
 # * Original Author: Kingfinik98
 # * Original Repository: https://github.com/Kingfinik98/build-arkael
 # * Signed-off-by: kingfinix98@gmail.com
-# */
 
 name: Release Build - All GKI
 
 on:
   workflow_dispatch:
     inputs:
-      # ==========================================
-      # 🎯 RELEASE TYPE SELECTION (NEW)
-      # ==========================================
       RELEASE_TYPE:
         description: '🎯 Release Type (Build Scope)'
         default: 'full'
         type: choice
         options:
-          - 'full'         # All variants × All kernels × Selected governor(s)
-          - 'ksu'          # Only KSU variants (yes + sukisu) × All kernels
-          - 'no'           # Only Non-KSU (VNL/Vanilla) × All kernels
-          - 'sukisu'       # Only SukiSU variant × All kernels
+          - 'full'
+          - 'ksu'
+          - 'no'
+          - 'sukisu'
 
-      # ==========================================
-      # 🎛️ GOVERNOR SELECTION (NEW)
-      # ==========================================
       GOVERNOR_CHOICE:
         description: '🎛️ CPU Governor Selection'
         default: 'vortexcore'
         type: choice
         options:
-          - 'vortexcore'   # Build with VortexCore governor only
-          - 'arkael'       # Build with Arkael governor only
-          - 'all'          # Build BOTH governors (2× builds per variant!)
+          - 'vortexcore'
+          - 'arkael'
+          - 'all'
 
-      # ==========================================
-      # 📁 VORTEX GKI FILE (ADVANCED)
-      # ==========================================
       VORTEX_GKI_FILE:
         description: '📁 Vortex GKI Source File (Advanced Users)'
         default: 'vortex_gki.c'
@@ -48,9 +37,6 @@ env:
   DEBIAN_FRONTEND: noninteractive
 
 jobs:
-  # =====================================================================
-  # JOB 0: GENERATE DYNAMIC BUILD MATRIX
-  # =====================================================================
   generate-matrix:
     name: "🔧 Generate Build Matrix"
     runs-on: ubuntu-latest
@@ -75,11 +61,11 @@ jobs:
           echo "  Governor     : ${GOVERNOR_CHOICE}"
           echo "=========================================="
           
-          # Install jq for JSON processing
           sudo apt-get update && sudo apt-get install -y jq
           
-          # Define base variants as proper JSON array
-          VARIANTS_JSON='[
+          # Create variants array using heredoc to avoid formatting issues
+          read -r -d '' VARIANTS_JSON << 'VARIANTS_EOF'
+          [
             {"kernel_version":"5.10","variant_name":"VNL","ksu":"no","ksu_susfs":"false","last_build":"false"},
             {"kernel_version":"5.10","variant_name":"KSU","ksu":"yes","ksu_susfs":"false","last_build":"false"},
             {"kernel_version":"5.10","variant_name":"KSU+SuSFS","ksu":"yes","ksu_susfs":"true","last_build":"false"},
@@ -92,24 +78,31 @@ jobs:
             {"kernel_version":"6.6","variant_name":"KSU","ksu":"yes","ksu_susfs":"false","last_build":"false"},
             {"kernel_version":"6.6","variant_name":"KSU+SuSFS","ksu":"yes","ksu_susfs":"true","last_build":"false"},
             {"kernel_version":"6.6","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true","last_build":"true"}
-          ]'
+          ]
+          VARIANTS_EOF
           
-          # Filter variants based on RELEASE_TYPE using jq
+          # Validate JSON before processing
+          if ! echo "$VARIANTS_JSON" | jq empty 2>/dev/null; then
+            echo "❌ Invalid base JSON!"
+            exit 1
+          fi
+          
+          # Filter based on RELEASE_TYPE
           case "${RELEASE_TYPE}" in
             "full")
-              SELECTED_VARIANTS=$(echo "$VARIANTS_JSON" | jq '.')
+              SELECTED_VARIANTS=$(echo "$VARIANTS_JSON" | jq -c '.')
               echo "✅ Mode: FULL (All Variants)"
               ;;
             "ksu")
-              SELECTED_VARIANTS=$(echo "$VARIANTS_JSON" | jq '[.[] | select(.ksu == "yes" or .ksu == "sukisu")]')
-              echo "✅ Mode: KSU ONLY (KernelSU + SukiSU)"
+              SELECTED_VARIANTS=$(echo "$VARIANTS_JSON" | jq -c '[.[] | select(.ksu == "yes" or .ksu == "sukisu")]')
+              echo "✅ Mode: KSU ONLY"
               ;;
             "no")
-              SELECTED_VARIANTS=$(echo "$VARIANTS_JSON" | jq '[.[] | select(.ksu == "no")]')
-              echo "✅ Mode: NON-KSU (Vanilla/VNL Only)"
+              SELECTED_VARIANTS=$(echo "$VARIANTS_JSON" | jq -c '[.[] | select(.ksu == "no")]')
+              echo "✅ Mode: NON-KSU"
               ;;
             "sukisu")
-              SELECTED_VARIANTS=$(echo "$VARIANTS_JSON" | jq '[.[] | select(.ksu == "sukisu")]')
+              SELECTED_VARIANTS=$(echo "$VARIANTS_JSON" | jq -c '[.[] | select(.ksu == "sukisu")]')
               echo "✅ Mode: SUKISU ONLY"
               ;;
             *)
@@ -118,21 +111,23 @@ jobs:
               ;;
           esac
           
-          # Determine which governors to use
+          # Validate filtered JSON
+          if ! echo "$SELECTED_VARIANTS" | jq empty 2>/dev/null; then
+            echo "❌ Invalid filtered JSON!"
+            exit 1
+          fi
+          
+          # Determine governors
           case "${GOVERNOR_CHOICE}" in
-            "all")
-              GOVS='["vortexcore","arkael"]'
-              ;;
-            *)
-              GOVS="[\"${GOVERNOR_CHOICE:-vortexcore}\"]"
-              ;;
+            "all") GOVS='["vortexcore","arkael"]' ;;
+            *) GOVS="[\"${GOVERNOR_CHOICE:-vortexcore}\"]" ;;
           esac
           
-          # Generate final matrix with governors using jq
-          FINAL_MATRIX=$(echo "$SELECTED_VARIANTS" | jq --argjson govs "$GOVS" '
+          # Generate matrix - use -c for compact output and proper variable handling
+          FINAL_MATRIX=$(jq --argjson govs "$GOVS" '
             [
-              .[] | 
-              $govs[] | . as $gov |
+              .[] |
+              $govs[] as $gov |
               {
                 kernel_version: .kernel_version,
                 variant_name: .variant_name,
@@ -142,12 +137,17 @@ jobs:
                 last_build: .last_build
               }
             ]
-          ')
+          ' <<< "$SELECTED_VARIANTS")
           
-          # Output matrix (must be single line, valid JSON)
+          # Final validation
+          if [ -z "$FINAL_MATRIX" ] || ! echo "$FINAL_MATRIX" | jq empty 2>/dev/null; then
+            echo "❌ Failed to generate matrix!"
+            exit 1
+          fi
+          
+          # Output matrix
           echo "matrix=${FINAL_MATRIX}" >> $GITHUB_OUTPUT
           
-          # Count total builds
           TOTAL_BUILDS=$(echo "$FINAL_MATRIX" | jq 'length')
           echo ""
           echo "=========================================="
@@ -159,11 +159,8 @@ jobs:
           echo "=========================================="
           echo ""
           echo "📋 Matrix Preview:"
-          echo "$FINAL_MATRIX" | jq '.' 2>/dev/null || echo "$FINAL_MATRIX"
+          echo "$FINAL_MATRIX" | jq '.'
 
-  # =====================================================================
-  # JOB 1: BUILD ALL KERNELS
-  # =====================================================================
   build:
     name: "🐧 ${{ matrix.kernel_version }} | ${{ matrix.variant_name }} | ${{ matrix.governor }}"
     needs: generate-matrix
@@ -238,9 +235,6 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
 
-  # =====================================================================
-  # JOB 2: CREATE UNIFIED RELEASE
-  # =====================================================================
   release:
     name: "🚀 Create Unified Release"
     permissions:
@@ -261,16 +255,12 @@ jobs:
           pattern: '*'
           merge-multiple: true
 
-      # =====================================================================
-      # ✅ Debug & Flatten Artifact Structure
-      # =====================================================================
       - name: 🔍 Inspect & Prepare Artifacts
         run: |
           echo "=========================================="
           echo "  🔍 ARTIFACT STRUCTURE INSPECTION"
           echo "=========================================="
           
-          # Show directory structure
           echo ""
           echo "📁 Directory tree:"
           find release_files -type f 2>/dev/null | head -30
@@ -279,24 +269,20 @@ jobs:
           echo "📊 File count:"
           find release_files -type f \( -name "*.zip" -o -name "*.img" \) 2>/dev/null | wc -l
           
-          # Check if files are in subdirectories
           DEEP_FILES=$(find release_files -mindepth 2 -type f \( -name "*.zip" -o -name "*.img" \) 2>/dev/null | wc -l)
           echo ""
           echo "📂 Files in subdirectories: ${DEEP_FILES}"
           
-          # If files are in subfolders, flatten them
           if [ "${DEEP_FILES}" -gt 0 ]; then
             echo ""
             echo "🔧 Flattening artifact structure..."
             mkdir -p release_flat
             
-            # Move all zip/img files to flat directory
             find release_files -type f \( -name "*.zip" -o -name "*.img" \) 2>/dev/null | while read f; do
               cp "$f" release_flat/
               echo "  ✓ Copied: $(basename "$f")"
             done
             
-            # Replace original with flattened
             rm -rf release_files
             mv release_flat release_files
           fi
@@ -343,36 +329,18 @@ jobs:
           RELEASE_TYPE: ${{ inputs.RELEASE_TYPE }}
           GOVERNOR_CHOICE: ${{ inputs.GOVERNOR_CHOICE }}
         run: |
-          # Determine scope description
           case "${RELEASE_TYPE}" in
-            "full")
-              SCOPE_DESC="**All Variants** (VNL, KSU, KSU+SuSFS, SukiSU)"
-              ;;
-            "ksu")
-              SCOPE_DESC="**KSU Variants Only** (KSU, KSU+SuSFS, SukiSU)"
-              ;;
-            "no")
-              SCOPE_DESC="**Non-KSU Variants Only** (VNL/Vanilla)"
-              ;;
-            "sukisu")
-              SCOPE_DESC="**SukiSU Variant Only**"
-              ;;
-            *)
-              SCOPE_DESC="**Unknown Scope**"
-              ;;
+            "full") SCOPE_DESC="**All Variants** (VNL, KSU, KSU+SuSFS, SukiSU)" ;;
+            "ksu") SCOPE_DESC="**KSU Variants Only** (KSU, KSU+SuSFS, SukiSU)" ;;
+            "no") SCOPE_DESC="**Non-KSU Variants Only** (VNL/Vanilla)" ;;
+            "sukisu") SCOPE_DESC="**SukiSU Variant Only**" ;;
+            *) SCOPE_DESC="**Unknown Scope**" ;;
           esac
           
-          # Determine governor description
           case "${GOVERNOR_CHOICE}" in
-            "all")
-              GOV_DESC="**Both Governors** (VortexCore + Arkael)"
-              ;;
-            "arkael")
-              GOV_DESC="**Arkael Governor** (Optimized Performance)"
-              ;;
-            "vortexcore"|*)
-              GOV_DESC="**VortexCore Governor** (Balanced Gaming)"
-              ;;
+            "all") GOV_DESC="**Both Governors** (VortexCore + Arkael)" ;;
+            "arkael") GOV_DESC="**Arkael Governor** (Optimized Performance)" ;;
+            "vortexcore"|*) GOV_DESC="**VortexCore Governor** (Balanced Gaming)" ;;
           esac
           
           cat > release_notes.md << EOF
@@ -473,10 +441,6 @@ jobs:
           fi
           echo "=========================================="
 
-      # =====================================================================
-      # ✅ BUGFIX #002: Fixed Subshell Loop & Variable Typo
-      # =====================================================================
-      
       - name: 🚀 Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -492,7 +456,6 @@ jobs:
           echo "  Timestamp: ${BUILD_TIMESTAMP}"
           echo "=========================================="
           
-          # Step 1: Create release FIRST (without assets)
           gh release create "${RELEASE_TAG}" \
             --repo "${REPO}" \
             --title "🐧 Arkael Kernel - All GKI (${BUILD_TIMESTAMP}) [${RELEASE_TYPE:-full}]" \
@@ -508,16 +471,13 @@ jobs:
           
           echo "✅ Release created/updated!"
           
-          # Step 2: Initialize counters (BEFORE loop - critical!)
           UPLOAD_COUNT=0
           FAIL_COUNT=0
           
-          # Step 3: Upload assets using PROCESS SUBSTITUTION (not pipe!)
           echo ""
           echo "📤 Uploading assets..."
           
           if [ -d "release_files" ]; then
-            # Use < <() instead of | to avoid subshell
             while IFS= read -r f; do
               FILENAME=$(basename "$f")
               FILESIZE=$(ls -lh "$f" | awk '{print $5}')
@@ -549,7 +509,6 @@ jobs:
           echo "  ❌ Failed:     ${FAIL_COUNT} files"
           echo "=========================================="
           
-          # Verify at least one file uploaded
           if [ "${UPLOAD_COUNT}" -eq 0 ] && [ "${FAIL_COUNT}" -eq 0 ]; then
             echo "⚠️ WARNING: No files were uploaded! Release may be empty."
             exit 1
@@ -570,7 +529,6 @@ jobs:
           LINK="https://github.com/${REPO}/releases/tag/${RELEASE_TAG}"
           TOTAL_ZIPS=$(find release_files -name "*.zip" 2>/dev/null | wc -l)
           
-          # Determine scope text for telegram
           case "${RELEASE_TYPE}" in
             "full")   SCOPE_TEXT="All Variants" ;;
             "ksu")    SCOPE_TEXT="KSU Only" ;;
@@ -579,7 +537,6 @@ jobs:
             *)       SCOPE_TEXT="${RELEASE_TYPE}" ;;
           esac
           
-          # Determine governor text
           case "${GOVERNOR_CHOICE}" in
             "all")     GOV_TEXT="VortexCore + Arkael" ;;
             "arkael")  GOV_TEXT="Arkael" ;;
@@ -616,7 +573,6 @@ jobs:
           TOTAL_IMGS=$(find release_files -name '*.img' 2>/dev/null | wc -l)
           TOTAL=$((TOTAL_ZIPS + TOTAL_IMGS))
           
-          # Determine scope label
           case "${RELEASE_TYPE}" in
             "full")   SCOPE_LABEL="Full" ;;
             "ksu")    SCOPE_LABEL="KSU Only" ;;
@@ -625,7 +581,6 @@ jobs:
             *)       SCOPE_LABEL="${RELEASE_TYPE}" ;;
           esac
           
-          # Determine governor label
           case "${GOVERNOR_CHOICE}" in
             "all")     GOV_LABEL="Dual (VC+AK)" ;;
             "arkael")  GOV_LABEL="Arkael" ;;
