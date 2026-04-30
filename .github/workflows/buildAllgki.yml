@@ -1,6 +1,6 @@
 #/*!
 # * © 2026 Kingfinik98. All Rights Reserved.
-# * FIXED: YAML Syntax Error on Line 333
+# * FIXED: Full mode should build ALL variants!
 # */
 
 name: Release Build - GKI Kernel
@@ -80,58 +80,74 @@ jobs:
           echo "  Governor : ${GC}"
           echo "=========================================="
           
+          # Set governors
           if [ "${GC}" = "all" ]; then
             GOVS="vortexcore arkael"
           else
             GOVS="${GC}"
           fi
           
+          # Generate build list
           > /tmp/build_queue.txt
           
           case "${RT}" in
             full)
+              # FULL = Semua 4 variant (VNL, KSU, KSU+SuSFS, SukiSU)
               for GOV in ${GOVS}; do
                 echo "${KVER}|VNL|no|false|${GOV}" >> /tmp/build_queue.txt
                 echo "${KVER}|KSU|yes|false|${GOV}" >> /tmp/build_queue.txt
                 echo "${KVER}|KSU+SuSFS|yes|true|${GOV}" >> /tmp/build_queue.txt
                 echo "${KVER}|SukiSU|sukisu|true|${GOV}" >> /tmp/build_queue.txt
               done
+              MODE_DESC="All Variants (VNL, KSU, KSU+SuSFS, SukiSU)"
               ;;
             ksu)
+              # KSU = Hanya variants dengan root
               for GOV in ${GOVS}; do
                 echo "${KVER}|KSU|yes|false|${GOV}" >> /tmp/build_queue.txt
                 echo "${KVER}|KSU+SuSFS|yes|true|${GOV}" >> /tmp/build_queue.txt
                 echo "${KVER}|SukiSU|sukisu|true|${GOV}" >> /tmp/build_queue.txt
               done
+              MODE_DESC="Root Variants (KSU, KSU+SuSFS, SukiSU)"
               ;;
             no)
+              # NO = Vanilla only
               for GOV in ${GOVS}; do
                 echo "${KVER}|VNL|no|false|${GOV}" >> /tmp/build_queue.txt
               done
+              MODE_DESC="Vanilla Only (No Root)"
               ;;
             sukisu)
+              # SUKISU = Hanya SukiSU
               for GOV in ${GOVS}; do
                 echo "${KVER}|SukiSU|sukisu|true|${GOV}" >> /tmp/build_queue.txt
               done
+              MODE_DESC="SukiSU Only (KPM Patch)"
               ;;
           esac
           
           TOTAL=$(wc -l < /tmp/build_queue.txt)
           
           echo ""
-          echo "BUILD QUEUE (${TOTAL} builds):"
-          echo "----------------------------------------"
+          echo "╔══════════════════════════════════════════╗"
+          echo "║  BUILD QUEUE                            ║"
+          echo "╠══════════════════════════════════════════╣"
+          printf "║  Mode  : %-30s ║\n" "${MODE_DESC}"
+          printf "║  Total : %-2d builds                     ║\n" "${TOTAL}"
+          echo "╠══════════════════════════════════════════╣"
+          echo "║  List:                                  ║"
           NUM=0
           while IFS='|' read -r kv var ksu susfs gov; do
             NUM=$((NUM + 1))
-            printf "  %2d. [%s] %s (%s)\n" "${NUM}" "${kv}" "${var}" "${gov}"
+            printf "║  %2d. [%s] %-12s (%s)           ║\n" "${NUM}" "${kv}" "${var}" "${gov}"
           done < /tmp/build_queue.txt
-          echo "----------------------------------------"
+          echo "╚══════════════════════════════════════════╝"
           
           echo "total=${TOTAL}" >> $GITHUB_OUTPUT
           echo "kernel_version=${KVER}" >> $GITHUB_OUTPUT
           echo "release_type=${RT}" >> $GITHUB_OUTPUT
           echo "governor_choice=${GC}" >> $GITHUB_OUTPUT
+          echo "mode_desc=${MODE_DESC}" >> $GITHUB_OUTPUT
 
       - name: 🚀 Execute Builds
         env:
@@ -142,6 +158,8 @@ jobs:
         run: |
           echo "=========================================="
           echo "  STARTING BUILD PROCESS"
+          echo "=========================================="
+          echo "Mode: ${{ steps.queue.outputs.mode_desc }}"
           echo "=========================================="
           
           export GIT_CLONE_PROTECTION_ACTIVE=false
@@ -156,10 +174,13 @@ jobs:
             NUM=$((NUM + 1))
             
             echo ""
-            echo "=========================================="
-            echo "  [${NUM}/${TOTAL}] ${VARIANT} [${GOV}]"
-            echo "=========================================="
+            echo "████████████████████████████████████████"
+            echo "  [${NUM}/${TOTAL}] Building: ${VARIANT}"
+            echo "  Kernel: ${KVER} | Governor: ${GOV}"
+            echo "  KSU=${KSU} | SuSFS=${SUSFS}"
+            echo "████████████████████████████████████████"
             
+            # Export environment untuk build.sh
             export TODO="kernel"
             export KSU="${KSU}"
             export KSU_SUSFS="${SUSFS}"
@@ -168,38 +189,62 @@ jobs:
             export STATUS="RELEASE"
             export GOVERNOR_CHOICE="${GOV}"
             
+            # Last build flag
             if [ "${NUM}" = "${TOTAL}" ]; then
               export LAST_BUILD="true"
+              echo "  ⚠️  This is the LAST build (will generate info.txt)"
             else
               export LAST_BUILD="false"
             fi
             
+            # Clean artifacts sebelumnya
             rm -rf artifacts/*.zip artifacts/*.img out/ 2>/dev/null || true
             
+            # Jalankan build.sh dengan full output
+            echo ""
+            echo "▶️  Running build.sh..."
             set +e
-            ./build.sh
+            ./build.sh 2>&1 | tee /tmp/build_${NUM}.log
             RESULT=$?
             set -e
             
+            echo ""
+            echo "  Exit Code: ${RESULT}"
+            
             if [ ${RESULT} -eq 0 ]; then
-              if ls artifacts/*.zip 1>/dev/null 2>&1; then
+              # Cek apakah artifacts benar-bear ada
+              ARTIFACT_COUNT=$(find artifacts -name "*.zip" 2>/dev/null | wc -l)
+              
+              if [ "${ARTIFACT_COUNT}" -gt 0 ]; then
+                echo "  ✅ SUCCESS! Found ${ARTIFACT_COUNT} artifact(s)"
+                
+                # Rename artifacts
                 cd artifacts
                 for f in *.zip; do
                   if [ -f "$f" ]; then
                     NEWNAME="${KVER}-${VARIANT}-${GOV}-${f}"
-                    mv "$f" "$NEWNAME}"
-                    SIZE=$(du -h "$NEWNAME" | cut -f1)
-                    echo "  OK: ${NEWNAME} (${SIZE})"
+                    mv "$f" "${NEWNAME}"
+                    SIZE=$(du -h "${NEWNAME}" | cut -f1)
+                    echo "  📄 ${NEWNAME} (${SIZE})"
                   fi
                 done
                 cd ..
                 OK=$((OK + 1))
               else
-                echo "  WARN: No output!"
+                echo "  ⚠️  WARNING: Build succeeded but NO artifacts found!"
+                echo "  Check build log above for details."
                 FAIL=$((FAIL + 1))
+                
+                # Show last 20 lines of build log
+                echo "--- Last 20 lines of build log ---"
+                tail -20 /tmp/build_${NUM}.log
               fi
             else
-              echo "  FAIL: Build failed!"
+              echo "  ❌ FAILED with exit code ${RESULT}!"
+              echo ""
+              echo "--- Error Log (last 30 lines) ---"
+              tail -30 /tmp/build_${NUM}.log
+              echo "--- End of Error Log ---"
               FAIL=$((FAIL + 1))
             fi
             
@@ -207,26 +252,37 @@ jobs:
           
           echo ""
           echo "=========================================="
-          echo "  RESULTS: ${OK} success, ${FAIL} failed"
+          echo "  FINAL RESULTS"
+          echo "=========================================="
+          echo "  ✅ Successful : ${OK}"
+          echo "  ❌ Failed     : ${FAIL}"
+          echo "  📊 Total      : ${NUM}/${TOTAL}"
           echo "=========================================="
           
+          # Write to summary
           echo "success=${OK}" >> $GITHUB_STEP_SUMMARY
           echo "failed=${FAIL}" >> $GITHUB_STEP_SUMMARY
+          echo "total=${NUM}" >> $GITHUB_STEP_SUMMARY
           
           echo ""
-          echo "Final Artifacts:"
+          echo "📦 Final Artifacts:"
           ls -lh artifacts/ 2>/dev/null || echo "  (empty)"
           
+          # Fail jika semua gagal
           if [ ${OK} -eq 0 ] && [ ${FAIL} -gt 0 ]; then
-            echo "::error::All builds failed!"
+            echo "::error::All ${TOTAL} builds failed!"
             exit 1
           fi
+          
+          # Warning jika ada yang gagal
+          if [ ${FAIL} -gt 0 ]; then
+            echo "::warning::${FAIL} out of ${TOTAL} builds failed"
 
       - name: 📤 Upload Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: "Arkael-${{ inputs.KERNEL_VERSION }}-${{ inputs.RELEASE_TYPE }}-${{ inputs.GOVERNOR_CHOICE }}"
+          name: "Arkael-GKI${{ inputs.KERNEL_VERSION }}-${{ inputs.RELEASE_TYPE }}-${{ inputs.GOVERNOR_CHOICE }}"
           path: artifacts/
           retention-days: 30
           if-no-files-found: warn
@@ -287,7 +343,6 @@ jobs:
             echo "RELEASE=v0.3" >> $GITHUB_ENV
           fi
 
-      # ✅ FIX: Generate notes to FILE first, then use --notes-file
       - name: 📝 Generate Release Notes
         run: |
           TIMESTAMP=$(date +%Y%m%d-%H%M)
@@ -302,46 +357,44 @@ jobs:
             6.6)  ANDROID_VER="Android 15" ;;
           esac
           
-          # Determine variants list
           case "${RT}" in
             full)
-              VARIANTS="- VNL (Vanilla/No Root)
-          - KSU (Standard KernelSU)
-          - KSU+SuSFS (Hidden Root)
-          - SukiSU-Ultra (KPM Patch)"
+              VARIANTS="- VNL (Vanilla - No Root)
+- KSU (Standard KernelSU)
+- KSU+SuSFS (KernelSU + Hidden Root)
+- SukiSU-Ultra (KPM Patch)" 
               ;;
             ksu)
               VARIANTS="- KSU (Standard KernelSU)
-          - KSU+SuSFS (Hidden Root)
-          - SukiSU-Ultra (KPM Patch)"
+- KSU+SuSFS (Hidden Root)
+- SukiSU-Ultra (KPM Patch)"
               ;;
             no)
-              VARIANTS="- VNL (Vanilla/No Root)"
+              VARIANTS="- VNL (Vanilla - No Root)"
               ;;
             sukisu)
               VARIANTS="- SukiSU-Ultra (KPM Patch)"
               ;;
           esac
           
-          # Write notes to file (avoid YAML parsing issues!)
           cat > release_notes.md << EOF
-          ## ${KN} - GKI ${KVER} Release
-          
-          ### Information
-          | Item | Details |
-          |------|---------|
-          | **Kernel Version** | GKI ${KVER} (${ANDROID_VER}) |
-          | **Release Type** | ${RT} |
-          | **Governor** | ${GC} |
-          | **Total Files** | ${total_files} |
-          
-          ### Variants Included
-          ${VARIANTS}
-          
-          ---
-          *Built by Kingfinik98*
-          *© 2026 Arkael Kernel*
-          EOF
+## ${KN} - GKI ${KVER} Release
+
+### Information
+| Item | Details |
+|------|---------|
+| **Kernel Version** | GKI ${KVER} (${ANDROID_VER}) |
+| **Release Type** | ${RT} |
+| **Governor** | ${GC} |
+| **Total Files** | ${total_files} |
+
+### Variants Included
+ ${VARIANTS}
+
+---
+*Built by Kingfinik98*
+*© 2026 Arkael Kernel*
+EOF
           
           echo "Notes generated!"
 
@@ -358,14 +411,12 @@ jobs:
           TAG="${KN}-GKI${KVER}-${RT}-${GC}-${TIMESTAMP}"
           REPO="Kingfinik98/build-arkael"
           
-          # ✅ Use --notes-file instead of --notes (FIXES YAML ERROR!)
           gh release create "${TAG}" \
             --repo "${REPO}" \
             --title "Arkael Kernel - GKI ${KVER} (${RT}) ${TIMESTAMP}" \
             --notes-file release_notes.md \
             || true
           
-          # Upload files
           COUNT=0
           for f in release_files/*.zip; do
             if [ -f "$f" ]; then
@@ -382,15 +433,15 @@ jobs:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         run: |
-          MSG="*ARKAEL KERNEL - GKI ${{ inputs.KERNEL_VERSION }}* OK
+          MSG="*ARKAEL KERNEL - GKI ${{ inputs.KERNEL_VERSION }}* ✅
 
-          Mode: \`${{ inputs.RELEASE_TYPE }}\`
-          Governor: \`${{ inputs.GOVERNOR_CHOICE }}\`
-          Files: \`${total_files}\`
-          
-          [Download](https://github.com/Kingfinik98/build-arkael/releases/tag/${RELEASE_TAG})
-          
-          _Kingfinik98_"
+Mode: \`${{ inputs.RELEASE_TYPE }}\`
+Governor: \`${{ inputs.GOVERNOR_CHOICE }}\`
+Files: \`${total_files}\`
+
+[Download](https://github.com/Kingfinik98/build-arkael/releases/tag/${RELEASE_TAG})
+
+_Kingfinik98_"
           
           curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${TG_CHAT_ID}" \
