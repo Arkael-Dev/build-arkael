@@ -105,6 +105,110 @@ get_variant_name() {
 get_kpm_status() { kpm_enabled && echo "✅ Enabled" || echo "❌ Disabled"; }
 get_susfs_status() { susfs_included && echo "✅ Enabled" || echo "❌ Disabled"; }
 
+# ========================================================================
+# 🎛️ GOVERNOR SELECTION FUNCTIONS (NEW: Integrated with build.sh)
+# ========================================================================
+
+# Get governor display name (uppercase)
+get_governor_name() {
+  case "${GOVERNOR_CHOICE,,}" in
+    "arkael")     echo "ARKAEL" ;;
+    "vortexcore"|*) echo "VORTEXCORE" ;;
+  esac
+}
+
+# Get governor source filename
+get_governor_source_file() {
+  case "${GOVERNOR_CHOICE,,}" in
+    "arkael")     echo "governor-arkael.c" ;;
+    "vortexcore"|*) echo "governor-vortexcore.c" ;;
+  esac
+}
+
+# Get governor target name in kernel source
+get_governor_target_name() {
+  case "${GOVERNOR_CHOICE,,}" in
+    "arkael")     echo "governor-arkael" ;;
+    "vortexcore"|*) echo "governor-vortexcore" ;;
+  esac
+}
+
+# Get governor config name for Kconfig/Makefile
+get_governor_config_name() {
+  case "${GOVERNOR_CHOICE,,}" in
+    "arkael")     echo "ARKAEL" ;;
+    "vortexcore"|*) echo "VORTEXCORE" ;;
+  esac
+}
+
+# Validate governor choice and set defaults
+validate_governor_choice() {
+  # Default to vortexcore if not set
+  if [[ -z "$GOVERNOR_CHOICE" ]]; then
+    export GOVERNOR_CHOICE="vortexcore"
+    log "⚠️ GOVERNOR_CHOICE not set, defaulting to: $GOVERNOR_CHOICE"
+  fi
+  
+  # Validate choice
+  case "${GOVERNOR_CHOICE,,}" in
+    "arkael"|"vortexcore")
+      log "✅ Governor validated: ${GOVERNOR_CHOICE^^} ($(get_governor_source_file))"
+      ;;
+    *)
+      warn "Unknown governor: $GOVERNOR_CHOICE, falling back to vortexcore"
+      export GOVERNOR_CHOICE="vortexcore"
+      ;;
+  esac
+  
+  # Validate source file exists
+  local GOV_SOURCE="$WORKDIR/$(get_governor_source_file)"
+  if [[ ! -f "$GOV_SOURCE" ]]; then
+    error "❌ Governor source file not found: $GOV_SOURCE"
+  fi
+  
+  # Validate vortex_gki file if set
+  if [[ -n "$VORTEX_GKI_FILE" ]]; then
+    local VORTEX_GKI_PATH="$WORKDIR/kernel-patches/${VORTEX_GKI_FILE}"
+    if [[ ! -f "$VORTEX_GKI_PATH" ]]; then
+      error "❌ Vortex GKI file not found: $VORTEX_GKI_PATH"
+    else
+      log "✅ Vortex GKI file validated: ${VORTEX_GKI_FILE}"
+    fi
+  else
+    export VORTEX_GKI_FILE="vortex_gki.c"
+    log "ℹ️ VORTEX_GKI_FILE not set, defaulting to: $VORTEX_GKI_FILE"
+  fi
+}
+
+# Enable selected governor config in kernel
+enable_governor_config() {
+  local GOV_CONFIG="CONFIG_CPU_FREQ_GOV_$(get_governor_config_name)"
+  
+  log "Enabling governor config: $GOV_CONFIG"
+  config --enable "$GOV_CONFIG"
+  
+  if [[ $? -eq 0 ]]; then
+    log "✅ $GOV_CONFIG enabled successfully"
+  else
+    error "❌ Failed to enable $GOV_CONFIG"
+  fi
+}
+
+# Log governor selection summary
+log_governor_selection() {
+  log ""
+  log "=========================================="
+  log "  🎛️ GOVERNOR SELECTION SUMMARY"
+  log "=========================================="
+  log "  Governor Choice : ${GOVERNOR_CHOICE^^}"
+  log "  Source File     : $(get_governor_source_file)"
+  log "  Target Name     : $(get_governor_target_name)"
+  log "  Config Name     : CONFIG_CPU_FREQ_GOV_$(get_governor_config_name)"
+  log "  Vortex GKI File : ${VORTEX_GKI_FILE:-vortex_gki.c}"
+  log "=========================================="
+  log ""
+}
+
 config() {
   if [[ -z "$DEFCONFIG_FILE" ]] || [[ ! -f "$DEFCONFIG_FILE" ]]; then
     error "DEFCONFIG_FILE not found or not set"
@@ -115,7 +219,7 @@ config() {
 log() { echo -e "[LOG] $(date '+%H:%M:%S') $*"; }
 
 error() {
-  local err_txt="*🔴 Arkael Build ERROR*\n\n❌ Error: $*\n📅 Time: $(date)\n🐧 Kernel: ${LINUX_VERSION:-unknown}\n📛 Variant: $(get_variant_name)"
+  local err_txt="*🔴 Arkael Build ERROR*\n\n❌ Error: $*\n📅 Time: $(date)\n🐧 Kernel: ${LINUX_VERSION:-unknown}\n📛 Variant: $(get_variant_name)\n🎛️ Governor: $(get_governor_name)"
   echo -e "[ERROR] $(date '+%H:%M:%S') $*"
   send_msg "$err_txt"
   [[ -n "$WORKDIR" ]] && [[ -f "$WORKDIR/build.log" ]] && upload_file "$WORKDIR/build.log"
@@ -136,11 +240,13 @@ success() {
 
 matrix_log() {
   local KVER_LOG="${1:-$KVER}" VARIANT_LOG="${2:-$(get_variant_name)}"
+  local GOV_LOG="${3:-$(get_governor_name)}"
   echo ""
   echo "=========================================="
   echo "  🐧 ARKAEL BUILD INFO"
   echo "  📌 Kernel : ${KVER_LOG} | 🔐 Variant: ${VARIANT_LOG}"
   echo "  ⚡ KPM   : $(get_kpm_status) | 🛡️ SuSFS: $(get_susfs_status)"
+  echo "  🎛️ Gov   : ${GOV_LOG} | 📁 GKI: ${VORTEX_GKI_FILE:-vortex_gki.c}"
   echo "=========================================="
   echo ""
 }
@@ -183,6 +289,8 @@ SUSFS_VERSION=${SUSFS_VERSION:-N/A}
 KERNEL_NAME=${KERNEL_NAME:-Arkael-Kernel}
 RELEASE=${RELEASE:-v0.3}
 RELEASE_REPO=${RELEASE_REPO:-Kingfinik98/build-arkael}
+GOVERNOR=${GOVERNOR_CHOICE:-vortexcore}
+VORTEX_GKI_FILE=${VORTEX_GKI_FILE:-vortex_gki.c}
 EOF
   log "Info file generated: $OUTPUT_PATH"
 }
@@ -203,23 +311,118 @@ cleanup_build_artifacts() {
 
 validate_github_actions_env() {
   local ERRORS=0
+  
+  # Validate required environment variables
   [[ -z "$KVER" ]] && { warn "KVER not set"; ((ERRORS++)); } || log "KVER: $KVER ✓"
   [[ -z "$KSU" ]] && { export KSU="yes"; warn "KSU defaulting to yes"; } || log "KSU: $KSU ✓"
   [[ -z "$TODO" ]] && { export TODO="kernel"; warn "TODO defaulting to kernel"; } || log "TODO: $TODO ✓"
+  
+  # Validate new governor options
+  validate_governor_choice
+  
+  # Optional services
   [[ -n "$TG_CHAT_ID" && -n "$TG_BOT_TOKEN" ]] && log "Telegram: ✓" || warn "Telegram: Not configured"
   [[ -n "$GH_TOKEN" ]] && log "GitHub Token: ✓" || warn "GitHub Token: Not configured"
+  
+  # Print summary
   log "Variant: $(get_variant_name) | KPM: $(get_kpm_status) | SuSFS: $(get_susfs_status)"
+  log "Governor: $(get_governor_name) | Vortex GKI: ${VORTEX_GKI_FILE:-vortex_gki.c}"
+  
   [[ $ERRORS -gt 0 ]] && error "Validation failed with $ERRORS errors"
   log "Environment validation passed!"
 }
 
 print_build_header() {
   echo ""
-  echo "╔══════════════════════════════════════════════════╗"
-  echo "║          🐧 ARKAEL KERNEL BUILD SYSTEM 🐧         ║"
-  echo "╠══════════════════════════════════════════════════╣"
-  printf "║  Kernel: %-20s KPM: %-10s ║\n" "${KVER:-unknown}" "$(get_kpm_status)"
-  printf "║  Variant: %-18s SuSFS: %-10s ║\n" "$(get_variant_name)" "$(get_susfs_status)"
-  echo "╚══════════════════════════════════════════════════╝"
+  echo "╔══════════════════════════════════════════════════════════════╗"
+  echo "║            🐧 ARKAEL KERNEL BUILD SYSTEM 🐧                  ║"
+  echo "╠══════════════════════════════════════════════════════════════╣"
+  printf "║  Kernel: %-16s Governor: %-18s ║\n" "${KVER:-unknown}" "$(get_governor_name)"
+  printf "║  Variant: %-16s KPM: %-18s ║\n" "$(get_variant_name)" "$(get_kpm_status)"
+  printf "║  SuSFS: %-17s GKI File: %-16s ║\n" "$(get_susfs_status)" "${VORTEX_GKI_FILE:-vortex.gki.c}"
+  echo "╚══════════════════════════════════════════════════════════════╝"
   echo ""
+}
+
+# ========================================================================
+# 🔧 GOVERNOR INJECTION HELPERS (NEW: For build.sh integration)
+# ========================================================================
+
+# Inject selected governor into kernel source
+inject_governor_to_kernel() {
+  local KSRC_DIR="$1"
+  
+  if [[ -z "$KSRC_DIR" ]] || [[ ! -d "$KSRC_DIR" ]]; then
+    error "Kernel source directory not provided or invalid: $KSRC_DIR"
+  fi
+  
+  local GOV_SOURCE="$WORKDIR/$(get_governor_source_file)"
+  local GOV_TARGET="$KSRC_DIR/drivers/cpufreq/$(get_governor_target_name).c"
+  local GOV_MAKEFILE="$KSRC_DIR/drivers/cpufreq/Makefile"
+  local GOV_KCONFIG="$KSRC_DIR/drivers/cpufreq/Kconfig"
+  local GOV_CONFIG_NAME="$(get_governor_config_name)"
+  local GOV_TARGET_NAME="$(get_governor_target_name)"
+  local GOV_DISPLAY_NAME="$(get_governor_name)"
+  
+  log "Injecting ${GOV_DISPLAY_NAME} governor into kernel source..."
+  
+  # Copy governor source file
+  cp "$GOV_SOURCE" "$GOV_TARGET"
+  log "✅ Copied $(get_governor_source_file) → ${GOV_TARGET_NAME}.c"
+  
+  # Add to Makefile if not exists
+  if ! grep -q "${GOV_TARGET_NAME}.o" "$GOV_MAKEFILE"; then
+    echo "obj-\$(CONFIG_CPU_FREQ_GOV_${GOV_CONFIG_NAME}) += ${GOV_TARGET_NAME}.o" >> "$GOV_MAKEFILE"
+    log "✅ Added ${GOV_TARGET_NAME}.o to cpufreq Makefile"
+  else
+    log "ℹ️ ${GOV_TARGET_NAME}.o already in Makefile"
+  fi
+  
+  # Add to Kconfig if not exists
+  if ! grep -q "CPU_FREQ_GOV_${GOV_CONFIG_NAME}" "$GOV_KCONFIG"; then
+    cat << KCONF_EOF >> "$GOV_KCONFIG"
+
+config CPU_FREQ_GOV_${GOV_CONFIG_NAME}
+    tristate "${GOV_DISPLAY_NAME} CPU frequency policy governor"
+    depends on CPU_FREQ
+    help
+      ${GOV_DISPLAY_NAME} governor balances performance and efficiency for gaming and daily use.
+
+      If in doubt, say N.
+KCONF_EOF
+    log "✅ Added CPU_FREQ_GOV_${GOV_CONFIG_NAME} to cpufreq Kconfig"
+  else
+    log "ℹ️ CPU_FREQ_GOV_${GOV_CONFIG_NAME} already in Kconfig"
+  fi
+  
+  log "✅ ${GOV_DISPLAY_NAME} governor injection completed successfully!"
+}
+
+# Inject vortex_gki.c file into kernel source
+inject_vortex_gki_to_kernel() {
+  local KSRC_DIR="$1"
+  
+  if [[ -z "$KSRC_DIR" ]] || [[ ! -d "$KSRC_DIR" ]]; then
+    error "Kernel source directory not provided or invalid: $KSRC_DIR"
+  fi
+  
+  local VORTEX_GKI_SOURCE="$WORKDIR/kernel-patches/${VORTEX_GKI_FILE}"
+  local VORTEX_GKI_TARGET="$KSRC_DIR/drivers/misc/vortex_gki.c"
+  local MISC_MAKEFILE="$KSRC_DIR/drivers/misc/Makefile"
+  
+  log "Injecting Vortex GKI file (${VORTEX_GKI_FILE}) into kernel source..."
+  
+  # Ensure directory exists
+  mkdir -p "$KSRC_DIR/drivers/misc"
+  
+  # Copy vortex_gki.c
+  cp "$VORTEX_GKI_SOURCE" "$VORTEX_GKI_TARGET"
+  log "✅ Copied ${VORTEX_GKI_FILE} → drivers/misc/vortex_gki.c"
+  
+  # Update Makefile
+  sed -i '/vortex_gki/d' "$MISC_MAKEFILE"
+  echo "obj-y += vortex_gki.o" >> "$MISC_MAKEFILE"
+  log "✅ Updated drivers/misc/Makefile with vortex_gki.o"
+  
+  log "✅ Vortex GKI injection completed successfully!"
 }
