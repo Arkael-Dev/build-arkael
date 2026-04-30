@@ -1,8 +1,8 @@
 # * © 2026 Kingfinik98. All Rights Reserved.
 # * Original Author: Kingfinik98
-# * FIXED VERSION - All GKI Build Compatible
+# * VERSION: All GKI Unified Build (Single ZIP Output)
 
-name: Release Build - All GKI (FIXED)
+name: Release Build - All GKI (UNIFIED)
 
 on:
   workflow_dispatch:
@@ -43,6 +43,8 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       release_type: ${{ steps.set-matrix.outputs.release_type }}
       governor_choice: ${{ steps.set-matrix.outputs.governor_choice }}
+      total_builds: ${{ steps.set-matrix.outputs.total_builds }}
+    
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
@@ -56,7 +58,7 @@ jobs:
           GOVERNOR_CHOICE: ${{ inputs.GOVERNOR_CHOICE }}
         run: |
           echo "=========================================="
-          echo "  🔧 MATRIX GENERATOR"
+          echo "  🔧 MATRIX GENERATOR v2.0"
           echo "=========================================="
           
           RELEASE_TYPE=$(echo "${RELEASE_TYPE}" | tr -d '[:space:]')
@@ -70,39 +72,30 @@ jobs:
           sudo apt-get install -y jq > /dev/null 2>&1
           
           VARIANTS_JSON='[
-            {"kernel_version":"5.10","variant_name":"VNL","ksu":"no","ksu_susfs":"false","last_build":"false"},
-            {"kernel_version":"5.10","variant_name":"KSU","ksu":"yes","ksu_susfs":"false","last_build":"false"},
-            {"kernel_version":"5.10","variant_name":"KSU+SuSFS","ksu":"yes","ksu_susfs":"true","last_build":"false"},
-            {"kernel_version":"5.10","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true","last_build":"false"},
-            {"kernel_version":"6.1","variant_name":"VNL","ksu":"no","ksu_susfs":"false","last_build":"false"},
-            {"kernel_version":"6.1","variant_name":"KSU","ksu":"yes","ksu_susfs":"false","last_build":"false"},
-            {"kernel_version":"6.1","variant_name":"KSU+SuSFS","ksu":"yes","ksu_susfs":"true","last_build":"false"},
-            {"kernel_version":"6.1","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true","last_build":"false"},
-            {"kernel_version":"6.6","variant_name":"VNL","ksu":"no","ksu_susfs":"false","last_build":"false"},
-            {"kernel_version":"6.6","variant_name":"KSU","ksu":"yes","ksu_susfs":"false","last_build":"false"},
-            {"kernel_version":"6.6","variant_name":"KSU+SuSFS","ksu":"yes","ksu_susfs":"true","last_build":"false"},
-            {"kernel_version":"6.6","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true","last_build":"true"}
+            {"kernel_version":"5.10","variant_name":"VNL","ksu":"no","ksu_susfs":"false"},
+            {"kernel_version":"5.10","variant_name":"KSU","ksu":"yes","ksu_susfs":"false"},
+            {"kernel_version":"5.10","variant_name":"KSU+SuSFS","ksu":"yes","ksu_susfs":"true"},
+            {"kernel_version":"5.10","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true"},
+            {"kernel_version":"6.1","variant_name":"VNL","ksu":"no","ksu_susfs":"false"},
+            {"kernel_version":"6.1","variant_name":"KSU","ksu":"yes","ksu_susfs":"false"},
+            {"kernel_version":"6.1","variant_name":"KSU+SuSFS","ksu":"yes","ksu_susfs":"true"},
+            {"kernel_version":"6.1","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true"},
+            {"kernel_version":"6.6","variant_name":"VNL","ksu":"no","ksu_susfs":"false"},
+            {"kernel_version":"6.6","variant_name":"KSU","ksu":"yes","ksu_susfs":"false"},
+            {"kernel_version":"6.6","variant_name":"KSU+SuSFS","ksu":"yes","ksu_susfs":"true"},
+            {"kernel_version":"6.6","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true"}
           ]'
           
-          if [ "$RELEASE_TYPE" = "full" ]; then
-            SELECTED_VARIANTS=$(echo "$VARIANTS_JSON" | jq '.')
-            echo "✅ Mode: FULL"
-          elif [ "$RELEASE_TYPE" = "ksu" ]; then
-            SELECTED_VARIANTS=$(echo "$VARIANTS_JSON" | jq '[.[] | select(.ksu == "yes" or .ksu == "sukisu")]')
-            echo "✅ Mode: KSU ONLY"
-          elif [ "$RELEASE_TYPE" = "no" ]; then
-            SELECTED_VARIANTS=$(echo "$VARIANTS_JSON" | jq '[.[] | select(.ksu == "no")]')
-            echo "✅ Mode: NON-KSU ONLY"
-          elif [ "$RELEASE_TYPE" = "sukisu" ]; then
-            SELECTED_VARIANTS=$(echo "$VARIANTS_JSON" | jq '[.[] | select(.ksu == "sukisu")]')
-            echo "✅ Mode: SUKISU ONLY"
-          else
-            echo "❌ ERROR: Unknown release type '$RELEASE_TYPE'"
-            exit 1
-          fi
+          case "$RELEASE_TYPE" in
+            full)   SELECTED=$(echo "$VARIANTS_JSON" | jq '.') && echo "✅ Mode: FULL" ;;
+            ksu)    SELECTED=$(echo "$VARIANTS_JSON" | jq '[.[] | select(.ksu == "yes" or .ksu == "sukisu")]') && echo "✅ Mode: KSU ONLY" ;;
+            no)     SELECTED=$(echo "$VARIANTS_JSON" | jq '[.[] | select(.ksu == "no")]') && echo "✅ Mode: VANILLA ONLY" ;;
+            sukisu) SELECTED=$(echo "$VARIANTS_JSON" | jq '[.[] | select(.ksu == "sukisu")]') && echo "✅ Mode: SUKISU ONLY" ;;
+            *)      echo "❌ ERROR: Unknown type '$RELEASE_TYPE'" && exit 1 ;;
+          esac
           
-          if [ -z "$SELECTED_VARIANTS" ] || [ "$SELECTED_VARIANTS" = "[]" ] || [ "$SELECTED_VARIANTS" = "null" ]; then
-            echo "❌ ERROR: No variants selected"
+          if [ "$SELECTED" = "[]" ] || [ "$SELECTED" = "null" ]; then
+            echo "❌ ERROR: No variants selected!"
             exit 1
           fi
           
@@ -112,36 +105,50 @@ jobs:
             GOVS="[\"${GOVERNOR_CHOICE:-vortexcore}\"]"
           fi
           
-          FINAL_MATRIX=$(echo "$SELECTED_VARIANTS" | jq --argjson govs "$GOVS" '[
-            .[] | 
-            ($govs[] as $gov | {
+          # Generate cross-product matrix
+          MATRIX=$(echo "$SELECTED" | jq --argjson govs "$GOVS" '[
+            .[] | ($govs[] as $gov | {
               kernel_version: .kernel_version,
               variant_name: .variant_name,
               governor: $gov,
               ksu: .ksu,
               ksu_susfs: .ksu_susfs,
-              last_build: .last_build
+              build_id: "\(.kernel_version)-\(.variant_name)-\($gov)"
             })
           ]')
           
-          # FIX: TRIM WHITESPACE UNTUK GITHUB OUTPUT!
-          MATRIX_CLEAN=$(echo "$FINAL_MATRIX" | tr -d '[:space:]')
-          echo "matrix=${MATRIX_CLEAN}" >> $GITHUB_OUTPUT
+          # Validate JSON
+          MATRIX_COMPACT=$(echo "$MATRIX" | jq -c '.' 2>/dev/null)
+          if [ $? -ne 0 ] || [ -z "$MATRIX_COMPACT" ]; then
+            echo "❌ ERROR: Failed to generate valid matrix!"
+            exit 1
+          fi
           
-          # Output variables for downstream jobs
-          echo "release_type=${RELEASE_TYPE}" >> $GITHUB_OUTPUT
-          echo "governor_choice=${GOVERNOR_CHOICE}" >> $GITHUB_OUTPUT
+          TOTAL=$(echo "$MATRIX" | jq 'length')
           
-          TOTAL=$(echo "$FINAL_MATRIX" | jq 'length')
+          # ✅ OUTPUT USING HEREDOC (FIX FOR GITHUB ACTIONS)
+          {
+            echo "matrix<<MATRIX_EOF"
+            echo "$MATRIX_COMPACT"
+            echo "MATRIX_EOF"
+            echo "release_type=${RELEASE_TYPE}"
+            echo "governor_choice=${GOVERNOR_CHOICE}"
+            echo "total_builds=${TOTAL}"
+          } >> $GITHUB_OUTPUT
+          
           echo ""
           echo "=========================================="
-          echo "  📊 MATRIX GENERATED"
+          echo "  ✅ MATRIX READY"
           echo "=========================================="
           echo "  Total Builds : ${TOTAL}"
+          echo "  Format       : VALID JSON ✅"
           echo "=========================================="
 
+  # ============================================
+  # PARALLEL BUILD JOB (Fast Execution)
+  # ============================================
   build:
-    name: "🐧 ${{ matrix.kernel_version }} | ${{ matrix.variant_name }} | ${{ matrix.governor }}"
+    name: "🔨 ${{ matrix.kernel_version }}-${{ matrix.variant_name }}-${{ matrix.governor }}"
     needs: generate-matrix
     runs-on: ubuntu-latest
     strategy:
@@ -149,35 +156,28 @@ jobs:
       matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
     
     steps:
-      - name: 📥 Checkout Repository
+      - name: 📥 Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      - name: 🔍 Initialize Build Environment
+      - name: ⚙️ Setup Environment
         run: |
-          echo "STATUS=RELEASE" >> $GITHUB_ENV
-          echo "TRIGGER=workflow_dispatch" >> $GITHUB_ENV
-          echo "=========================================="
-          echo "  🚀 ARKAEL KERNEL BUILD SYSTEM"
-          echo "=========================================="
-          echo "  Kernel   : ${{ matrix.kernel_version }}"
-          echo "  Variant  : ${{ matrix.variant_name }}"
-          echo "  Governor : ${{ matrix.governor }}"
-          echo "  KSU      : ${{ matrix.ksu }}"
-          echo "  SuSFS    : ${{ matrix.ksu_susfs }}"
-          echo "=========================================="
+          echo "BUILD_ID=${{ matrix.build_id }}" >> $GITHUB_ENV
+          echo "KERNEL_VER=${{ matrix.kernel_version }}" >> $GITHUB_ENV
+          echo "VARIANT=${{ matrix.variant_name }}" >> $GITHUB_ENV
+          echo "GOV=${{ matrix.governor }}" >> $GITHUB_ENV
+          mkdir -p output
 
       - name: 📦 Install Dependencies
         run: |
-          sudo apt-get update > /dev/null 2>&1
-          sudo apt-get install -y \
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
             gh bc bison flex libssl-dev libelf-dev dwarves cpio \
-            wget curl git zip unzip p7zip-full jq > /dev/null 2>&1
-          pip install lxml > /dev/null 2>&1
-          echo "✅ Dependencies installed"
+            wget curl git zip unzip p7zip-full jq python3-pip
+          pip install lxml -qq
 
-      - name: ⚙️ Execute Build Script
+      - name: 🐧 Build Kernel
         env:
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
@@ -186,153 +186,185 @@ jobs:
           KSU: ${{ matrix.ksu }}
           KSU_SUSFS: ${{ matrix.ksu_susfs }}
           KERNEL_VERSION: ${{ matrix.kernel_version }}
-          LAST_BUILD: ${{ matrix.last_build }}
           KVER: ${{ matrix.kernel_version }}
           STATUS: "RELEASE"
           GOVERNOR_CHOICE: ${{ matrix.governor }}
           VORTEX_GKI_FILE: ${{ inputs.VORTEX_GKI_FILE }}
         run: |
-          echo "▶️ BUILD: ${{ matrix.variant_name }} (${{ matrix.kernel_version }}) [Gov: ${{ matrix.governor }}]"
+          echo "▶️ Building: ${{ matrix.build_id }}"
           export GIT_CLONE_PROTECTION_ACTIVE=false
           chmod +x *.sh py/*.py 2>/dev/null || true
-          ./build.sh
-          EXIT_CODE=$?
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "❌ Failed: $EXIT_CODE"
-            exit $EXIT_CODE
+          
+          # Run build script
+          ./build.sh || {
+            echo "❌ Build failed for ${{ matrix.build_id }}"
+            exit 1
+          }
+          
+          # Move artifacts to standardized location
+          if [ -d "artifacts" ]; then
+            find artifacts -type f \( -name "*.zip" -o -name "*.img" \) \
+              -exec cp {} output/ \; 2>/dev/null || true
           fi
-          echo "✅ Build OK!"
+          
+          ls -lh output/ 2>/dev/null || echo "⚠️ No output files"
 
-      - name: 📤 Upload Artifacts
+      - name: 📤 Upload Build Output
         if: always()
-        uses: actions/upload-artifact@v4  # ✅ FIXED: Typo corrected!
+        uses: actions/upload-artifact@v4
         with:
-          name: "${{ matrix.kernel_version }}-${{ matrix.variant_name }}-${{ matrix.governor }}-${{ github.run_number }}"
-          path: |
-            artifacts/*.zip
-            artifacts/*.img
-          retention-days: 30
+          name: "build-${{ matrix.build_id }}"
+          path: output/
+          retention-days: 1
           if-no-files-found: warn
 
+  # ============================================
+  # UNIFIED RELEASE JOB (Single ZIP)
+  # ============================================
   release:
-    name: "🚀 Create Unified Release"
+    name: "📦 Create Unified Release"
     permissions:
       contents: write
-    needs: [generate-matrix, build]  # ✅ FIXED: Added generate-matrix dependency
+    needs: [generate-matrix, build]
     runs-on: ubuntu-latest
+    if: always() && needs.generate-matrix.result == 'success'
     
     steps:
-      - name: 📥 Checkout Repository
+      - name: 📥 Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      - name: 📦 Download All Build Artifacts
+      - name: 📥 Download All Artifacts
         uses: actions/download-artifact@v4
         with:
-          path: release_files
-          pattern: '*'
-          merge-multiple: true
+          path: all_builds
+          pattern: 'build-*'
+          merge-multiple: false
 
-      - name: 🔍 Inspect & Prepare Artifacts
+      - name: 🔍 Inspect Downloads
         run: |
-          DEEP_FILES=$(find release_files -mindepth 2 -type f \( -name "*.zip" -o -name "*.img" \) 2>/dev/null | wc -l)
-          if [ "${DEEP_FILES}" -gt 0 ]; then
-            mkdir -p release_flat
-            find release_files -type f \( -name "*.zip" -o -name "*.img" \) 2>/dev/null | while read f; do
-              cp "$f" release_flat/
-            done
-            rm -rf release_files
-            mv release_flat release_files
-          fi
-          ls -lh release_files/ 2>/dev/null || echo "⚠️ No files found!"
+          echo "📂 Downloaded structure:"
+          find all_builds -type f \( -name "*.zip" -o -name "*.img" \) 2>/dev/null | head -50
+          echo ""
+          TOTAL_FILES=$(find all_builds -type f \( -name "*.zip" -o -name "*.img" \) 2>/dev/null | wc -l)
+          echo "📊 Total files found: ${TOTAL_FILES}"
+          echo "total_files=${TOTAL_FILES}" >> $GITHUB_ENV
 
-      - name: 🔍 Extract Build Variables
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          INFO_FILE=$(find release_files -name "info.txt" -type f 2>/dev/null | head -1)
-          if [[ -f "$INFO_FILE" ]]; then
-            while IFS='=' read -r key value; do
-              [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
-              key=$(echo "$key" | xargs)
-              value=$(echo "$value" | xargs)
-              [[ -n "$key" && -n "$value" ]] && echo "$key=$value" >> $GITHUB_ENV
-            done < "$INFO_FILE"
-          else
-            echo "KERNEL_NAME=Arkael-Kernel" >> $GITHUB_ENV
-            echo "RELEASE=v0.3" >> $GITHUB_ENV
-            echo "GOVERNOR=vortexCore" >> $GITHUB_ENV
-          fi
-
-      - name: 🏷️ Generate Release Tag
+      - name: 🗃️ Create Unified ZIP Bundle
+        if: env.total_files > 0
         run: |
           TIMESTAMP=$(date +%Y%m%d-%H%M)
-          KERNEL_NAME="${KERNEL_NAME:-Arkael-Kernel}"
-          # ✅ FIXED: Use output from generate-matrix job
-          GOV_TAG="${GOVERNOR_CHOICE:-${{ needs.generate-matrix.outputs.governor_choice }}}"
-          RELEASE_TYPE_TAG="${RELEASE_TYPE:-${{ needs.generate-matrix.outputs.release_type }}}"
-          RELEASE_TAG="${KERNEL_NAME}-AllGKI-${RELEASE_TYPE_TAG}-${GOV_TAG}-${TIMESTAMP}"
-          echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
-          echo "BUILD_TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
-
-      - name: 📝 Prepare Release Notes
-        run: |
-          cat > release_notes.md << EOF
-          ## 🐧 Arkael Kernel - All GKI Release
+          RELEASE_TYPE="${{ needs.generate-matrix.outputs.release_type }}"
+          GOV="${{ needs.generate-matrix.outputs.governor_choice }}"
           
-          ### 📋 Build Information
-          | Item | Details |
-          |------|---------|
-          | **Kernel Name** | ${KERNEL_NAME:-Arkael-Kernel} |
-          | **Build Date** | ${BUILD_TIMESTAMP} |
-          | **Governor** | ${GOVERNOR_CHOICE:-${{ needs.generate-matrix.outputs.governor_choice }}} |
+          # Create release directory structure
+          mkdir -p "Arkael-Kernel-AllGKI-${TIMESTAMP}"
           
-          ### 📦 Variants
+          # Copy all files to unified directory
+          find all_builds -type f \( -name "*.zip" -o -name "*.img" \) \
+            -exec cp {} "Arkael-Kernel-AllGKI-${TIMESTAMP}/" \;
+          
+          # Create info file
+          cat > "Arkael-Kernel-AllGKI-${TIMESTAMP}/README.txt" << EOF
+          Arkael Kernel - All GKI Unified Build
+          =====================================
+          Build Date : ${TIMESTAMP}
+          Type       : ${RELEASE_TYPE}
+          Governor   : ${GOV}
+          Total Files: $(ls -1 "Arkael-Kernel-AllGKI-${TIMESTAMP}/"*.zip "Arkael-Kernel-AllGKI-${TIMESTAMP}/"*.img 2>/dev/null | wc -l)
+          
+          Contents:
           - GKI 5.10 (Android 12): VNL, KSU, KSU+SuSFS, SukiSU
-          - GKI 6.1 (Android 14): VNL, KSU, KSU+SuSFS, SukiSU  
+          - GKI 6.1 (Android 14): VNL, KSU, KSU+SuSFS, SukiSU
           - GKI 6.6 (Android 15): VNL, KSU, KSU+SuSFS, SukiSU
           
-          *Built by Kingfinik98*
+          Built by Kingfinik98
+          © 2026 Arkael Kernel Project
           EOF
+          
+          # Create SINGLE ZIP
+          zip -r "Arkael-Kernel-AllGKI-${RELEASE_TYPE}-${GOV}-${TIMESTAMP}.zip" \
+            "Arkael-Kernel-AllGKI-${TIMAPSHOT}/"
+          
+          # Set output variables
+          echo "ZIP_FILE=Arkael-Kernel-AllGKI-${RELEASE_TYPE}-${GOV}-${TIMESTAMP}.zip" >> $GITHUB_ENV
+          echo "RELEASE_TAG=Arkael-Kernel-AllGKI-${RELEASE_TYPE}-${GOV}-${TIMESTAMP}" >> $GITHUB_ENV
+          echo "BUILD_TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
+          
+          echo "✅ Created unified ZIP:"
+          ls -lh "Arkael-Kernel-AllGKI-"*.zip
 
       - name: 🚀 Create GitHub Release
+        if: env.ZIP_FILE != ''
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          REPO="${REPO:-Kingfinik98/build-arkael}"
+          REPO="Kingfinik98/build-arkael"
+          
+          # Create release
           gh release create "${RELEASE_TAG}" \
             --repo "${REPO}" \
             --title "🐧 Arkael Kernel - All GKI (${BUILD_TIMESTAMP})" \
-            --notes-file release_notes.md || true
-          
-          UPLOAD_COUNT=0
-          while IFS= read -r f; do
-            gh release upload "${RELEASE_TAG}" --repo "${REPO}" "${f}" --clobber 2>/dev/null && ((UPLOAD_COUNT++))
-          done < <(find release_files -type f \( -name "*.zip" -o -name "*.img" \) 2>/dev/null)
-          
-          echo "✅ Uploaded ${UPLOAD_COUNT} files"
-          echo "🔗 https://github.com/${REPO}/releases/tag/${RELEASE_TAG}"
+            --notes "## 📦 Arkael Kernel - All GKI Unified Release
 
-      - name: 📬 Send Telegram Notification
+          ### 📋 Build Info
+          | Item | Value |
+          |------|-------|
+          **Type** | ${{ needs.generate-matrix.outputs.release_type }} |
+          **Governor** | ${{ needs.generate-matrix.outputs.governor_choice }} |
+          **Total Builds** | ${{ needs.generate-matrix.outputs.total_builds }} |
+          **Date** | ${BUILD_TIMESTAMP} |
+
+          ### 📦 Contents
+          This ZIP contains ALL kernel variants in one package:
+          - **GKI 5.10** (Android 12): VNL, KSU, KSU+SuSFS, SukiSU
+          - **GKI 6.1** (Android 14): VNL, KSU, KSU+SuSFS, SukiSU  
+          - **GKI 6.6** (Android 15): VNL, KSU, KSU+SuSFS, SukiSU
+
+          ---
+          *Built by Kingfinik98* © 2026" || true
+          
+          # Upload the SINGLE unified ZIP
+          gh release upload "${RELEASE_TAG}" \
+            --repo "${REPO}" \
+            "${ZIP_FILE}" \
+            --clobber 2>/dev/null && echo "✅ Uploaded: ${ZIP_FILE}"
+
+      - name: 📬 Telegram Notification
+        if: always() && env.RELEASE_TAG != ''
         env:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         run: |
-          MSG="*🐧 ARKAEL KERNEL - ALL GKI RELEASE* ✅
+          MSG="*🐧 ARKAEL KERNEL - ALL GKI UNIFIED* ✅
           
-          📦 Build: ${{ needs.generate-matrix.outputs.release_type }}
-          🎛️ Gov: ${{ needs.generate-matrix.outputs.governor_choice }}
+          📦 Type: \`${{ needs.generate-matrix.outputs.release_type }}\`
+          🎛️ Gov: \`${{ needs.generate-matrix.outputs.governor_choice }}\`
+          📊 Builds: \`${{ needs.generate-matrix.outputs.total_builds }}\` variants
           📅 ${BUILD_TIMESTAMP}
-          🔗 [Download](https://github.com/Kingfinik98/build-arkael/releases/tag/${RELEASE_TAG})"
+          
+          🔗 [Download ZIP](https://github.com/Kingfinik98/build-arkael/releases/tag/${RELEASE_TAG})
+          
           _© 2025-2026 Arkael Kernel_"
+          
           curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
-            -d "chat_id=${TG_CHAT_ID}" -d "parse_mode=markdown" -d "text=${MSG}" > /dev/null 2>&1 || true
+            -d "chat_id=${TG_CHAT_ID}" \
+            -d "parse_mode=Markdown" \
+            -d "text=${MSG}" > /dev/null 2>&1 || true
 
       - name: 📊 Summary
         if: always()
         run: |
-          TOTAL=$(find release_files -type f \( -name "*.zip" -o -name "*.img" \) 2>/dev/null | wc -l)
-          echo "## 🎉 Release Complete" >> $GITHUB_STEP_SUMMARY
-          echo "| Total Files | \`${TOTAL}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| [View Release](https://github.com/Kingfinik98/build-arkael/releases/tag/${RELEASE_TAG}) |" >> $GITHUB_STEP_SUMMARY
+          echo "## 🎉 Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Release Type** | \`${{ needs.generate-matrix.outputs.release_type }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Governor** | \`${{ needs.generate-matrix.outputs.governor_choice }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Total Variants** | \`${{ needs.generate-matrix.outputs.total_builds }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Output** | **1 Unified ZIP** ✅ |" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${ZIP_FILE}" ]; then
+            echo "| **File Size** | $(du -h "${ZIP_FILE}" | cut -f1) |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Download** | [${ZIP_FILE}](https://github.com/Kingfinik98/build-arkael/releases/tag/${RELEASE_TAG}) |" >> $GITHUB_STEP_SUMMARY
+          fi
