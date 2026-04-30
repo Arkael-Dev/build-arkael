@@ -1,14 +1,22 @@
 #/*!
 # * © 2026 Kingfinik98. All Rights Reserved.
-# * Original Author: Kingfinik98
-# * FIXED: No more fake success - real filtering with actual builds only!
+# * FINAL: Per-GKI Build (No Matrix, No Fake Jobs!)
 # */
 
-name: Release Build - All GKI (FIXED v3)
+name: Release Build - GKI Kernel
 
 on:
   workflow_dispatch:
     inputs:
+      KERNEL_VERSION:
+        description: '🐧 Kernel Version (GKI)'
+        default: '5.10'
+        type: choice
+        options:
+          - '5.10'
+          - '6.1'
+          - '6.6'
+
       RELEASE_TYPE:
         description: '🎯 Release Mode'
         default: 'full'
@@ -39,214 +47,211 @@ env:
 
 jobs:
   # ============================================
-  # JOB 1: VALIDATE & PREPARE (No Matrix Generation!)
-  # ============================================
-  prepare:
-    name: "🔍 Validate Inputs"
-    runs-on: ubuntu-latest
-    outputs:
-      release_type: ${{ steps.validate.outputs.release_type }}
-      governor_choice: ${{ steps.validate.outputs.governor_choice }}
-      selected_variants: ${{ steps.validate.outputs.selected_variants }}
-      
-    steps:
-      - name: ✅ Validate Configuration
-        id: validate
-        run: |
-          echo "=========================================="
-          echo "  🔍 INPUT VALIDATION"
-          echo "=========================================="
-          
-          RT="${{ inputs.RELEASE_TYPE }}"
-          GC="${{ inputs.GOVERNOR_CHOICE }}"
-          
-          echo "Release Type : ${RT}"
-          echo "Governor     : ${GC}"
-          
-          # Validate release type
-          case "${RT}" in
-            full|ksu|no|sukisu) 
-              echo "✅ Release Type Valid" 
-              ;;
-            *) 
-              echo "❌ Invalid Release Type"
-              exit 1 
-              ;;
-          esac
-          
-          # Validate governor
-          case "${GC}" in
-            vortexcore|arkael|all) 
-              echo "✅ Governor Valid" 
-              ;;
-            *) 
-              echo "❌ Invalid Governor"
-              exit 1 
-              ;;
-          esac
-          
-          # Output validated values
-          echo "release_type=${RT}" >> $GITHUB_OUTPUT
-          echo "governor_choice=${GC}" >> $GITHUB_OUTPUT
-          
-          # Output human-readable summary
-          case "${RT}" in
-            full)   echo "selected_variants=All (VNL, KSU, KSU+SuSFS, SukiSU)" >> $GITHUB_OUTPUT ;;
-            ksu)    echo "selected_variants=KSU, KSU+SuSFS, SukiSU" >> $GITHUB_OUTPUT ;;
-            no)     echo "selected_variants=VNL Only" >> $GITHUB_OUTPUT ;;
-            sukisu) echo "selected_variants=SukiSU Only" >> $GITHUB_OUTPUT ;;
-          esac
-          
-          echo ""
-          echo "=========================================="
-          echo "  ✅ VALIDATION PASSED"
-          echo "=========================================="
-
-  # ============================================
-  # JOB 2: BUILD MATRIX (Hardcoded + Real Filtering)
+  # 🎯 SINGLE BUILD JOB (No Matrix!)
   # ============================================
   build:
-    name: "🐧 ${{ matrix.kernel_version }} | ${{ matrix.variant_name }} | ${{ matrix.governor }}"
-    needs: prepare
+    name: "🐧 GKI ${{ inputs.KERNEL_VERSION }} | ${{ inputs.RELEASE_TYPE }} | ${{ inputs.GOVERNOR_CHOICE }}"
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # ===== GKI 5.10 =====
-          - { kernel_version: "5.10", variant_name: "VNL", ksu: "no", ksu_susfs: "false", governor: "vortexcore", enabled_for: ["full","no"] }
-          - { kernel_version: "5.10", variant_name: "VNL", ksu: "no", ksu_susfs: "false", governor: "arkael", enabled_for: ["full","no"] }
-          - { kernel_version: "5.10", variant_name: "KSU", ksu: "yes", ksu_susfs: "false", governor: "vortexcore", enabled_for: ["full","ksu"] }
-          - { kernel_version: "5.10", variant_name: "KSU", ksu: "yes", ksu_susfs: "false", governor: "arkael", enabled_for: ["full","ksu"] }
-          - { kernel_version: "5.10", variant_name: "KSU+SuSFS", ksu: "yes", ksu_susfs: "true", governor: "vortexcore", enabled_for: ["full","ksu"] }
-          - { kernel_version: "5.10", variant_name: "KSU+SuSFS", ksu: "yes", ksu_susfs: "true", governor: "arkael", enabled_for: ["full","ksu"] }
-          - { kernel_version: "5.10", variant_name: "SukiSU", ksu: "sukisu", ksu_susfs: "true", governor: "vortexcore", enabled_for: ["full","ksu","sukisu"] }
-          - { kernel_version: "5.10", variant_name: "SukiSU", ksu: "sukisu", ksu_susfs: "true", governor: "arkael", enabled_for: ["full","ksu","sukisu"] }
-
-          # ===== GKI 6.1 =====
-          - { kernel_version: "6.1", variant_name: "VNL", ksu: "no", ksu_susfs: "false", governor: "vortexcore", enabled_for: ["full","no"] }
-          - { kernel_version: "6.1", variant_name: "VNL", ksu: "no", ksu_susfs: "false", governor: "arkael", enabled_for: ["full","no"] }
-          - { kernel_version: "6.1", variant_name: "KSU", ksu: "yes", ksu_susfs: "false", governor: "vortexcore", enabled_for: ["full","ksu"] }
-          - { kernel_version: "6.1", variant_name: "KSU", ksu: "yes", ksu_susfs: "false", governor: "arkael", enabled_for: ["full","ksu"] }
-          - { kernel_version: "6.1", variant_name: "KSU+SuSFS", ksu: "yes", ksu_susfs: "true", governor: "vortexcore", enabled_for: ["full","ksu"] }
-          - { kernel_version: "6.1", variant_name: "KSU+SuSFS", ksu: "yes", ksu_susfs: "true", governor: "arkael", enabled_for: ["full","ksu"] }
-          - { kernel_version: "6.1", variant_name: "SukiSU", ksu: "sukisu", ksu_susfs: "true", governor: "vortexcore", enabled_for: ["full","ksu","sukisu"] }
-          - { kernel_version: "6.1", variant_name: "SukiSU", ksu: "sukisu", ksu_susfs: "true", governor: "arkael", enabled_for: ["full","ksu","sukisu"] }
-
-          # ===== GKI 6.6 =====
-          - { kernel_version: "6.6", variant_name: "VNL", ksu: "no", ksu_susfs: "false", governor: "vortexcore", enabled_for: ["full","no"] }
-          - { kernel_version: "6.6", variant_name: "VNL", ksu: "no", ksu_susfs: "false", governor: "arkael", enabled_for: ["full","no"] }
-          - { kernel_version: "6.6", variant_name: "KSU", ksu: "yes", ksu_susfs: "false", governor: "vortexcore", enabled_for: ["full","ksu"] }
-          - { kernel_version: "6.6", variant_name: "KSU", ksu: "yes", ksu_susfs: "false", governor: "arkael", enabled_for: ["full","ksu"] }
-          - { kernel_version: "6.6", variant_name: "KSU+SuSFS", ksu: "yes", ksu_susfs: "true", governor: "vortexcore", enabled_for: ["full","ksu"] }
-          - { kernel_version: "6.6", variant_name: "KSU+SuSFS", ksu: "yes", ksu_susfs: "true", governor: "arkael", enabled_for: ["full","ksu"] }
-          - { kernel_version: "6.6", variant_name: "SukiSU", ksu: "sukisu", ksu_susfs: "true", governor: "vortexcore", enabled_for: ["full","ksu","sukisu"], is_last: true }
-          - { kernel_version: "6.6", variant_name: "SukiSU", ksu: "sukisu", ksu_susfs: "true", governor: "arkael", enabled_for: ["full","ksu","sukisu"], is_last: true }
     
     steps:
-      # ==========================================
-      # STEP 1: REAL FILTER CHECK (No Fake Success!)
-      # ==========================================
-      - name: 🔍 Check If Should Build
-        id: check
-        run: |
-          RT="${{ needs.prepare.outputs.release_type }}"
-          ENABLED_FOR='${{ join(matrix.enabled_for, ',') }}'
-          
-          # Check if current release_type is in enabled_for list
-          if echo "${ENABLED_FOR}" | grep -q "\\b${RT}\\b"; then
-            echo "✅ ENABLED: This build matches release type '${RT}'"
-            echo "should_build=true" >> $GITHUB_OUTPUT
-          else
-            echo "⏭️  SKIPPED: This build NOT enabled for '${RT}' (enabled for: ${ENABLED_FOR})"
-            echo "should_build=false" >> $GITHUB_OUTPUT
-            # Exit early to prevent fake success
-            exit 0
-          fi
-
       - name: 📥 Checkout Repository
-        if: steps.check.outputs.should_build == 'true'
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      - name: 🔍 Initialize Build Environment
-        if: steps.check.outputs.should_build == 'true'
-        run: |
-          echo "STATUS=RELEASE" >> $GITHUB_ENV
-          echo "TRIGGER=workflow_dispatch" >> $GITHUB_ENV
-          echo "=========================================="
-          echo "  🚀 ARKAEL KERNEL BUILD SYSTEM"
-          echo "=========================================="
-          echo "  Kernel   : ${{ matrix.kernel_version }}"
-          echo "  Variant  : ${{ matrix.variant_name }}"
-          echo "  Governor : ${{ matrix.governor }}"
-          echo "  KSU      : ${{ matrix.ksu }}"
-          echo "  SuSFS    : ${{ matrix.ksu_susfs }}"
-          echo "=========================================="
-
       - name: 📦 Install Dependencies
-        if: steps.check.outputs.should_build == 'true'
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq \
             gh bc bison flex libssl-dev libelf-dev dwarves cpio \
             wget curl git zip unzip p7zip-full jq
           pip install lxml -qq
+          mkdir -p artifacts
 
-      - name: ⚙️ Execute Build Script
-        if: steps.check.outputs.should_build == 'true'
+      - name: 🔧 Generate Build Queue
+        id: queue
+        run: |
+          KVER="${{ inputs.KERNEL_VERSION }}"
+          RT="${{ inputs.RELEASE_TYPE }}"
+          GC="${{ inputs.GOVERNOR_CHOICE }}"
+          
+          echo "╔══════════════════════════════════════════╗"
+          echo "║     ARKAEL KERNEL BUILD SYSTEM           ║"
+          echo "╠══════════════════════════════════════════╣"
+          printf "║  Kernel %-14s Mode %-12s ║\n" "${KVER}" "${RT}"
+          printf "║  Governor %-13s                  ║\n" "${GC}"
+          echo "╚══════════════════════════════════════════╝"
+          
+          # Set governors
+          if [ "${GC}" = "all" ]; then
+            GOVS="vortexcore arkael"
+          else
+            GOVS="${GC}"
+          fi
+          
+          # Generate build list berdasarkan release type
+          > /tmp/build_queue.txt
+          
+          case "${RT}" in
+            full)
+              # Full = Semua variant (VNL, KSU, KSU+SuSFS, SukiSU)
+              for GOV in ${GOVS}; do
+                echo "${KVER}|VNL|no|false|${GOV}" >> /tmp/build_queue.txt
+                echo "${KVER}|KSU|yes|false|${GOV}" >> /tmp/build_queue.txt
+                echo "${KVER}|KSU+SuSFS|yes|true|${GOV}" >> /tmp/build_queue.txt
+                echo "${KVER}|SukiSU|sukisu|true|${GOV}" >> /tmp/build_queue.txt
+              done
+              ;;
+            ksu)
+              # KSU = Hanya variants dengan root (KSU, KSU+SuSFS, SukiSU)
+              for GOV in ${GOVS}; do
+                echo "${KVER}|KSU|yes|false|${GOV}" >> /tmp/build_queue.txt
+                echo "${KVER}|KSU+SuSFS|yes|true|${GOV}" >> /tmp/build_queue.txt
+                echo "${KVER}|SukiSU|sukisu|true|${GOV}" >> /tmp/build_queue.txt
+              done
+              ;;
+            no)
+              # No = Vanilla only (tanpa root)
+              for GOV in ${GOVS}; do
+                echo "${KVER}|VNL|no|false|${GOV}" >> /tmp/build_queue.txt
+              done
+              ;;
+            sukisu)
+              # SukiSU = Hanya SukiSU variant
+              for GOV in ${GOVS}; do
+                echo "${KVER}|SukiSU|sukisu|true|${GOV}" >> /tmp/build_queue.txt
+              done
+              ;;
+          esac
+          
+          TOTAL=$(wc -l < /tmp/build_queue.txt)
+          
+          echo ""
+          echo "📋 BUILD QUEUE (${TOTAL} builds):"
+          echo "──────────────────────────────────────"
+          NUM=0
+          while IFS='|' read -r kv var ksu susfs gov; do
+            NUM=$((NUM + 1))
+            printf "  %2d. [%s] %s (%s)\n" "${NUM}" "${kv}" "${var}" "${gov}"
+          done < /tmp/build_queue.txt
+          echo "──────────────────────────────────────"
+          
+          echo "total=${TOTAL}" >> $GITHUB_OUTPUT
+          echo "kernel_version=${KVER}" >> $GITHUB_OUTPUT
+          echo "release_type=${RT}" >> $GITHUB_OUTPUT
+          echo "governor_choice=${GC}" >> $GITHUB_OUTPUT
+
+      - name: 🚀 Execute Builds
         env:
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          TODO: "kernel"
-          KSU: ${{ matrix.ksu }}
-          KSU_SUSFS: ${{ matrix.ksu_susfs }}
-          KERNEL_VERSION: ${{ matrix.kernel_version }}
-          LAST_BUILD: ${{ matrix.is_last == true && 'true' || 'false' }}
-          KVER: ${{ matrix.kernel_version }}
-          STATUS: "RELEASE"
-          GOVERNOR_CHOICE: ${{ matrix.governor }}
           VORTEX_GKI_FILE: ${{ inputs.VORTEX_GKI_FILE }}
         run: |
-          echo "▶️ BUILD: ${{ matrix.variant_name }} (${{ matrix.kernel_version }}) [Gov: ${{ matrix.governor }}]"
+          echo "=========================================="
+          echo "  ▶️  STARTING BUILD PROCESS"
+          echo "=========================================="
+          
           export GIT_CLONE_PROTECTION_ACTIVE=false
           chmod +x *.sh py/*.py 2>/dev/null || true
-          ./build.sh
-          EXIT_CODE=$?
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "❌ Failed: $EXIT_CODE"
-            exit $EXIT_CODE
-          fi
           
-          # Verify artifacts exist
-          if [ ! -d "artifacts" ] || [ -z "$(ls -A artifacts/*.zip 2>/dev/null)" ]; then
-            echo "⚠️ WARNING: No ZIP artifacts found after build!"
+          OK=0
+          FAIL=0
+          NUM=0
+          TOTAL="${{ steps.queue.outputs.total }}"
+          
+          while IFS='|' read -r KVER VARIANT KSU SUSFS GOV; do
+            NUM=$((NUM + 1))
+            
+            echo ""
+            echo "╔══════════════════════════════════════════╗"
+            echo "║  [${NUM}/${TOTAL}] ${VARIANT} [${GOV}]"
+            echo "╚══════════════════════════════════════════╝"
+            
+            # Export environment untuk build.sh
+            export TODO="kernel"
+            export KSU="${KSU}"
+            export KSU_SUSFS="${SUSFS}"
+            export KERNEL_VERSION="${KVER}"
+            export KVER="${KVER}"
+            export STATUS="RELEASE"
+            export GOVERNOR_CHOICE="${GOV}"
+            
+            # Last build flag (true untuk build terakhir)
+            if [ "${NUM}" = "${TOTAL}" ]; then
+              export LAST_BUILD="true"
+            else
+              export LAST_BUILD="false"
+            fi
+            
+            # Clean artifacts sebelumnya
+            rm -rf artifacts/*.zip artifacts/*.img out/ 2>/dev/null || true
+            
+            # Jalankan build.sh
+            set +e
+            ./build.sh
+            RESULT=$?
+            set -e
+            
+            if [ ${RESULT} -eq 0 ]; then
+              # Cek artifacts
+              if ls artifacts/*.zip 1>/dev/null 2>&1; then
+                cd artifacts
+                for f in *.zip; do
+                  if [ -f "$f" ]; then
+                    NEWNAME="${KVER}-${VARIANT}-${GOV}-${f}"
+                    mv "$f" "$NEWNAME}"
+                    SIZE=$(du -h "$NEWNAME" | cut -f1)
+                    echo "  ✅ ${NEWNAME} (${SIZE})"
+                  fi
+                done
+                cd ..
+                OK=$((OK + 1))
+              else
+                echo "  ⚠️ No output!"
+                FAIL=$((FAIL + 1))
+              fi
+            else
+              echo "  ❌ Failed!"
+              FAIL=$((FAIL + 1))
+            fi
+            
+          done < /tmp/build_queue.txt
+          
+          echo ""
+          echo "=========================================="
+          echo "  📊 RESULTS: ${OK} success, ${FAIL} failed"
+          echo "=========================================="
+          
+          echo "success=${OK}" >> $GITHUB_STEP_SUMMARY
+          echo "failed=${FAIL}" >> $GITHUB_STEP_SUMMARY
+          
+          echo ""
+          echo "📦 Final Artifacts:"
+          ls -lh artifacts/ 2>/dev/null || echo "  (empty)"
+          
+          if [ ${OK} -eq 0 ] && [ ${FAIL} -gt 0 ]; then
+            echo "::error::All builds failed!"
             exit 1
           fi
-          
-          echo "✅ Build OK!"
 
       - name: 📤 Upload Artifacts
-        if: always() && steps.check.outputs.should_build == 'true'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ matrix.kernel_version }}-${{ matrix.variant_name }}-${{ matrix.governor }}"
-          path: |
-            artifacts/*.zip
-            artifacts/*.img
+          name: "Arkael-${{ inputs.KERNEL_VERSION }}-${{ inputs.RELEASE_TYPE }}-${{ inputs.GOVERNOR_CHOICE }}"
+          path: artifacts/
           retention-days: 30
-          if-no-files-found: error  # ❌ CHANGE: Error instead of warn!
+          if-no-files-found: warn
 
   # ============================================
-  # JOB 3: UNIFIED RELEASE
+  # 🚀 RELEASE JOB
   # ============================================
   release:
-    name: "🚀 Create Unified Release"
+    name: "🚀 Create Release"
     permissions:
       contents: write
-    needs: [prepare, build]
+    needs: build
     runs-on: ubuntu-latest
     if: always() && needs.build.result == 'success'
     
@@ -256,20 +261,16 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: 📦 Download All Artifacts
+      - name: 📦 Download Artifacts
         uses: actions/download-artifact@v4
         with:
           path: release_files
           pattern: '*'
           merge-multiple: true
 
-      - name: 🔍 Inspect Artifacts
+      - name: 🔍 Prepare Files
         run: |
-          echo "=========================================="
-          echo "  🔍 ARTIFACT INSPECTION"
-          echo "=========================================="
-          
-          # Flatten structure if needed
+          # Flatten structure
           if find release_files -mindepth 2 -type f \( -name "*.zip" -o -name "*.img" \) 2>/dev/null | grep -q .; then
             mkdir -p release_flat
             find release_files -type f \( -name "*.zip" -o -name "*.img" \) -exec cp {} release_flat/ \;
@@ -277,23 +278,18 @@ jobs:
             mv release_flat release_files
           fi
           
-          echo ""
-          echo "📦 Files found:"
-          ls -lh release_files/ 2>/dev/null || echo "  ⚠️ EMPTY!"
+          echo "📦 Release Files:"
+          ls -lh release_files/ 2>/dev/null || echo "  EMPTY!"
           
           TOTAL=$(find release_files -type f \( -name "*.zip" -o -name "*.img" \) 2>/dev/null | wc -l)
-          echo ""
-          echo "📊 Total: ${TOTAL} files"
           echo "total_files=${TOTAL}" >> $GITHUB_ENV
           
           if [ "${TOTAL}" -eq 0 ]; then
-            echo "❌ ERROR: No artifacts to release!"
-            exit 1
+            echo "⚠️ No files to release"
+            exit 0
           fi
 
-      - name: 🔍 Extract Build Info
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      - name: 🔍 Extract Info
         run: |
           INFO_FILE=$(find release_files -name "info.txt" -type f 2>/dev/null | head -1)
           if [[ -f "$INFO_FILE" ]]; then
@@ -308,78 +304,101 @@ jobs:
             echo "RELEASE=v0.3" >> $GITHUB_ENV
           fi
 
-      - name: 🏷️ Generate Tag
-        run: |
-          TIMESTAMP=$(date +%Y%m%d-%H%M)
-          RT="${{ needs.prepare.outputs.release_type }}"
-          GC="${{ needs.prepare.outputs.governor_choice }}"
-          KN="${KERNEL_NAME:-Arkael-Kernel}"
-          RELEASE_TAG="${KN}-AllGKI-${RT}-${GC}-${TIMESTAMP}"
-          echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
-          echo "BUILD_TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
-
-      - name: 📝 Prepare Notes
-        run: |
-          cat > release_notes.md << EOF
-          ## 🐧 Arkael Kernel - All GKI Release
-          
-          ### 📋 Build Information
-          | Item | Details |
-          |------|---------|
-          | **Kernel Name** | ${KERNEL_NAME:-Arkael-Kernel} |
-          | **Build Date** | ${BUILD_TIMESTAMP} |
-          | **Release Type** | ${{ needs.prepare.outputs.release_type }} |
-          | **Governor** | ${{ needs.prepare.outputs.governor_choice }} |
-          
-          ### 📦 Contents (${total_files} files)
-          
-          This release contains **${{ needs.prepare.outputs.selected_variants }}** variants.
-          
-          ---
-          *Built by Kingfinik98*
-          EOF
-
-      - name: 🚀 Create Release
+      - name: 🏷️ Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
+          TIMESTAMP=$(date +%Y%m%d-%H%M)
+          KVER="${{ inputs.KERNEL_VERSION }}"
+          RT="${{ inputs.RELEASE_TYPE }}"
+          GC="${{ inputs.GOVERNOR_CHOICE }}"
+          KN="${KERNEL_NAME:-Arkael-Kernel}"
+          
+          TAG="${KN}-GKI${KVER}-${RT}-${GC}-${TIMESTAMP}"
           REPO="Kingfinik98/build-arkael"
           
-          gh release create "${RELEASE_TAG}" \
+          # Android version label
+          case "${KVER}" in
+            5.10) ANDROID_VER="Android 12/12.1" ;;
+            6.1)  ANDROID_VER="Android 14" ;;
+            6.6)  ANDROID_VER="Android 15" ;;
+          esac
+          
+          gh release create "${TAG}" \
             --repo "${REPO}" \
-            --title "🐧 Arkael Kernel - All GKI (${BUILD_TIMESTAMP})" \
-            --notes-file release_notes.md || true
-          
-          COUNT=0
-          while IFS= read -r f; do
-            gh release upload "${RELEASE_TAG}" --repo "${REPO}" "${f}" --clobber 2>/dev/null && ((COUNT++))
-          done < <(find release_files -type f \( -name "*.zip" -o -name "*.img" \))
-          
-          echo "✅ Uploaded ${COUNT} files"
-          echo "🔗 https://github.com/${REPO}/releases/tag/${RELEASE_TAG}"
+            --title "🐧 Arkael Kernel - GKI ${KVER} (${RT}) ${TIMESTAMP}" \
+            --notes "## ${KN} - GKI ${KVER} Release
 
-      - name: 📬 Telegram Notify
+### 📋 Information
+| Item | Details |
+|------|---------|
+| **Kernel Version** | GKI ${KVER} (${ANDROID_VER}) |
+| **Release Type** | ${RT} |
+| **Governor** | ${GC} |
+| **Total Files** | ${total_files} |
+
+### 📦 Variants Included
+ $([ "${RT}" = "full" ] && echo '- VNL (Vanilla/No Root)
+- KSU (Standard KernelSU)
+- KSU+SuSFS (Hidden Root)
+- SukiSU-Ultra (KPM Patch)' || \
+[ "${RT}" = "ksu" ] && echo '- KSU (Standard KernelSU)
+- KSU+SuSFS (Hidden Root)
+- SukiSU-Ultra (KPM Patch)' || \
+[ "${RT}" = "no" ] && echo '- VNL (Vanilla/No Root)' || \
+[ "${RT}" = "sukisu" ] && echo '- SukiSU-Ultra (KPM Patch)')
+
+---
+*Built by Kingfinik98*
+*© 2026 Arkael Kernel*" \
+            || true
+          
+          # Upload files
+          COUNT=0
+          for f in release_files/*.zip; do
+            if [ -f "$f" ]; then
+              gh release upload "${TAG}" --repo "${REPO}" "${f}" --clobber 2>/dev/null
+              COUNT=$((COUNT + 1))
+            fi
+          done
+          
+          echo "✅ Released ${COUNT} files as ${TAG}"
+          echo "RELEASE_TAG=${TAG}" >> $GITHUB_ENV
+
+      - name: 📬 Telegram Notification
         env:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         run: |
-          MSG="*🐧 ARKAEL KERNEL - ALL GKI* ✅
+          KVER="${{ inputs.KERNEL_VERSION }}"
+          RT="${{ inputs.RELEASE_TYPE }}"
+          GC="${{ inputs.GOVERNOR_CHOICE }}"
           
-          📦 Type: \`${{ needs.prepare.outputs.release_type }}\`
-          🎛️ Gov: \`${{ needs.prepare.outputs.governor_choice }}\`
-          📊 Files: \`${total_files}\`
-          📅 ${BUILD_TIMESTAMP}
-          🔗 [Download](https://github.com/Kingfinik98/build-arkael/releases/tag/${RELEASE_TAG})"
+          MSG="*🐧 ARKAEL KERNEL - GKI ${KVER}* ✅
+
+📦 *Mode*: \`${RT}\`
+🎛️ *Governor*: \`${GC}\`
+📊 *Files*: \`${total_files}\`
+
+🔗 [Download](https://github.com/Kingfinik98/build-arkael/releases/tag/${RELEASE_TAG})
+
+_© Kingfinik98_"
           
           curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
-            -d "chat_id=${TG_CHAT_ID}" -d "parse_mode=markdown" -d "text=${MSG}"
+            -d "chat_id=${TG_CHAT_ID}" \
+            -d "parse_mode=markdown" \
+            -d "text=${MSG}" || true
 
       - name: 📊 Summary
-        if: always()
         run: |
-          echo "## 🎉 Release Complete" >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ Release Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| **Tag** | \`${RELEASE_TAG}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Kernel** | \`GKI ${{ inputs.KERNEL_VERSION }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Type** | \`${{ inputs.RELEASE_TYPE }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Governor** | \`${{ inputs.GOVERNOR_CHOICE }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Files** | \`${total_files}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Link** | [View](https://github.com/Kingfinik98/build-arkael/releases/tag/${RELEASE_TAG}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Tag** | \`${RELEASE_TAG}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 [View Release](https://github.com/Kingfinik98/build-arkael/releases/tag/${RELEASE_TAG})" >> $GITHUB_STEP_SUMMARY
