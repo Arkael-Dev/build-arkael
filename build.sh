@@ -326,7 +326,6 @@ elif [ "$KSU" == "sukisu" ]; then
     patch -p1 < 50_add_susfs_in_${SUSFS_BRANCH}.patch || true
     SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
     config --enable CONFIG_KPM
-    config --enable CONFIG_KSU_TRACEPOINT_HOOK
     config --enable CONFIG_KSU_MULTI_MANAGER_SUPPORT
     config --enable CONFIG_KSU_SUSFS
     log "[✓] SukiSU & SUSFS patched for $KVER."
