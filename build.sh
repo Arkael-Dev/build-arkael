@@ -1,11 +1,3 @@
-#!/usr/bin/env bash
-
-# * © 2025-2026 Kingfinik98. All Rights Reserved.
-# * Original Author: Kingfinik98
-# * Original Repository: https://github.com/Kingfinik98/build-arkael
-# * Signed-off-by: kingfinix98@gmail.com
-# */
-
 WORKDIR="$(pwd)"
 
 # ========================================================================
@@ -13,10 +5,6 @@ WORKDIR="$(pwd)"
 # ========================================================================
 export GOVERNOR_CHOICE="${GOVERNOR_CHOICE:-vortexcore}"
 export VORTEX_GKI_FILE="${VORTEX_GKI_FILE:-vortex_gki.c}"
-
-log "🔧 Build Configuration:"
-log "   Governor Selected : ${GOVERNOR_CHOICE}"
-log "   Vortex GKI File   : ${VORTEX_GKI_FILE}"
 
 if [ "$KVER" == "6.6" ]; then
   RELEASE="v0.3"
@@ -69,6 +57,12 @@ trap 'error "Failed at line $LINENO [$BASH_COMMAND]"' ERR
 source $WORKDIR/functions.sh
 
 sudo timedatectl set-timezone "$TIMEZONE" || export TZ="$TIMEZONE"
+
+# ========================================================================
+# ========================================================================
+log "🔧 Build Configuration:"
+log "   Governor Selected : ${GOVERNOR_CHOICE}"
+log "   Vortex GKI File   : ${VORTEX_GKI_FILE}"
 
 log "Cloning kernel source from $(simplify_gh_url "$KERNEL_REPO")"
 git clone -q --depth=1 $KERNEL_REPO -b $KERNEL_BRANCH $KSRC
