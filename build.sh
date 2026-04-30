@@ -108,20 +108,31 @@ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
 
   cp "$WORKDIR/governor-${GOV_NAME}.c" "$KSRC/drivers/cpufreq/governor-${GOV_NAME}.c"
 
-  # BUILT-IN (obj-y), NOT module (obj-$(CONFIG_...))
+  # BUILT-IN (obj-y)
   sed -i "/governor-${GOV_NAME}.o/d" "$KSRC/drivers/cpufreq/Makefile"
   echo "obj-y += governor-${GOV_NAME}.o" >> "$KSRC/drivers/cpufreq/Makefile"
   log "${GOV_NAME_CAP} added to cpufreq Makefile (built-in)."
 
-  # Kconfig: bool + default y, injected BEFORE endmenu
+  # Kconfig: write to tmp file first, then inject before endmenu
   if ! grep -q "CPU_FREQ_GOV_${GOV_CONFIG}" "$KSRC/drivers/cpufreq/Kconfig"; then
-    sed -i "/endmenu/i\\
+    KCONF_TMP="$WORKDIR/.gov_kconf_tmp"
+    cat > "$KCONF_TMP" << KEOF
 
 config CPU_FREQ_GOV_${GOV_CONFIG}
-\tbool \"${GOV_NAME_CAP} CPU governor\"\n\
-\tdepends on CPU_FREQ\n\
-\tdefault y
-" "$KSRC/drivers/cpufreq/Kconfig"
+    bool "${GOV_NAME_CAP} CPU governor"
+    depends on CPU_FREQ
+    default y
+KEOF
+
+    # Insert before 'endmenu' using awk (safe for multiline)
+    awk "
+      /endmenu/ {
+        system(\"cat $KCONF_TMP\")
+      }
+      { print }
+    " "$KSRC/drivers/cpufreq/Kconfig" > "$KSRC/drivers/cpufreq/Kconfig.tmp"
+    mv "$KSRC/drivers/cpufreq/Kconfig.tmp" "$KSRC/drivers/cpufreq/Kconfig"
+    rm -f "$KCONF_TMP"
     log "${GOV_NAME_CAP} added to cpufreq Kconfig (bool, default y)."
   fi
 fi
