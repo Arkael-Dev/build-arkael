@@ -1,4 +1,4 @@
-#/*!
+/*!
 # * © 2026 Kingfinik98. All Rights Reserved.
 # * Original Author: Kingfinik98
 # * Original Repository: https://github.com/Kingfinik98/build-arkael
@@ -75,72 +75,41 @@ jobs:
           echo "  Governor     : ${GOVERNOR_CHOICE}"
           echo "=========================================="
           
-          # Define base kernels
-          KERNELS='5.10 6.1 6.6'
+          # Install jq for JSON processing
+          sudo apt-get update && sudo apt-get install -y jq
           
-          # Define base variants (ALL)
-          VARIANTS_ALL='
-            {"kernel_version":"5.10","variant_name":"VNL","ksu":"no","ksu_susfs":"false","last_build":"false"}
-            {"kernel_version":"5.10","variant_name":"KSU","ksu":"yes","ksu_susfs":"false","last_build":"false"}
-            {"kernel_version":"5.10","variant_name":"KSU+SuSFS","ksu":"yes","ksu_susfs":"true","last_build":"false"}
-            {"kernel_version":"5.10","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true","last_build":"false"}
-            {"kernel_version":"6.1","variant_name":"VNL","ksu":"no","ksu_susfs":"false","last_build":"false"}
-            {"kernel_version":"6.1","variant_name":"KSU","ksu":"yes","ksu_susfs":"false","last_build":"false"}
-            {"kernel_version":"6.1","variant_name":"KSU+SuSFS","ksu":"yes","ksu_susfs":"true","last_build":"false"}
-            {"kernel_version":"6.1","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true","last_build":"false"}
-            {"kernel_version":"6.6","variant_name":"VNL","ksu":"no","ksu_susfs":"false","last_build":"false"}
-            {"kernel_version":"6.6","variant_name":"KSU","ksu":"yes","ksu_susfs":"false","last_build":"false"}
-            {"kernel_version":"6.6","variant_name":"KSU+SuSFS","ksu":"yes","ksu_susfs":"true","last_build":"false"}
+          # Define base variants as proper JSON array
+          VARIANTS_JSON='[
+            {"kernel_version":"5.10","variant_name":"VNL","ksu":"no","ksu_susfs":"false","last_build":"false"},
+            {"kernel_version":"5.10","variant_name":"KSU","ksu":"yes","ksu_susfs":"false","last_build":"false"},
+            {"kernel_version":"5.10","variant_name":"KSU+SuSFS","ksu":"yes","ksu_susfs":"true","last_build":"false"},
+            {"kernel_version":"5.10","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true","last_build":"false"},
+            {"kernel_version":"6.1","variant_name":"VNL","ksu":"no","ksu_susfs":"false","last_build":"false"},
+            {"kernel_version":"6.1","variant_name":"KSU","ksu":"yes","ksu_susfs":"false","last_build":"false"},
+            {"kernel_version":"6.1","variant_name":"KSU+SuSFS","ksu":"yes","ksu_susfs":"true","last_build":"false"},
+            {"kernel_version":"6.1","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true","last_build":"false"},
+            {"kernel_version":"6.6","variant_name":"VNL","ksu":"no","ksu_susfs":"false","last_build":"false"},
+            {"kernel_version":"6.6","variant_name":"KSU","ksu":"yes","ksu_susfs":"false","last_build":"false"},
+            {"kernel_version":"6.6","variant_name":"KSU+SuSFS","ksu":"yes","ksu_susfs":"true","last_build":"false"},
             {"kernel_version":"6.6","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true","last_build":"true"}
-          '
+          ]'
           
-          # Filter variants based on RELEASE_TYPE
+          # Filter variants based on RELEASE_TYPE using jq
           case "${RELEASE_TYPE}" in
             "full")
-              SELECTED_VARIANTS="$VARIANTS_ALL"
+              SELECTED_VARIANTS=$(echo "$VARIANTS_JSON" | jq '.')
               echo "✅ Mode: FULL (All Variants)"
               ;;
             "ksu")
-              # Only KSU variants (yes + sukisu), exclude VNL (no)
-              SELECTED_VARIANTS=$(echo "$VARIANTS_ALL" | jq -s '[.[] | select(.ksu == "yes" or .ksu == "sukisu")]' 2>/dev/null || echo '[]')
-              if [[ "$SELECTED_VARIANTS" == "[]" ]]; then
-                # Fallback if jq not available
-                SELECTED_VARIANTS='
-                  {"kernel_version":"5.10","variant_name":"KSU","ksu":"yes","ksu_susfs":"false","last_build":"false"}
-                  {"kernel_version":"5.10","variant_name":"KSU+SuSFS","ksu":"yes","ksu_susfs":"true","last_build":"false"}
-                  {"kernel_version":"5.10","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true","last_build":"false"}
-                  {"kernel_version":"6.1","variant_name":"KSU","ksu":"yes","ksu_susfs":"false","last_build":"false"}
-                  {"kernel_version":"6.1","variant_name":"KSU+SuSFS","ksu":"yes","ksu_susfs":"true","last_build":"false"}
-                  {"kernel_version":"6.1","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true","last_build":"false"}
-                  {"kernel_version":"6.6","variant_name":"KSU","ksu":"yes","ksu_susfs":"false","last_build":"false"}
-                  {"kernel_version":"6.6","variant_name":"KSU+SuSFS","ksu":"yes","ksu_susfs":"true","last_build":"false"}
-                  {"kernel_version":"6.6","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true","last_build":"true"}
-                '
-              fi
+              SELECTED_VARIANTS=$(echo "$VARIANTS_JSON" | jq '[.[] | select(.ksu == "yes" or .ksu == "sukisu")]')
               echo "✅ Mode: KSU ONLY (KernelSU + SukiSU)"
               ;;
             "no")
-              # Only Non-KSU (VNL/Vanilla)
-              SELECTED_VARIANTS=$(echo "$VARIANTS_ALL" | jq -s '[.[] | select(.ksu == "no")]' 2>/dev/null || echo '[]')
-              if [[ "$SELECTED_VARIANTS" == "[]" ]]; then
-                SELECTED_VARIANTS='
-                  {"kernel_version":"5.10","variant_name":"VNL","ksu":"no","ksu_susfs":"false","last_build":"false"}
-                  {"kernel_version":"6.1","variant_name":"VNL","ksu":"no","ksu_susfs":"false","last_build":"false"}
-                  {"kernel_version":"6.6","variant_name":"VNL","ksu":"no","ksu_susfs":"false","last_build":"true"}
-                '
-              fi
+              SELECTED_VARIANTS=$(echo "$VARIANTS_JSON" | jq '[.[] | select(.ksu == "no")]')
               echo "✅ Mode: NON-KSU (Vanilla/VNL Only)"
               ;;
             "sukisu")
-              # Only SukiSU variant
-              SELECTED_VARIANTS=$(echo "$VARIANTS_ALL" | jq -s '[.[] | select(.ksu == "sukisu")]' 2>/dev/null || echo '[]')
-              if [[ "$SELECTED_VARIANTS" == "[]" ]]; then
-                SELECTED_VARIANTS='
-                  {"kernel_version":"5.10","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true","last_build":"false"}
-                  {"kernel_version":"6.1","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true","last_build":"false"}
-                  {"kernel_version":"6.6","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true","last_build":"true"}
-                '
-              fi
+              SELECTED_VARIANTS=$(echo "$VARIANTS_JSON" | jq '[.[] | select(.ksu == "sukisu")]')
               echo "✅ Mode: SUKISU ONLY"
               ;;
             *)
@@ -149,59 +118,37 @@ jobs:
               ;;
           esac
           
-          # Add governor to each variant based on GOVERNOR_CHOICE
-          FINAL_MATRIX='['
-          FIRST=true
+          # Determine which governors to use
+          case "${GOVERNOR_CHOICE}" in
+            "all")
+              GOVS='["vortexcore","arkael"]'
+              ;;
+            *)
+              GOVS="[\"${GOVERNOR_CHOICE:-vortexcore}\"]"
+              ;;
+          esac
           
-          while IFS= read -r variant; do
-            # Skip empty lines
-            [[ -z "$variant" ]] && continue
-            
-            # Extract variant fields
-            KV=$(echo "$variant" | grep -o '"kernel_version":"[^"]*"' | cut -d'"' -f4)
-            VN=$(echo "$variant" | grep -o '"variant_name":"[^"]*"' | cut -d'"' -f4)
-            KS=$(echo "$variant" | grep -o '"ksu":"[^"]*"' | cut -d'"' -f4)
-            SS=$(echo "$variant" | grep -o '"ksu_susfs":"[^"]*"' | cut -d'"' -f4)
-            LB=$(echo "$variant" | grep -o '"last_build":"[^"]*"' | cut -d'"' -f4)
-            
-            # Determine which governors to use
-            case "${GOVERNOR_CHOICE}" in
-              "all")
-                GOVS="vortexcore arkael"
-                ;;
-              *)
-                GOVS="${GOVERNOR_CHOICE:-vortexcore}"
-                ;;
-            esac
-            
-            # Create entry for each governor
-            for gov in $GOVS; do
-              if [ "$FIRST" = true ]; then
-                FIRST=false
-              else
-                FINAL_MATRIX="${FINAL_MATRIX},"
-              fi
-              
-              FINAL_MATRIX="${FINAL_MATRIX}
+          # Generate final matrix with governors using jq
+          FINAL_MATRIX=$(echo "$SELECTED_VARIANTS" | jq --argjson govs "$GOVS" '
+            [
+              .[] | 
+              $govs[] | . as $gov |
               {
-                \"kernel_version\":\"${KV}\",
-                \"variant_name\":\"${VN}\",
-                \"governor\":\"${gov}\",
-                \"ksu\":\"${KS}\",
-                \"ksu_susfs\":\"${SS}\",
-                \"last_build\":\"${LB}\"
-              }"
-            done
-            
-          done <<< "$SELECTED_VARIANTS"
+                kernel_version: .kernel_version,
+                variant_name: .variant_name,
+                governor: $gov,
+                ksu: .ksu,
+                ksu_susfs: .ksu_susfs,
+                last_build: .last_build
+              }
+            ]
+          ')
           
-          FINAL_MATRIX="${FINAL_MATRIX}]"
-          
-          # Output matrix
+          # Output matrix (must be single line, valid JSON)
           echo "matrix=${FINAL_MATRIX}" >> $GITHUB_OUTPUT
           
           # Count total builds
-          TOTAL_BUILDS=$(echo "$FINAL_MATRIX" | jq 'length' 2>/dev/null || echo "unknown")
+          TOTAL_BUILDS=$(echo "$FINAL_MATRIX" | jq 'length')
           echo ""
           echo "=========================================="
           echo "  📊 MATRIX GENERATED"
@@ -210,6 +157,9 @@ jobs:
           echo "  Release Type : ${RELEASE_TYPE}"
           echo "  Governor(s)  : ${GOVERNOR_CHOICE}"
           echo "=========================================="
+          echo ""
+          echo "📋 Matrix Preview:"
+          echo "$FINAL_MATRIX" | jq '.' 2>/dev/null || echo "$FINAL_MATRIX"
 
   # =====================================================================
   # JOB 1: BUILD ALL KERNELS
@@ -248,7 +198,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             gh bc bison flex libssl-dev libelf-dev dwarves cpio \
-            wget curl git zip unzip p7zip-full
+            wget curl git zip unzip p7zip-full jq
           pip install lxml
 
       - name: ⚙️ Execute Build Script
