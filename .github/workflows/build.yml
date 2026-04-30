@@ -22,6 +22,12 @@ on:
         type: string
       KERNEL_VERSION:
         type: string
+      GOVERNOR_CHOICE:
+        type: string
+        default: "vortexcore"
+      VORTEX_GKI_FILE:
+        type: string
+        default: "vortex_gki.c"
 
   workflow_dispatch:
     inputs:
@@ -66,6 +72,19 @@ on:
           - "6.6"          # Android 15
           - "6.1"          # Android 14
           - "5.10"         # Android 12/12.1
+
+      GOVERNOR_CHOICE:
+        description: '🎛️ CPU Governor (Performance Profile)'
+        default: "vortexcore"
+        type: choice
+        options:
+          - "vortexcore"   # VortexCore (Balanced Gaming)
+          - "arkael"       # Arkael (Optimized Performance)
+
+      VORTEX_GKI_FILE:
+        description: '📁 Vortex GKI Source File (Advanced)'
+        default: "vortex_gki.c"
+        type: string
 
       LAST_BUILD:
         description: '📦 Is this the last build? (Generate info.txt)'
@@ -117,6 +136,8 @@ jobs:
           KSU_SUSFS: ${{ inputs.KSU_SUSFS }}
           KSU_MANUAL_HOOK: ${{ inputs.KSU_MANUAL_HOOK }}
           KERNEL_VERSION: ${{ inputs.KERNEL_VERSION }}
+          GOVERNOR_CHOICE: ${{ inputs.GOVERNOR_CHOICE }}
+          VORTEX_GKI_FILE: ${{ inputs.VORTEX_GKI_FILE }}
         run: |
           echo "=========================================="
           echo "  🔍 VALIDATING INPUTS & SECRETS"
@@ -249,6 +270,48 @@ jobs:
           esac
 
           # ==========================================
+          # 🎛️ GOVERNOR CHOICE VALIDATION (NEW)
+          # ==========================================
+          echo ""
+          echo "--- Validating Governor Choice ---"
+          
+          # Set default if empty
+          GOVERNOR_CHOICE="${GOVERNOR_CHOICE:-vortexcore}"
+          
+          case "${GOVERNOR_CHOICE,,}" in
+            "vortexcore")
+              _info "Governor: VortexCore (Balanced Gaming)"
+              _info "  Source: governor-vortexcore.c"
+              _info "  Config: CONFIG_CPU_FREQ_GOV_VORTEXCORE"
+              ;;
+            "arkael")
+              _info "Governor: Arkael (Optimized Performance)"
+              _info "  Source: governor-arkael.c"
+              _info "  Config: CONFIG_CPU_FREQ_GOV_ARKAEL"
+              ;;
+            *)
+              _error "Invalid governor choice: '$GOVERNOR_CHOICE'"
+              _info "Valid options: vortexcore, arkael"
+              ;;
+          esac
+
+          # ==========================================
+          # 📁 VORTEX GKI FILE VALIDATION (NEW)
+          # ==========================================
+          echo ""
+          echo "--- Validating Vortex GKI File ---"
+          
+          VORTEX_GKI_FILE="${VORTEX_GKI_FILE:-vortex_gki.c}"
+          
+          # Check if file extension is .c
+          if [[ "$VORTEX_GKI_FILE" != *.c ]]; then
+            _warn "Vortex GKI file should have .c extension: $VORTEX_GKI_FILE"
+          fi
+          
+          _info "Vortex GKI File: $VORTEX_GKI_FILE"
+          _info "  Path: kernel-patches/$VORTEX_GKI_FILE"
+
+          # ==========================================
           # VARIANT-SPECIFIC WARNINGS/INFO
           # ==========================================
           echo ""
@@ -266,6 +329,24 @@ jobs:
           
           if [[ $KSU == "no" ]]; then
             _info "📋 Vanilla build - No root solution"
+          fi
+
+          # ==========================================
+          # 🎛️ GOVERNOR-SPECIFIC INFO (NEW)
+          # ==========================================
+          echo ""
+          echo "--- Governor Information ---"
+          
+          if [[ "${GOVERNOR_CHOICE,,}" == "arkael" ]]; then
+            _info "🚀 Arkael Governor Selected"
+            _info "   • Optimized for performance & efficiency"
+            _info "   • Anti-parachute max hold feature"
+            _info "   • Proactive thermal management"
+          else
+            _info "⚡ VortexCore Governor Selected (Default)"
+            _info "   • Balanced gaming & daily use"
+            _info "   • Adaptive sampling rate"
+            _info "   • Refined big.LITTLE awareness"
           fi
 
           # ==========================================
@@ -291,6 +372,8 @@ jobs:
             echo "| **KSU Variant** | \`$KSU\` |" >> $GITHUB_STEP_SUMMARY
             echo "| **SuSFS** | \`$KSU_SUSFS\` |" >> $GITHUB_STEP_SUMMARY
             echo "| **Manual Hooks** | \`$KSU_MANUAL_HOOK\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Governor** | \`${GOVERNOR_CHOICE^^}\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Vortex GKI File** | \`$VORTEX_GKI_FILE\` |" >> $GITHUB_STEP_SUMMARY
             echo "| **Build Type** | \`${STATUS:-BETA}\` |" >> $GITHUB_STEP_SUMMARY
             echo "| **Trigger** | \`${TRIGGER:-manual}\` |" >> $GITHUB_STEP_SUMMARY
           fi
@@ -335,6 +418,8 @@ jobs:
           KSU_SUSFS: ${{ inputs.KSU_SUSFS }}
           KERNEL_VERSION: ${{ inputs.KERNEL_VERSION }}
           TODO: ${{ inputs.TODO }}
+          GOVERNOR_CHOICE: ${{ inputs.GOVERNOR_CHOICE }}
+          VORTEX_GKI_FILE: ${{ inputs.VORTEX_GKI_FILE }}
         run: |
           echo "=========================================="
           echo "  🚀 ARKAEL KERNEL BUILD SYSTEM"
@@ -346,6 +431,10 @@ jobs:
           echo "  • SuSFS          : ${KSU_SUSFS:-false}"
           echo "  • Build Type     : ${TODO:-kernel}"
           echo "  • Status         : ${STATUS:-BETA}"
+          echo ""
+          echo "🎛️ Governor Configuration:"
+          echo "  • Governor       : ${GOVERNOR_CHOICE:-vortexcore}"
+          echo "  • Vortex GKI File: ${VORTEX_GKI_FILE:-vortex_gki.c}"
           echo ""
           echo "🔧 Toolchain:"
           echo "  • Clang : GreenForce gf-clang-23.0.0"
@@ -368,6 +457,8 @@ jobs:
           LAST_BUILD: ${{ inputs.LAST_BUILD }}
           TODO: ${{ inputs.TODO }}
           KVER: ${{ inputs.KERNEL_VERSION }}
+          GOVERNOR_CHOICE: ${{ inputs.GOVERNOR_CHOICE }}
+          VORTEX_GKI_FILE: ${{ inputs.VORTEX_GKI_FILE }}
         run: |
           echo "=========================================="
           echo "  ▶️  STARTING BUILD PROCESS"
@@ -386,6 +477,14 @@ jobs:
             echo "=========================================="
             echo "  ✅ BUILD COMPLETED SUCCESSFULLY"
             echo "=========================================="
+            
+            # Print governor info to log
+            echo ""
+            echo "🎛️ Build Summary:"
+            echo "  Governor Used : ${GOVERNOR_CHOICE:-vortexcore}"
+            echo "  Vortex GKI    : ${VORTEX_GKI_FILE:-vortex_gki.c}"
+            echo "  Kernel        : ${KVER:-unknown}"
+            echo "  Variant       : ${KSU:-unknown}"
           else
             echo ""
             echo "=========================================="
@@ -425,6 +524,9 @@ jobs:
       # ============================================
       - name: 📊 Generate Build Summary
         if: always()
+        env:
+          GOVERNOR_CHOICE: ${{ inputs.GOVERNOR_CHOICE }}
+          VORTEX_GKI_FILE: ${{ inputs.VORTEX_GKI_FILE }}
         run: |
           cat >> $GITHUB_STEP_SUMMARY << 'EOF'
           
@@ -436,6 +538,8 @@ jobs:
           | **Run Number** | \`${{ github.run_number }}\` |
           | **Triggered By** | \`${{ github.actor }}\` |
           | **Status** | \`${{ job.status }}\` |
+          | **Governor** | \`${GOVERNOR_CHOICE:-vortexcore}\` |
+          | **Vortex GKI** | \`${VORTEX_GKI_FILE:-vortex_gki.c}\` |
           
           ### 📦 Artifacts
           
