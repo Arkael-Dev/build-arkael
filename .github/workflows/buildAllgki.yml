@@ -78,7 +78,8 @@ jobs:
             {"kernel_version":"6.6","variant_name":"VNL","ksu":"no","ksu_susfs":"false","last_build":"false"},
             {"kernel_version":"6.6","variant_name":"KSU","ksu":"yes","ksu_susfs":"false","last_build":"false"},
             {"kernel_version":"6.6","variant_name":"KSU+SuSFS","ksu":"yes","ksu_susfs":"true","last_build":"false"},
-            {"kernel_version":"6.6","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true","last_build":"true"}
+            {"kernel_version":"6.6","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true","last_build":"true"
+            }
           ]'
           
           if [ "$RELEASE_TYPE" = "full" ]; then
@@ -198,7 +199,7 @@ jobs:
 
       - name: 📤 Upload Artifacts
         if: always()
-        uses: actions/upload-artartifact@v4
+        uses: actions/upload-artifact@v4
         with:
           name: "${{ matrix.kernel_version }}-${{ matrix.variant_name }}-${{ matrix.governor }}-${{ github.run_number }}"
           path: |
@@ -259,6 +260,9 @@ jobs:
           fi
 
       - name: 🏷️ Generate Release Tag
+        env:
+          RELEASE_TYPE: ${{ inputs.RELEASE_TYPE }}
+          GOVERNOR_CHOICE: ${{ inputs.GOVERNOR_CHOICE }}
         run: |
           TIMESTAMP=$(date +%Y%m%d-%H%M)
           KERNEL_NAME="${KERNEL_NAME:-Arkael-Kernel}"
@@ -279,7 +283,7 @@ jobs:
           | **Kernel Name** | ${KERNEL_NAME:-Arkael-Kernel} |
           | **Build Date** | ${BUILD_TIMESTAMP} |
           | **Governor** | ${GOVERNOR_CHOICE:-vortexcore} |
-          
+          | 
           ### 📦 Variants
           - GKI 5.10 (Android 12): VNL, KSU, KSU+SuSFS, SukiSU
           - Gki 6.1 (Android 14): VNL, KSU, KSU+SuSFS, SukiSU  
@@ -310,13 +314,15 @@ jobs:
         env:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          RELEASE_TYPE: ${{ inputs.RELEASE_TYPE }}
+          GOVERNOR_CHOICE: ${{ inputs.GOVERNOR_CHOICE }}
         run: |
           MSG="*🐧 ARKAEL KERNEL - ALL GKI RELEASE* ✅
           
           📦 Build: ${RELEASE_TYPE}
           🎛️ Gov: ${GOVERNOR_CHOICE:-vortexcore}
           📅 ${BUILD_TIMESTAMP}
-          🔗 [Download](https://github.com/Kingfinik98/build-arkael/releases/tag/${RELEASE_TAG})"
+          🔗 [Download](https://github.com/Kingfinik98/build-arkael/releases/tag/${RELEASE_TAG})
           _© 2025-2026 Arkael Kernel_"
           curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${TG_CHAT_ID}" -d "parse_mode=markdown" -d "text=${MSG}" > /dev/null 2>&1 || true
@@ -326,5 +332,7 @@ jobs:
         run: |
           TOTAL=$(find release_files -type f \( -name "*.zip" -o -name "*.img" \) 2>/dev/null | wc -l)
           echo "## 🎉 Release Complete" >> $GITHUB_STEP_SUMMARY
-          echo "| Total Files | \`${TOTAL}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Total Files | \
+          \
+          `${TOTAL}` |" >> $GITHUB_STEP_SUMMARY
           echo "| [View Release](https://github.com/Kingfinik98/build-arkael/releases/tag/${RELEASE_TAG}) |" >> $GITHUB_STEP_SUMMARY
