@@ -4,16 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       KERNEL_VERSION:
-        description: '🐧 Kernel Version (GKI)'
+        description: Kernel Version
         default: '5.10'
         type: choice
         options:
           - '5.10'
           - '6.1'
           - '6.6'
-
       RELEASE_TYPE:
-        description: '🎯 Release Mode'
+        description: Release Mode
         default: 'full'
         type: choice
         options:
@@ -21,18 +20,16 @@ on:
           - 'ksu'
           - 'no'
           - 'sukisu'
-
       GOVERNOR_CHOICE:
-        description: '🎛️ Governor'
+        description: Governor
         default: 'vortexcore'
         type: choice
         options:
           - 'vortexcore'
           - 'arkael'
           - 'all'
-
       VORTEX_GKI_FILE:
-        description: '📁 Vortex GKI File'
+        description: Vortex GKI File
         default: 'vortex_gki.c'
         type: string
 
@@ -42,36 +39,26 @@ env:
 
 jobs:
   build:
-    name: "🐧 GKI ${{ inputs.KERNEL_VERSION }} | ${{ inputs.RELEASE_TYPE }} | ${{ inputs.GOVERNOR_CHOICE }}"
+    name: "GKI ${{ inputs.KERNEL_VERSION }} | ${{ inputs.RELEASE_TYPE }} | ${{ inputs.GOVERNOR_CHOICE }}"
     runs-on: ubuntu-latest
-    
     steps:
-      - name: 📥 Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      - name: 📦 Install Dependencies
+      - name: Install Dependencies
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq gh bc bison flex libssl-dev libelf-dev dwarves cpio wget curl git zip unzip p7zip-full jq
           pip install lxml -qq
           mkdir -p artifacts
 
-      - name: 🔧 Generate Build Queue
+      - name: Generate Build Queue
         id: queue
         run: |
           KVER="${{ inputs.KERNEL_VERSION }}"
           RT="${{ inputs.RELEASE_TYPE }}"
           GC="${{ inputs.GOVERNOR_CHOICE }}"
-          
-          echo "=========================================="
-          echo "  ARKAEL KERNEL BUILD SYSTEM"
-          echo "=========================================="
-          echo "  Kernel   : ${KVER}"
-          echo "  Mode     : ${RT}"
-          echo "  Governor : ${GC}"
-          echo "=========================================="
           
           if [ "${GC}" = "all" ]; then
             GOVS="vortexcore arkael"
@@ -81,62 +68,39 @@ jobs:
           
           > /tmp/build_queue.txt
           
-          case "${RT}" in
-            full)
-              for GOV in ${GOVS}; do
-                echo "${KVER}|VNL|no|false|${GOV}" >> /tmp/build_queue.txt
-                echo "${KVER}|KSU|yes|false|${GOV}" >> /tmp/build_queue.txt
-                echo "${KVER}|KSU+SuSFS|yes|true|${GOV}" >> /tmp/build_queue.txt
-                echo "${KVER}|SukiSU|sukisu|true|${GOV}" >> /tmp/build_queue.txt
-              done
-              ;;
-            ksu)
-              for GOV in ${GOVS}; do
-                echo "${KVER}|KSU|yes|false|${GOV}" >> /tmp/build_queue.txt
-                echo "${KVER}|KSU+SuSFS|yes|true|${GOV}" >> /tmp/build_queue.txt
-                echo "${KVER}|SukiSU|sukisu|true|${GOV}" >> /tmp/build_queue.txt
-              done
-              ;;
-            no)
-              for GOV in ${GOVS}; do
-                echo "${KVER}|VNL|no|false|${GOV}" >> /tmp/build_queue.txt
-              done
-              ;;
-            sukisu)
-              for GOV in ${GOVS}; do
-                echo "${KVER}|SukiSU|sukisu|true|${GOV}" >> /tmp/build_queue.txt
-              done
-              ;;
-          esac
+          if [ "${RT}" = "full" ]; then
+            for GOV in ${GOVS}; do
+              echo "${KVER}|VNL|no|false|${GOV}" >> /tmp/build_queue.txt
+              echo "${KVER}|KSU|yes|false|${GOV}" >> /tmp/build_queue.txt
+              echo "${KVER}|KSU+SuSFS|yes|true|${GOV}" >> /tmp/build_queue.txt
+              echo "${KVER}|SukiSU|sukisu|true|${GOV}" >> /tmp/build_queue.txt
+            done
+          elif [ "${RT}" = "ksu" ]; then
+            for GOV in ${GOVS}; do
+              echo "${KVER}|KSU|yes|false|${GOV}" >> /tmp/build_queue.txt
+              echo "${KVER}|KSU+SuSFS|yes|true|${GOV}" >> /tmp/build_queue.txt
+              echo "${KVER}|SukiSU|sukisu|true|${GOV}" >> /tmp/build_queue.txt
+            done
+          elif [ "${RT}" = "no" ]; then
+            for GOV in ${GOVS}; do
+              echo "${KVER}|VNL|no|false|${GOV}" >> /tmp/build_queue.txt
+            done
+          elif [ "${RT}" = "sukisu" ]; then
+            for GOV in ${GOVS}; do
+              echo "${KVER}|SukiSU|sukisu|true|${GOV}" >> /tmp/build_queue.txt
+            done
+          fi
           
           TOTAL=$(wc -l < /tmp/build_queue.txt)
-          
-          echo ""
-          echo "BUILD QUEUE (${TOTAL} builds):"
-          echo "----------------------------------------"
-          NUM=0
-          while IFS='|' read -r kv var ksu susfs gov; do
-            NUM=$((NUM + 1))
-            printf "  %2d. [%s] %s (%s)\n" "${NUM}" "${kv}" "${var}" "${gov}"
-          done < /tmp/build_queue.txt
-          echo "----------------------------------------"
-          
           echo "total=${TOTAL}" >> $GITHUB_OUTPUT
-          echo "kernel_version=${KVER}" >> $GITHUB_OUTPUT
-          echo "release_type=${RT}" >> $GITHUB_OUTPUT
-          echo "governor_choice=${GC}" >> $GITHUB_OUTPUT
 
-      - name: 🚀 Execute Builds
+      - name: Execute Builds
         env:
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           VORTEX_GKI_FILE: ${{ inputs.VORTEX_GKI_FILE }}
         run: |
-          echo "=========================================="
-          echo "  STARTING BUILD PROCESS"
-          echo "=========================================="
-          
           export GIT_CLONE_PROTECTION_ACTIVE=false
           chmod +x *.sh py/*.py 2>/dev/null || true
           
@@ -147,11 +111,7 @@ jobs:
           
           while IFS='|' read -r KVER VARIANT KSU SUSFS GOV; do
             NUM=$((NUM + 1))
-            
-            echo ""
-            echo "=========================================="
-            echo "  [${NUM}/${TOTAL}] ${VARIANT} [${GOV}]"
-            echo "=========================================="
+            echo "[${NUM}/${TOTAL}] Building ${VARIANT} ${KVER} ${GOV}"
             
             export TODO="kernel"
             export KSU="${KSU}"
@@ -170,47 +130,33 @@ jobs:
             rm -rf artifacts/*.zip artifacts/*.img out/ 2>/dev/null || true
             
             set +e
-            ./build.sh 2>&1 | tee /tmp/build_${NUM}.log
+            ./build.sh
             RESULT=$?
             set -e
             
-            if [ ${RESULT} -eq 0 ]; then
-              if ls artifacts/*.zip 1>/dev/null 2>&1; then
-                cd artifacts
-                for f in *.zip; do
-                  if [ -f "$f" ]; then
-                    NEWNAME="${KVER}-${VARIANT}-${GOV}-${f}"
-                    mv "$f" "$NEWNAME"
-                    SIZE=$(du -h "$NEWNAME" | cut -f1)
-                    echo "  OK: ${NEWNAME} (${SIZE})"
-                  fi
-                done
-                cd ..
-                OK=$((OK + 1))
-              else
-                echo "  WARN: No output!"
-                FAIL=$((FAIL + 1))
-              fi
+            if [ ${RESULT} -eq 0 ] && ls artifacts/*.zip 1>/dev/null 2>&1; then
+              cd artifacts
+              for f in *.zip; do
+                if [ -f "$f" ]; then
+                  mv "$f" "${KVER}-${VARIANT}-${GOV}-${f}"
+                fi
+              done
+              cd ..
+              OK=$((OK + 1))
+              echo "OK: ${VARIANT}"
             else
-              echo "  FAIL: Exit code ${RESULT}"
-              tail -30 /tmp/build_${NUM}.log
+              echo "FAIL: ${VARIANT} (exit ${RESULT})"
               FAIL=$((FAIL + 1))
             fi
-            
           done < /tmp/build_queue.txt
           
-          echo ""
-          echo "RESULTS: ${OK} success, ${FAIL} failed"
-          echo "success=${OK}" >> $GITHUB_STEP_SUMMARY
-          echo "failed=${FAIL}" >> $GITHUB_STEP_SUMMARY
-          
-          ls -lh artifacts/ 2>/dev/null || echo "  (empty)"
+          echo "Results: ${OK} success, ${FAIL} failed"
           
           if [ ${OK} -eq 0 ] && [ ${FAIL} -gt 0 ]; then
             exit 1
           fi
 
-      - name: 📤 Upload Artifacts
+      - name: Upload Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -220,146 +166,96 @@ jobs:
           if-no-files-found: warn
 
   release:
-    name: "🚀 Create Release"
+    name: Create Release
     permissions:
       contents: write
     needs: build
     runs-on: ubuntu-latest
     if: always() && needs.build.result == 'success'
-    
     steps:
-      - name: 📥 Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      - name: 📦 Download Artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           path: release_files
           pattern: '*'
           merge-multiple: true
 
-      - name: 🔍 Prepare Files
+      - name: Prepare Files
         run: |
-          if find release_files -mindepth 2 -type f \( -name "*.zip" -o -name "*.img" \) 2>/dev/null | grep -q .; then
-            mkdir -p release_flat
-            find release_files -type f \( -name "*.zip" -o -name "*.img" \) -exec cp {} release_flat/ \;
-            rm -rf release_files
-            mv release_flat release_files
-          fi
-          
-          echo "Release Files:"
-          ls -lh release_files/ 2>/dev/null || echo "  EMPTY!"
-          
-          TOTAL=$(find release_files -type f \( -name "*.zip" -o -name "*.img" \) 2>/dev/null | wc -l)
+          find release_files -mindepth 2 -type f 2>/dev/null | while read f; do cp "$f" release_flat/ 2>/dev/null; done
+          mkdir -p release_flat
+          find release_files -type f \( -name "*.zip" \) -exec cp {} release_flat/ \; 2>/dev/null || true
+          rm -rf release_files
+          mv release_flat release_files 2>/dev/null || true
+          ls -lh release_files/ 2>/dev/null || echo "EMPTY"
+          TOTAL=$(find release_files -name "*.zip" 2>/dev/null | wc -l)
           echo "total_files=${TOTAL}" >> $GITHUB_ENV
-          
-          if [ "${TOTAL}" -eq 0 ]; then
-            echo "No files to release"
-            exit 0
-          fi
 
-      - name: 🔍 Extract Info
+      - name: Extract Info
         run: |
           INFO_FILE=$(find release_files -name "info.txt" -type f 2>/dev/null | head -1)
           if [[ -f "$INFO_FILE" ]]; then
             while IFS='=' read -r key value; do
-              [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
               key=$(echo "$key" | xargs)
               value=$(echo "$value" | xargs)
               [[ -n "$key" && -n "$value" ]] && echo "$key=$value" >> $GITHUB_ENV
             done < "$INFO_FILE"
           else
             echo "KERNEL_NAME=Arkael-Kernel" >> $GITHUB_ENV
-            echo "RELEASE=v0.3" >> $GITHUB_ENV
           fi
 
-      - name: 📝 Generate Release Notes
+      - name: Generate Notes
         run: |
           TIMESTAMP=$(date +%Y%m%d-%H%M)
           KVER="${{ inputs.KERNEL_VERSION }}"
           RT="${{ inputs.RELEASE_TYPE }}"
           GC="${{ inputs.GOVERNOR_CHOICE }}"
           KN="${KERNEL_NAME:-Arkael-Kernel}"
+          TAG="${KN}-GKI${KVER}-${RT}-${GC}-${TIMESTAMP}"
           
-          case "${KVER}" in
-            5.10) ANDROID_VER="Android 12/12.1" ;;
-            6.1)  ANDROID_VER="Android 14" ;;
-            6.6)  ANDROID_VER="Android 15" ;;
-          esac
-          
-          case "${RT}" in
-            full)   VARIANTS="VNL - KSU - KSU+SuSFS - SukiSU" ;;
-            ksu)    VARIANTS="KSU - KSU+SuSFS - SukiSU" ;;
-            no)     VARIANTS="VNL Only" ;;
-            sukisu) VARIANTS="SukiSU Only" ;;
-          esac
+          echo "RELEASE_TAG=${TAG}" >> $GITHUB_ENV
           
           cat > release_notes.md << EOF
-## ${KN} - GKI ${KVER} Release
-
-### Information
-| Item | Details |
-|------|---------|
-| **Kernel** | GKI ${KVER} (${ANDROID_VER}) |
-| **Type** | ${RT} |
-| **Governor** | ${GC} |
-| **Files** | ${total_files} |
-
-### Variants
- ${VARIANTS}
-
----
-*Built by Kingfinik98*
-EOF
+          ## ${KN} - GKI ${KVER}
           
-          echo "Notes generated!"
+          | Item | Details |
+          |------|---------|
+          | Kernel | GKI ${KVER} |
+          | Type | ${RT} |
+          | Governor | ${GC} |
+          | Files | ${total_files} |
+          
+          ---
+          Built by Kingfinik98
+          EOF
 
-      - name: 🏷️ Create GitHub Release
+      - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          TIMESTAMP=$(date +%Y%m%d-%H%M)
-          KVER="${{ inputs.KERNEL_VERSION }}"
-          RT="${{ inputs.RELEASE_TYPE }}"
-          GC="${{ inputs.GOVERNOR_CHOICE }}"
-          KN="${KERNEL_NAME:-Arkael-Kernel}"
-          
-          TAG="${KN}-GKI${KVER}-${RT}-${GC}-${TIMESTAMP}"
           REPO="Kingfinik98/build-arkael"
-          
-          gh release create "${TAG}" \
-            --repo "${REPO}" \
-            --title "Arkael Kernel - GKI ${KVER} (${RT}) ${TIMESTAMP}" \
-            --notes-file release_notes.md \
-            || true
-          
+          gh release create "${RELEASE_TAG}" --repo "${REPO}" --title "Arkael GKI ${RELEASE_TAG}" --notes-file release_notes.md || true
           COUNT=0
           for f in release_files/*.zip; do
             if [ -f "$f" ]; then
-              gh release upload "${TAG}" --repo "${REPO}" "${f}" --clobber 2>/dev/null
-              COUNT=$((COUNT + 1))
+              gh release upload "${RELEASE_TAG}" --repo "${REPO}" "${f}" --clobber 2>/dev/null && COUNT=$((COUNT+1))
             fi
           done
-          
-          echo "Released ${COUNT} files as ${TAG}"
-          echo "RELEASE_TAG=${TAG}" >> $GITHUB_ENV
+          echo "Uploaded ${COUNT} files"
 
-      - name: 📬 Telegram Notification
+      - name: Telegram Notify
         env:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         run: |
-          MSG="ARKAEL KERNEL - GKI ${{ inputs.KERNEL_VERSION }} OK - Mode: ${{ inputs.RELEASE_TYPE }} - Files: ${total_files}"
-          curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" -d "chat_id=${TG_CHAT_ID}" -d "text=${MSG}" || true
+          curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" -d "chat_id=${TG_CHAT_ID}" -d "text=ARKAEL KERNEL GKI ${{ inputs.KERNEL_VERSION }} DONE - Files: ${total_files}"
 
-      - name: 📊 Summary
+      - name: Summary
         run: |
-          echo "## Complete" >> $GITHUB_STEP_SUMMARY
-          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| **Kernel** | \`GKI ${{ inputs.KERNEL_VERSION }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Type** | \`${{ inputs.RELEASE_TYPE }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Governor** | \`${{ inputs.GOVERNOR_CHOICE }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Files** | \`${total_files}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "## Done" >> $GITHUB_STEP_SUMMARY
+          echo "| Kernel | \`${{ inputs.KERNEL_VERSION }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Type | \`${{ inputs.RELEASE_TYPE }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Files | \`${total_files}\` |" >> $GITHUB_STEP_SUMMARY
