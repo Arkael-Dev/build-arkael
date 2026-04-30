@@ -1,7 +1,8 @@
 # * © 2026 Kingfinik98. All Rights Reserved.
 # * Original Author: Kingfinik98
+# * FIXED VERSION - All GKI Build Compatible
 
-name: Release Build - All GKI
+name: Release Build - All GKI (FIXED)
 
 on:
   workflow_dispatch:
@@ -40,6 +41,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      release_type: ${{ steps.set-matrix.outputs.release_type }}
+      governor_choice: ${{ steps.set-matrix.outputs.governor_choice }}
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
@@ -78,8 +81,7 @@ jobs:
             {"kernel_version":"6.6","variant_name":"VNL","ksu":"no","ksu_susfs":"false","last_build":"false"},
             {"kernel_version":"6.6","variant_name":"KSU","ksu":"yes","ksu_susfs":"false","last_build":"false"},
             {"kernel_version":"6.6","variant_name":"KSU+SuSFS","ksu":"yes","ksu_susfs":"true","last_build":"false"},
-            {"kernel_version":"6.6","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true","last_build":"true"
-            }
+            {"kernel_version":"6.6","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true","last_build":"true"}
           ]'
           
           if [ "$RELEASE_TYPE" = "full" ]; then
@@ -125,6 +127,10 @@ jobs:
           # FIX: TRIM WHITESPACE UNTUK GITHUB OUTPUT!
           MATRIX_CLEAN=$(echo "$FINAL_MATRIX" | tr -d '[:space:]')
           echo "matrix=${MATRIX_CLEAN}" >> $GITHUB_OUTPUT
+          
+          # Output variables for downstream jobs
+          echo "release_type=${RELEASE_TYPE}" >> $GITHUB_OUTPUT
+          echo "governor_choice=${GOVERNOR_CHOICE}" >> $GITHUB_OUTPUT
           
           TOTAL=$(echo "$FINAL_MATRIX" | jq 'length')
           echo ""
@@ -199,7 +205,7 @@ jobs:
 
       - name: 📤 Upload Artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4  # ✅ FIXED: Typo corrected!
         with:
           name: "${{ matrix.kernel_version }}-${{ matrix.variant_name }}-${{ matrix.governor }}-${{ github.run_number }}"
           path: |
@@ -212,7 +218,7 @@ jobs:
     name: "🚀 Create Unified Release"
     permissions:
       contents: write
-    needs: build
+    needs: [generate-matrix, build]  # ✅ FIXED: Added generate-matrix dependency
     runs-on: ubuntu-latest
     
     steps:
@@ -260,14 +266,12 @@ jobs:
           fi
 
       - name: 🏷️ Generate Release Tag
-        env:
-          RELEASE_TYPE: ${{ inputs.RELEASE_TYPE }}
-          GOVERNOR_CHOICE: ${{ inputs.GOVERNOR_CHOICE }}
         run: |
           TIMESTAMP=$(date +%Y%m%d-%H%M)
           KERNEL_NAME="${KERNEL_NAME:-Arkael-Kernel}"
-          GOV_TAG="${GOVERNOR_CHOICE:-vortexcore}"
-          RELEASE_TYPE_TAG="${RELEASE_TYPE:-full}"
+          # ✅ FIXED: Use output from generate-matrix job
+          GOV_TAG="${GOVERNOR_CHOICE:-${{ needs.generate-matrix.outputs.governor_choice }}}"
+          RELEASE_TYPE_TAG="${RELEASE_TYPE:-${{ needs.generate-matrix.outputs.release_type }}}"
           RELEASE_TAG="${KERNEL_NAME}-AllGKI-${RELEASE_TYPE_TAG}-${GOV_TAG}-${TIMESTAMP}"
           echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
           echo "BUILD_TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
@@ -282,11 +286,11 @@ jobs:
           |------|---------|
           | **Kernel Name** | ${KERNEL_NAME:-Arkael-Kernel} |
           | **Build Date** | ${BUILD_TIMESTAMP} |
-          | **Governor** | ${GOVERNOR_CHOICE:-vortexcore} |
-          | 
+          | **Governor** | ${GOVERNOR_CHOICE:-${{ needs.generate-matrix.outputs.governor_choice }}} |
+          
           ### 📦 Variants
           - GKI 5.10 (Android 12): VNL, KSU, KSU+SuSFS, SukiSU
-          - Gki 6.1 (Android 14): VNL, KSU, KSU+SuSFS, SukiSU  
+          - GKI 6.1 (Android 14): VNL, KSU, KSU+SuSFS, SukiSU  
           - GKI 6.6 (Android 15): VNL, KSU, KSU+SuSFS, SukiSU
           
           *Built by Kingfinik98*
@@ -314,15 +318,13 @@ jobs:
         env:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-          RELEASE_TYPE: ${{ inputs.RELEASE_TYPE }}
-          GOVERNOR_CHOICE: ${{ inputs.GOVERNOR_CHOICE }}
         run: |
           MSG="*🐧 ARKAEL KERNEL - ALL GKI RELEASE* ✅
           
-          📦 Build: ${RELEASE_TYPE}
-          🎛️ Gov: ${GOVERNOR_CHOICE:-vortexcore}
+          📦 Build: ${{ needs.generate-matrix.outputs.release_type }}
+          🎛️ Gov: ${{ needs.generate-matrix.outputs.governor_choice }}
           📅 ${BUILD_TIMESTAMP}
-          🔗 [Download](https://github.com/Kingfinik98/build-arkael/releases/tag/${RELEASE_TAG})
+          🔗 [Download](https://github.com/Kingfinik98/build-arkael/releases/tag/${RELEASE_TAG})"
           _© 2025-2026 Arkael Kernel_"
           curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${TG_CHAT_ID}" -d "parse_mode=markdown" -d "text=${MSG}" > /dev/null 2>&1 || true
@@ -332,7 +334,5 @@ jobs:
         run: |
           TOTAL=$(find release_files -type f \( -name "*.zip" -o -name "*.img" \) 2>/dev/null | wc -l)
           echo "## 🎉 Release Complete" >> $GITHUB_STEP_SUMMARY
-          echo "| Total Files | \
-          \
-          `${TOTAL}` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Total Files | \`${TOTAL}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| [View Release](https://github.com/Kingfinik98/build-arkael/releases/tag/${RELEASE_TAG}) |" >> $GITHUB_STEP_SUMMARY
