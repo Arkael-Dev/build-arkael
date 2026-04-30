@@ -56,7 +56,6 @@ jobs:
           echo "  🔧 MATRIX GENERATOR"
           echo "=========================================="
           
-          # TRIM INPUT
           RELEASE_TYPE=$(echo "${RELEASE_TYPE}" | tr -d '[:space:]')
           GOVERNOR_CHOICE=$(echo "${GOVERNOR_CHOICE}" | tr -d '[:space:]')
           
@@ -64,11 +63,9 @@ jobs:
           echo "  Governor     : '${GOVERNOR_CHOICE}'"
           echo "=========================================="
           
-          # INSTALL JQ
           sudo apt-get update > /dev/null 2>&1
           sudo apt-get install -y jq > /dev/null 2>&1
           
-          # DEFINISI VARIANTS
           VARIANTS_JSON='[
             {"kernel_version":"5.10","variant_name":"VNL","ksu":"no","ksu_susfs":"false","last_build":"false"},
             {"kernel_version":"5.10","variant_name":"KSU","ksu":"yes","ksu_susfs":"false","last_build":"false"},
@@ -84,10 +81,9 @@ jobs:
             {"kernel_version":"6.6","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true","last_build":"true"}
           ]'
           
-          # FILTER BERDASARKAN RELEASE TYPE
           if [ "$RELEASE_TYPE" = "full" ]; then
             SELECTED_VARIANTS=$(echo "$VARIANTS_JSON" | jq '.')
-            echo "✅ Mode: FULL (All Variants)"
+            echo "✅ Mode: FULL"
           elif [ "$RELEASE_TYPE" = "ksu" ]; then
             SELECTED_VARIANTS=$(echo "$VARIANTS_JSON" | jq '[.[] | select(.ksu == "yes" or .ksu == "sukisu")]')
             echo "✅ Mode: KSU ONLY"
@@ -102,20 +98,17 @@ jobs:
             exit 1
           fi
           
-          # VALIDASI HASIL FILTER
           if [ -z "$SELECTED_VARIANTS" ] || [ "$SELECTED_VARIANTS" = "[]" ] || [ "$SELECTED_VARIANTS" = "null" ]; then
-            echo "❌ ERROR: No variants selected for release type '$RELEASE_TYPE'"
+            echo "❌ ERROR: No variants selected"
             exit 1
           fi
           
-          # TENTUKAN GOVERNOR
           if [ "$GOVERNOR_CHOICE" = "all" ]; then
             GOVS='["vortexcore","arkael"]'
           else
             GOVS="[\"${GOVERNOR_CHOICE:-vortexcore}\"]"
           fi
           
-          # GENERATE MATRIX (FIXED!!!)
           FINAL_MATRIX=$(echo "$SELECTED_VARIANTS" | jq --argjson govs "$GOVS" '[
             .[] | 
             ($govs[] as $gov | {
@@ -128,13 +121,14 @@ jobs:
             })
           ]')
           
-          # OUTPUT
-          echo "matrix=${FINAL_MATRIX}" >> $GITHUB_OUTPUT
+          # FIX: TRIM WHITESPACE UNTUK GITHUB OUTPUT!
+          MATRIX_CLEAN=$(echo "$FINAL_MATRIX" | tr -d '[:space:]')
+          echo "matrix=${MATRIX_CLEAN}" >> $GITHUB_OUTPUT
           
           TOTAL=$(echo "$FINAL_MATRIX" | jq 'length')
           echo ""
           echo "=========================================="
-          echo "  📊 MATRIX GENERATED SUCCESSFULLY"
+          echo "  📊 MATRIX GENERATED"
           echo "=========================================="
           echo "  Total Builds : ${TOTAL}"
           echo "=========================================="
@@ -204,7 +198,7 @@ jobs:
 
       - name: 📤 Upload Artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artartifact@v4
         with:
           name: "${{ matrix.kernel_version }}-${{ matrix.variant_name }}-${{ matrix.governor }}-${{ github.run_number }}"
           path: |
@@ -261,7 +255,7 @@ jobs:
           else
             echo "KERNEL_NAME=Arkael-Kernel" >> $GITHUB_ENV
             echo "RELEASE=v0.3" >> $GITHUB_ENV
-            echo "GOVERNOR=vortexcore" >> $GITHUB_ENV
+            echo "GOVERNOR=vortexCore" >> $GITHUB_ENV
           fi
 
       - name: 🏷️ Generate Release Tag
@@ -288,7 +282,7 @@ jobs:
           
           ### 📦 Variants
           - GKI 5.10 (Android 12): VNL, KSU, KSU+SuSFS, SukiSU
-          - GKI 6.1 (Android 14): VNL, KSU, KSU+SuSFS, SukiSU  
+          - Gki 6.1 (Android 14): VNL, KSU, KSU+SuSFS, SukiSU  
           - GKI 6.6 (Android 15): VNL, KSU, KSU+SuSFS, SukiSU
           
           *Built by Kingfinik98*
