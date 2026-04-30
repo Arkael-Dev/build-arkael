@@ -323,15 +323,15 @@ elif [ "$KSU" == "sukisu" ]; then
   SUKISU_KSUD="$KSRC/drivers/kernelsu/runtime/ksud.c"
   
   if [ -f "$SUKISU_KSUD" ]; then
-    # Cek apakah fix sudah pernah diterapkan
+    # Check if the fix has been applied
     if grep -q "SUKISU_BUILTIN_HOOK_FIX_APPLIED" "$SUKISU_KSUD"; then
       log "[INFO] SukiSU hook fix already applied, skipping..."
     else
       # Backup original file
       cp "$SUKISU_KSUD" "${SUKISU_KSUD}.orig"
       
-      # Inject definisi static key setelah extern declarations
-      # Ini memperbaiki: undefined symbol ksu_init_rc_hook_key_false & ksu_input_hook_key_false
+      # Inject static key definitions after extern declarations
+      # This fixes: undefined symbol ksu_init_rc_hook_key_false & ksu_input_hook_key_false
       cat > /tmp/sukisu_hook_fix.tmp << 'HOOK_FIX_EOF'
 
 /* SukiSU-Ultra Builtin Hook Fix - Applied by build-arkael */
@@ -351,15 +351,15 @@ EXPORT_SYMBOL(ksu_input_hook_key_false);
 #endif /* SUKISU_BUILTIN_HOOK_FIX_APPLIED */
 HOOK_FIX_EOF
       
-      # Cari line terakhir dari extern declarations dan inject setelahnya
+      # Find the last line of extern declarations and inject after it.
       EXTERN_LINE=$(grep -n "extern struct static_key_false ksu_input_hook_key_false;" "$SUKISU_KSUD" | cut -d: -f1)
       
       if [ -n "$EXTERN_LINE" ] && [ "$EXTERN_LINE" -gt 0 ]; then
-        # Insert fix setelah extern declaration line
+        # Insert fix after external declaration line
         sed -i "${EXTERN_LINE}r /tmp/sukisu_hook_fix.tmp" "$SUKISU_KSUD"
         log "[✅ SUCCESS] Undefined hook symbols fix injected into ksud.c (after line $EXTERN_LINE)"
       else
-        # Fallback: prepend ke file jika pattern tidak ditemukan
+        # Fallback: prepend to file if pattern not found
         cat /tmp/sukisu_hook_fix.tmp "$SUKISU_KSUD" > "${SUKISU_KSUD}.tmp"
         mv "${SUKISU_KSUD}.tmp" "$SUKISU_KSUD"
         log "[✅ SUCCESS] Undefined hook symbols fix prepended to ksud.c (fallback method)"
