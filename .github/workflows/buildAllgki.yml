@@ -56,7 +56,7 @@ jobs:
           echo "  🔧 MATRIX GENERATOR"
           echo "=========================================="
           
-          # TRIM INPUT (HILANGKAN WHITESPACE & HIDDEN CHARS)
+          # TRIM INPUT
           RELEASE_TYPE=$(echo "${RELEASE_TYPE}" | tr -d '[:space:]')
           GOVERNOR_CHOICE=$(echo "${GOVERNOR_CHOICE}" | tr -d '[:space:]')
           
@@ -84,7 +84,7 @@ jobs:
             {"kernel_version":"6.6","variant_name":"SukiSU","ksu":"sukisu","ksu_susfs":"true","last_build":"true"}
           ]'
           
-          # FILTER BERDASARKAN RELEASE TYPE (PAKE IF-ELIF, BUKAN CASE!)
+          # FILTER BERDASARKAN RELEASE TYPE
           if [ "$RELEASE_TYPE" = "full" ]; then
             SELECTED_VARIANTS=$(echo "$VARIANTS_JSON" | jq '.')
             echo "✅ Mode: FULL (All Variants)"
@@ -99,7 +99,6 @@ jobs:
             echo "✅ Mode: SUKISU ONLY"
           else
             echo "❌ ERROR: Unknown release type '$RELEASE_TYPE'"
-            echo "   Valid options: full, ksu, no, sukisu"
             exit 1
           fi
           
@@ -116,22 +115,18 @@ jobs:
             GOVS="[\"${GOVERNOR_CHOICE:-vortexcore}\"]"
           fi
           
-          # GENERATE MATRIX (FIX SYNTAX!)
-          FINAL_MATRIX=$(jq --argjson govs "$GOVS" \
-            --argjson variants "$SELECTED_VARIANTS" \
-            '[
-              .variants[] | 
-              . as $variant |
-              $govs[] | . as $gov |
-              {
-                kernel_version: $variant.kernel_version,
-                variant_name: $variant.variant_name,
-                governor: $gov,
-                ksu: $variant.ksu,
-                ksu_susfs: $variant.ksu_susfs,
-                last_build: $variant.last_build
-              }
-            ]' <<< "{}")
+          # GENERATE MATRIX (FIXED!!!)
+          FINAL_MATRIX=$(echo "$SELECTED_VARIANTS" | jq --argjson govs "$GOVS" '[
+            .[] | 
+            ($govs[] as $gov | {
+              kernel_version: .kernel_version,
+              variant_name: .variant_name,
+              governor: $gov,
+              ksu: .ksu,
+              ksu_susfs: .ksu_susfs,
+              last_build: .last_build
+            })
+          ]')
           
           # OUTPUT
           echo "matrix=${FINAL_MATRIX}" >> $GITHUB_OUTPUT
