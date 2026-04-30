@@ -1,8 +1,13 @@
+#!/usr/bin/env bash
+
+# * © 2025-2026 Kingfinik98. All Rights Reserved.
+# * Original Author: Kingfinik98
+# * Original Repository: https://github.com/Kingfinik98/build-arkael
+# * Signed-off-by: kingfinix98@gmail.com
+# */
+
 WORKDIR="$(pwd)"
 
-# ========================================================================
-# 🔧 ARKAEL BUILD OPTIONS (NEW: Governor & Vortex GKI Selection)
-# ========================================================================
 export GOVERNOR_CHOICE="${GOVERNOR_CHOICE:-vortexcore}"
 export VORTEX_GKI_FILE="${VORTEX_GKI_FILE:-vortex_gki.c}"
 
@@ -58,8 +63,6 @@ source $WORKDIR/functions.sh
 
 sudo timedatectl set-timezone "$TIMEZONE" || export TZ="$TIMEZONE"
 
-# ========================================================================
-# ========================================================================
 log "🔧 Build Configuration:"
 log "   Governor Selected : ${GOVERNOR_CHOICE}"
 log "   Vortex GKI File   : ${VORTEX_GKI_FILE}"
@@ -88,9 +91,6 @@ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
 fi
 
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  # ========================================================================
-  # 🎛️ DYNAMIC GOVERNOR SELECTION (NEW FEATURE - Safe Injection)
-  # ========================================================================
   case "${GOVERNOR_CHOICE,,}" in
     "arkael")
       log "🚀 Injecting Arkael Custom Governor..."
@@ -108,21 +108,17 @@ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
       ;;
   esac
   
-  # Validate source file exists
   if [ ! -f "$GOV_SOURCE_FILE" ]; then
     error "❌ Governor source file not found: $GOV_SOURCE_FILE"
   fi
   
-  # Copy selected governor to kernel source
   cp "$GOV_SOURCE_FILE" "$KSRC/drivers/cpufreq/${GOV_TARGET_NAME}.c"
   
-  # Add to Makefile if not exists
   if ! grep -q "${GOV_TARGET_NAME}.o" "$KSRC/drivers/cpufreq/Makefile"; then
     echo "obj-\$(CONFIG_CPU_FREQ_GOV_${GOV_CONFIG_NAME}) += ${GOV_TARGET_NAME}.o" >> "$KSRC/drivers/cpufreq/Makefile"
     log "${GOV_DISPLAY_NAME} added to cpufreq Makefile."
   fi
   
-  # Add to Kconfig if not exists
   if ! grep -q "CPU_FREQ_GOV_${GOV_CONFIG_NAME}" "$KSRC/drivers/cpufreq/Kconfig"; then
     cat << KCONF_EOF >> "$KSRC/drivers/cpufreq/Kconfig"
 
@@ -491,9 +487,6 @@ log "Enabling Arkael kernel dependencies..."
 config --enable CONFIG_TCP_CONG_WESTWOOD
 config --enable CONFIG_DEVFREQ_GOV_SCHEDUTIL
 
-# ========================================================================
-# ⚡ DYNAMIC GOVERNOR CONFIG ENABLE (NEW FEATURE)
-# ========================================================================
 case "${GOVERNOR_CHOICE,,}" in
   "arkael")
     config --enable CONFIG_CPU_FREQ_GOV_ARKAEL
