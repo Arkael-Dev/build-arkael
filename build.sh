@@ -9,12 +9,9 @@
 WORKDIR="$(pwd)"
 
 # ========================================================================
-# 🎛️ ARKAEL BUILD OPTIONS (NEW: Governor & GKI Selection)
+# 🔧 ARKAEL BUILD OPTIONS (NEW: Governor & Vortex GKI Selection)
 # ========================================================================
-# Pilihan Governor: "vortexcore" atau "arkael"
 export GOVERNOR_CHOICE="${GOVERNOR_CHOICE:-vortexcore}"
-
-# Pilihan Vortex GKI File: default "vortex_gki.c" (bisa diganti jika ada varian lain)
 export VORTEX_GKI_FILE="${VORTEX_GKI_FILE:-vortex_gki.c}"
 
 log "🔧 Build Configuration:"
@@ -40,7 +37,7 @@ if [ "$KVER" == "5.10" ]; then
 elif [ "$KVER" == "6.1" ]; then
   KERNEL_DEFCONFIG="gki_defconfig"
 else
-  KERNEL_DEFconfig="gki_defconfig"
+  KERNEL_DEFCONFIG="gki_defconfig"
 fi
 
 if [ "$KVER" == "6.6" ]; then
@@ -98,7 +95,7 @@ fi
 
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   # ========================================================================
-  # 🎛️ DYNAMIC GOVERNOR SELECTION (NEW FEATURE)
+  # 🎛️ DYNAMIC GOVERNOR SELECTION (NEW FEATURE - Safe Injection)
   # ========================================================================
   case "${GOVERNOR_CHOICE,,}" in
     "arkael")
@@ -406,7 +403,7 @@ EOF
         bash $KERNEL_PATCHES/susfs/fix-sucompat-k510-sed.sh
       fi
       patch -p1 < $KERNEL_PATCHES/susfs/pershoot-susfs-k5.10.patch || true
-      fi
+    fi
 
     if [ $(echo "$LINUX_VERSION_CODE" | head -c1) -eq 6 ]; then
       if [ "$KSU" == "yes" ]; then
@@ -432,9 +429,10 @@ EOF
     config --enable CONFIG_KSU_SUSFS
   else
     log "Skipping standard SUSFS patch (Handled by SukiSU 5.10 custom method)."
-  else
-    config --disable CONFIG_KSU_SUSFS
   fi
+else
+  config --disable CONFIG_KSU_SUSFS
+fi
 
 if [ $TODO == "kernel" ]; then
   LATEST_COMMIT_HASH=$(git rev-parse --short HEAD)
@@ -493,13 +491,15 @@ EOF
 )
 
 log "Generating config..."
-make ${MAKE_ARGS[@]} $KERNEL_DEFconfig
+make ${MAKE_ARGS[@]} $KERNEL_DEFCONFIG
 
 log "Enabling Arkael kernel dependencies..."
 config --enable CONFIG_TCP_CONG_WESTWOOD
 config --enable CONFIG_DEVFREQ_GOV_SCHEDUTIL
 
-# Enable selected governor config dynamically
+# ========================================================================
+# ⚡ DYNAMIC GOVERNOR CONFIG ENABLE (NEW FEATURE)
+# ========================================================================
 case "${GOVERNOR_CHOICE,,}" in
   "arkael")
     config --enable CONFIG_CPU_FREQ_GOV_ARKAEL
