@@ -316,9 +316,9 @@ elif [ "$KSU" == "sukisu" ]; then
   curl -LSs "https://raw.githubusercontent.com/Kingfinik98/SukiSU-Ultra/refs/heads/builtin/kernel/setup.sh" | bash -s builtin
   
   # =============================================================
-  # 🔧 FIX: Undefined hook symbols di SukiSU-Ultra builtin
+  # FIX: Undefined hook symbols in SukiSU-Ultra builtin branch
   # =============================================================
-  log "🔧 Applying critical fix for undefined hook symbols (SukiSU-Ultra builtin bug)..."
+  log "Applying critical fix for undefined hook symbols (SukiSU-Ultra builtin bug)..."
   
   SUKISU_KSUD="$KSRC/drivers/kernelsu/runtime/ksud.c"
   
@@ -357,18 +357,18 @@ HOOK_FIX_EOF
       if [ -n "$EXTERN_LINE" ] && [ "$EXTERN_LINE" -gt 0 ]; then
         # Insert fix after external declaration line
         sed -i "${EXTERN_LINE}r /tmp/sukisu_hook_fix.tmp" "$SUKISU_KSUD"
-        log "[✅ SUCCESS] Undefined hook symbols fix injected into ksud.c (after line $EXTERN_LINE)"
+        log "[SUCCESS] Undefined hook symbols fix injected into ksud.c (after line $EXTERN_LINE)"
       else
         # Fallback: prepend to file if pattern not found
         cat /tmp/sukisu_hook_fix.tmp "$SUKISU_KSUD" > "${SUKISU_KSUD}.tmp"
         mv "${SUKISU_KSUD}.tmp" "$SUKISU_KSUD"
-        log "[✅ SUCCESS] Undefined hook symbols fix prepended to ksud.c (fallback method)"
+        log "[SUCCESS] Undefined hook symbols fix prepended to ksud.c (fallback method)"
       fi
       
       # Cleanup temp file
       rm -f /tmp/sukisu_hook_fix.tmp
       
-      log "[✓] SukiSU-Ultra builtin hook fix completed successfully!"
+      log "[DONE] SukiSU-Ultra builtin hook fix completed successfully!"
     fi
   else
     log "[WARNING] ksud.c not found at $SUKISU_KSUD - Cannot apply hook fix!"
@@ -385,11 +385,29 @@ HOOK_FIX_EOF
     cp -r $susfs/include .
     cp -r $susfs/50_add_susfs_in_${SUSFS_BRANCH}.patch .
     patch -p1 < 50_add_susfs_in_${SUSFS_BRANCH}.patch || true
+    
+    # =============================================================
+    # CRITICAL FIX: Apply SuSFS KSU enable patch for symbol definitions
+    # This provides: DEFINE_STATIC_KEY_TRUE(ksu_is_init_rc_hook_enabled)
+    #                 DEFINE_STATIC_KEY_TRUE(ksu_is_input_hook_enabled)
+    # Without this patch, linking will fail with undefined symbol errors!
+    # =============================================================
+    log "Applying CRITICAL SuSFS KSU enable patch (symbol definitions)..."
+    SUSFS_KSU_PATCH="sus/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch"
+    if [ -f "$SUSFS_KSU_PATCH" ]; then
+      patch -p1 < "$SUSFS_KSU_PATCH" || log "[WARN] SuSFS KSU enable patch failed (may already be applied)"
+      log "[SUCCESS] SuSFS KSU enable patch applied - symbols defined!"
+    else
+      log "[ERROR] CRITICAL: $SUSFS_KSU_PATCH not found! Build may fail with undefined symbols!"
+      log "[ERROR] This patch contains DEFINE_STATIC_KEY_TRUE for ksu_is_*_hook_enabled"
+    fi
+    # ============================================================= END CRITICAL FIX =============================================================
+    
     SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
     config --enable CONFIG_KPM
     config --enable CONFIG_KSU_MULTI_MANAGER_SUPPORT
     config --enable CONFIG_KSU_SUSFS
-    log "[✓] SukiSU & SUSFS patched for $KVER."
+    log "[DONE] SukiSU & SUSFS patched for $KVER."
   else
     config --enable CONFIG_KSU_SUSFS
     log "SUSFS config enabled for $KVER. Applying patches in Standard block..."
@@ -563,7 +581,7 @@ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   config --enable CONFIG_ANDROID_LOW_MEMORY_KILLER
   config --enable CONFIG_KSM
   config --enable CONFIG_CPU_IDLE
-  # NOTE: Untuk SukiSU, jangan disable hook features karena builtin branch membutuhkannya!
+  # NOTE: For SukiSU, do NOT disable hook features because builtin branch requires them!
   if [ "$KSU" != "sukisu" ]; then
     config --disable CONFIG_KSU_INIT_RC_HOOK
     config --disable CONFIG_KSU_INPUT_HOOK
@@ -605,14 +623,14 @@ log "Applying KPM Patch..."
 if [ "$KSU" == "sukisu" ]; then
   cd $OUTDIR/arch/arm64/boot
   if [ -f Image ]; then
-    echo "✅ Image found, applying KPM patch for ${VARIANT}..."
+    echo "Image found, applying KPM patch for ${VARIANT}..."
     curl -LSs "https://github.com/Kingfinik98/SukiSU_patch/raw/refs/heads/main/kpm/patch_linux" -o patch
     chmod 777 patch
     ./patch
     if [ -f oImage ]; then
       mv -f oImage Image
       ls -lh Image
-      log "✅ KPM Patch applied successfully for ${VARIANT}."
+      log "SUCCESS: KPM Patch applied successfully for ${VARIANT}."
     else
       log "Error: oImage not found!"
     fi
@@ -669,7 +687,7 @@ if [ $STATUS == "BETA" ]; then
   upload_file "$WORKDIR/$AK3_ZIP_NAME" "$text"
   upload_file "$WORKDIR/build.log"
 else
-  send_msg "✅ Build Succeeded for ${KERNEL_NAME} ${VARIANT} variant (Governor: ${GOVERNOR_CHOICE^^})."
+  send_msg "Build Succeeded for ${KERNEL_NAME} ${VARIANT} variant (Governor: ${GOVERNOR_CHOICE^^})."
 fi
 
 exit 0
