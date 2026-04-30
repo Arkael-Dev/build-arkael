@@ -91,46 +91,36 @@ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
 fi
 
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  case "${GOVERNOR_CHOICE,,}" in
-    "arkael")
-      log "🚀 Injecting Arkael Custom Governor..."
-      GOV_SOURCE_FILE="$WORKDIR/governor-arkael.c"
-      GOV_TARGET_NAME="governor-arkael"
-      GOV_CONFIG_NAME="ARKAEL"
-      GOV_DISPLAY_NAME="Arkael"
-      ;;
-    "vortexcore"|*)
-      log "⚡ Injecting VortexCore Custom Governor..."
-      GOV_SOURCE_FILE="$WORKDIR/governor-vortexcore.c"
-      GOV_TARGET_NAME="governor-vortexcore"
-      GOV_CONFIG_NAME="VORTEXCORE"
-      GOV_DISPLAY_NAME="VortexCore"
-      ;;
-  esac
-  
-  if [ ! -f "$GOV_SOURCE_FILE" ]; then
-    error "❌ Governor source file not found: $GOV_SOURCE_FILE"
+
+  if [ "${GOVERNOR_CHOICE,,}" == "arkael" ]; then
+    GOV_NAME="arkael"
+    GOV_NAME_CAP="Arkael"
+    log "Injecting ${GOV_NAME_CAP} Custom Governor..."
+  else
+    GOV_NAME="vortexcore"
+    GOV_NAME_CAP="VortexCore"
+    log "Injecting ${GOV_NAME_CAP} Custom Governor..."
   fi
-  
-  cp "$GOV_SOURCE_FILE" "$KSRC/drivers/cpufreq/${GOV_TARGET_NAME}.c"
-  
-  if ! grep -q "${GOV_TARGET_NAME}.o" "$KSRC/drivers/cpufreq/Makefile"; then
-    echo "obj-\$(CONFIG_CPU_FREQ_GOV_${GOV_CONFIG_NAME}) += ${GOV_TARGET_NAME}.o" >> "$KSRC/drivers/cpufreq/Makefile"
-    log "${GOV_DISPLAY_NAME} added to cpufreq Makefile."
+
+  cp "$WORKDIR/governor-${GOV_NAME}.c" "$KSRC/drivers/cpufreq/governor-${GOV_NAME}.c"
+
+  if ! grep -q "governor-${GOV_NAME}.o" "$KSRC/drivers/cpufreq/Makefile"; then
+    echo "obj-\$(CONFIG_CPU_FREQ_GOV_$(echo ${GOV_NAME} | tr '[:lower:]' '[:upper:]')) += governor-${GOV_NAME}.o" >> "$KSRC/drivers/cpufreq/Makefile"
+    log "${GOV_NAME_CAP} added to cpufreq Makefile."
   fi
-  
-  if ! grep -q "CPU_FREQ_GOV_${GOV_CONFIG_NAME}" "$KSRC/drivers/cpufreq/Kconfig"; then
+
+  if ! grep -q "CPU_FREQ_GOV_$(echo ${GOV_NAME} | tr '[:lower:]' '[:upper:]')" "$KSRC/drivers/cpufreq/Kconfig"; then
     cat << KCONF_EOF >> "$KSRC/drivers/cpufreq/Kconfig"
 
-config CPU_FREQ_GOV_${GOV_CONFIG_NAME}
-    tristate "${GOV_DISPLAY_NAME} CPU frequency policy governor"
+config CPU_FREQ_GOV_$(echo ${GOV_NAME} | tr '[:lower:]' '[:upper:]')
+    tristate "${GOV_NAME_CAP} CPU frequency policy governor"
     depends on CPU_FREQ
     help
-      ${GOV_DISPLAY_NAME} governor balances performance and efficiency for gaming and daily use.
+      ${GOV_NAME_CAP} governor balances performance and efficiency for gaming and daily use.
 
       If in doubt, say N.
 KCONF_EOF
-    log "${GOV_DISPLAY_NAME} added to cpufreq Kconfig."
+    log "${GOV_NAME_CAP} added to cpufreq Kconfig."
   fi
 fi
 
@@ -487,16 +477,11 @@ log "Enabling Arkael kernel dependencies..."
 config --enable CONFIG_TCP_CONG_WESTWOOD
 config --enable CONFIG_DEVFREQ_GOV_SCHEDUTIL
 
-case "${GOVERNOR_CHOICE,,}" in
-  "arkael")
-    config --enable CONFIG_CPU_FREQ_GOV_ARKAEL
-    log "✅ CONFIG_CPU_FREQ_GOV_ARKAEL enabled"
-    ;;
-  "vortexcore"|*)
-    config --enable CONFIG_CPU_FREQ_GOV_VORTEXCORE
-    log "✅ CONFIG_CPU_FREQ_GOV_VORTEXCORE enabled"
-    ;;
-esac
+if [ "${GOVERNOR_CHOICE,,}" == "arkael" ]; then
+  config --enable CONFIG_CPU_FREQ_GOV_ARKAEL
+else
+  config --enable CONFIG_CPU_FREQ_GOV_VORTEXCORE
+fi
 
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   config --enable CONFIG_ANDROID_LOW_MEMORY_KILLER
