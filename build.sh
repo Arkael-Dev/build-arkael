@@ -42,9 +42,9 @@ elif [ "$KVER" == "6.1" ]; then
   ANYKERNEL_BRANCH="master"
   KERNEL_BRANCH="android14-6.1-staging"
 elif [ "$KVER" == "5.10" ]; then
-  KERNEL_REPO="https://github.com/MillenniumOSS/android_kernel_common_android12-5.10.git"
+  KERNEL_REPO="https://github.com/Fleur-Project/android_kernel_xiaomi_sm7435.git"
   ANYKERNEL_BRANCH="master"
-  KERNEL_BRANCH="millennium-base"
+  KERNEL_BRANCH="linux-stable"
 fi
 DEFCONFIG_TO_MERGE=""
 GKI_RELEASES_REPO="https://github.com/Kingfinik98/build-arkael/releases"
