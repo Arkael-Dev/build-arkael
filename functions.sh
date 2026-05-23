@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 #/*!
-# * © 2025-2026 Kingfinik98. All Rights Reserved.
+# * © 2025-2026 Arkael-Dev. All Rights Reserved.
 # * Signed-off-by: kingfinix98@gmail.com
 # */
 
