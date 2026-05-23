@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
-# * © 2025-2026 Kingfinik98. All Rights Reserved.
-# * Original Author: Kingfinik98
-# * Original Repository: https://github.com/Kingfinik98/build-arkael
+# * © 2025-2026. All Rights Reserved.
+# * Original Author: Arkael-Dev
 # * Signed-off-by: kingfinix98@gmail.com
 # */
 
@@ -23,7 +22,7 @@ KERNEL_NAME="Arkael"
 USER="Zeroz"
 HOST="ZeroZ"
 TIMEZONE="Asia/Jakarta"
-ANYKERNEL_REPO="https://github.com/Kingfinik98/AnyKernel3"
+ANYKERNEL_REPO="https://github.com/Arkael-Dev/AnyKernel3"
 
 if [ "$KVER" == "5.10" ]; then
   KERNEL_DEFCONFIG="gki_defconfig"
@@ -34,7 +33,7 @@ else
 fi
 
 if [ "$KVER" == "6.6" ]; then
-  KERNEL_REPO="https://github.com/Kingfinik98/gki-clo.git"
+  KERNEL_REPO="https://github.com/Arkael-Dev/gki-clo.git"
   ANYKERNEL_BRANCH="master"
   KERNEL_BRANCH="6.6.77-base"
 elif [ "$KVER" == "6.1" ]; then
@@ -47,7 +46,7 @@ elif [ "$KVER" == "5.10" ]; then
   KERNEL_BRANCH="droidspaces"
 fi
 DEFCONFIG_TO_MERGE=""
-GKI_RELEASES_REPO="https://github.com/Kingfinik98/build-arkael/releases"
+GKI_RELEASES_REPO="https://github.com/Arkael-Dev/build-arkael/releases"
 
 CLANG_URL="https://github.com/greenforce-project/greenforce_clang/releases/download/20260418/gf-clang-23.0.0-20260418.tar.gz"
 CLANG_BRANCH=""
@@ -138,7 +137,7 @@ KEOF
 fi
 
 log "Applying inject.sh patch..."
-wget -qO Inject_300hz.sh https://raw.githubusercontent.com/Kingfinik98/build-arkael/refs/heads/6.x/inject_ksu/Inject_300hz.sh
+wget -qO Inject_300hz.sh https://raw.githubusercontent.com/Arkael-Dev/build-arkael/refs/heads/6.x/inject_ksu/Inject_300hz.sh
 bash Inject_300hz.sh
 rm Inject_300hz.sh
 
@@ -163,11 +162,11 @@ log "Injecting custom KSU & SuSFS configs from GitHub..."
 export KSU
 export KSU_SUSFS
 if [ "$KVER" == "5.10" ]; then
-  wget -qO inject.sh https://raw.githubusercontent.com/Kingfinik98/build-arkael/refs/heads/6.x/inject_ksu/gki_defconfig.sh
+  wget -qO inject.sh https://raw.githubusercontent.com/Arkael-Dev/build-arkael/refs/heads/6.x/inject_ksu/gki_defconfig.sh
   bash inject.sh
   rm inject.sh
 elif [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  wget -qO inject.sh https://raw.githubusercontent.com/Kingfinik98/build-arkael/refs/heads/6.x/inject_ksu/gki-deconfig-6.1.sh
+  wget -qO inject.sh https://raw.githubusercontent.com/Arkael-Dev/build-arkael/refs/heads/6.x/inject_ksu/gki-deconfig-6.1.sh
   bash inject.sh
   rm inject.sh
 fi
@@ -313,7 +312,7 @@ elif [ "$KSU" == "sukisu" ]; then
   log "Setting up SukiSU-Ultra for KVER $KVER..."
   
   log "Running SukiSU setup from builtin branch..."
-  curl -LSs "https://raw.githubusercontent.com/Kingfinik98/ReSukiSU/refs/heads/main/kernel/setup.sh" | bash -s main
+  curl -LSs "https://raw.githubusercontent.com/Arkael-Dev/ReSukiSU/refs/heads/main/kernel/setup.sh" | bash -s main
   if [ "$KVER" == "5.10" ]; then
     log "Applying SUSFS patches for GKI 5.10 (SukiSU Method)..."
     SUSFS_BRANCH="gki-android12-5.10"
@@ -538,7 +537,7 @@ if [ "$KSU" == "sukisu" ]; then
   cd $OUTDIR/arch/arm64/boot
   if [ -f Image ]; then
     echo "✅ Image found, applying KPM patch for ${VARIANT}..."
-    curl -LSs "https://github.com/Kingfinik98/SukiSU_patch/raw/refs/heads/main/kpm/patch_linux" -o patch
+    curl -LSs "https://github.com/Arkael-Dev/SukiSU_patch/raw/refs/heads/main/kpm/patch_linux" -o patch
     chmod 777 patch
     ./patch
     if [ -f oImage ]; then
