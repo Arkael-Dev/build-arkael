@@ -82,9 +82,8 @@ CONFIG_SWAP=y
 CONFIG_CPU_FREQ_GOV_SCHEDUTIL=y
 CONFIG_CPU_FREQ_GOV_REFLEX=y
 CONFIG_CPU_FREQ_GOV_VORTEXCORE=y
+CONFIG_CPU_FREQ_GOV_ARKAEL=y
 CONFIG_CPU_FREQ_GOV_ONDEMAND=y
-# Kernel configurations for full DroidSpaces support for GKI
-# Copyright (C) 2026 ravindu644 <droidcasts@protonmail.com>
 
 # IPC
 CONFIG_SYSVIPC=y
