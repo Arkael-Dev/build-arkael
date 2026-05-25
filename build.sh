@@ -43,7 +43,7 @@ elif [ "$KVER" == "6.1" ]; then
 elif [ "$KVER" == "5.10" ]; then
   KERNEL_REPO="https://github.com/Arkael-Dev/kernel-common-android12-5.10.git"
   ANYKERNEL_BRANCH="master"
-  KERNEL_BRANCH="android12-5.10-staging"
+  KERNEL_BRANCH="linuxstable"
 fi
 DEFCONFIG_TO_MERGE=""
 GKI_RELEASES_REPO="https://github.com/Arkael-Dev/build-arkael/releases"
