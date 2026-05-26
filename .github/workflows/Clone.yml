@@ -19,11 +19,12 @@ jobs:
       - name: Clone Android Common Kernel
         run: |
           cd ~
-          git clone --branch android16-6.12 https://android.googlesource.com/kernel/common
+          # TAMBAHKAN --depth=1 agar hanya mengambil commit terakhir (shallow clone)
+          git clone --branch android16-6.12 --depth=1 https://android.googlesource.com/kernel/common
 
       - name: Push to GitHub
         env:
-          TOKEN: ${{ secrets.PAT_TOKEN }}  # <-- DIUBAH: dari GITHUB_TOKEN menjadi PAT_TOKEN
+          TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
           cd ~/common
 
