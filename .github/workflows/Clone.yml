@@ -1,0 +1,39 @@
+name: Clone Android Kernel Common
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  clone-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install Git
+        run: |
+          sudo apt update
+          sudo apt install -y git
+
+      - name: Set Git Identity
+        run: |
+          git config --global user.name "Arkael-Dev"
+          git config --global user.email "kingfinix98@gmail.com"
+
+      - name: Clone Android Common Kernel
+        run: |
+          cd ~
+          git clone --branch android16-6.12 https://android.googlesource.com/kernel/common
+
+      - name: Push to GitHub
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd ~/common
+
+          git remote remove origin || true
+
+          git remote add origin https://x-access-token:${TOKEN}@github.com/Arkael-Dev/android-kernel-common16.6.12.git
+
+          git push -u origin android16-6.12 --force
