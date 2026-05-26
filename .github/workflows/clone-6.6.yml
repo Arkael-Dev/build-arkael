@@ -11,11 +11,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Install Git
-        run: |
-          sudo apt update
-          sudo apt install -y git
-
       - name: Set Git Identity
         run: |
           git config --global user.name "Arkael-Dev"
@@ -24,16 +19,19 @@ jobs:
       - name: Clone Source Repository
         run: |
           cd ~
-          git clone --mirror https://github.com/Arkael-Dev/gki-clo.git
+          # Hanya meng-clone branch 6.6 saja (tanpa memuat branch lain)
+          # Ganti 'android15-6.6' jika nama branch di repo asli berbeda (misalnya hanya '6.6')
+          git clone --branch android15-6.6 --single-branch https://github.com/Arkael-Dev/gki-clo.git gki-clo
 
-      - name: Push All Branches and Tags
+      - name: Push Branch to Destination
         env:
-          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TOKEN: ${{ secrets.PAT_TOKEN }}  # <-- DIUBAH: Menggunakan PAT_TOKEN agar bisa push
         run: |
-          cd ~/gki-clo.git
+          cd ~/gki-clo
 
           git remote remove origin || true
 
           git remote add origin https://x-access-token:${TOKEN}@github.com/Arkael-Dev/kernel-common-android-15.6.6.git
 
-          git push --mirror
+          # Push branch 6.6 ke repo tujuan
+          git push -u origin android15-6.6 --force
