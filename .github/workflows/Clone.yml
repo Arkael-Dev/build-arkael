@@ -1,4 +1,4 @@
-name: Clone Android Kernel Common
+name: Clone Android Kernel 6.12
 
 on:
   workflow_dispatch:
