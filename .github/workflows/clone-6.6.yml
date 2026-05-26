@@ -1,0 +1,39 @@
+name: Mirror gki 6.6
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install Git
+        run: |
+          sudo apt update
+          sudo apt install -y git
+
+      - name: Set Git Identity
+        run: |
+          git config --global user.name "Arkael-Dev"
+          git config --global user.email "kingfinix98@gmail.com"
+
+      - name: Clone Source Repository
+        run: |
+          cd ~
+          git clone --mirror https://github.com/Arkael-Dev/gki-clo.git
+
+      - name: Push All Branches and Tags
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd ~/gki-clo.git
+
+          git remote remove origin || true
+
+          git remote add origin https://x-access-token:${TOKEN}@github.com/Arkael-Dev/kernel-common-android-15.6.6.git
+
+          git push --mirror
