@@ -11,11 +11,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Install Git
-        run: |
-          sudo apt update
-          sudo apt install -y git
-
       - name: Set Git Identity
         run: |
           git config --global user.name "Arkael-Dev"
@@ -28,7 +23,7 @@ jobs:
 
       - name: Push to GitHub
         env:
-          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TOKEN: ${{ secrets.PAT_TOKEN }}  # <-- DIUBAH: dari GITHUB_TOKEN menjadi PAT_TOKEN
         run: |
           cd ~/common
 
