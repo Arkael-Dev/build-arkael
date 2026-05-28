@@ -86,7 +86,7 @@ set_config "CONFIG_TCP_CONG_ADVANCED=y"
 set_config "CONFIG_TCP_CONG_WESTWOOD=y"
 set_config "CONFIG_IP6_NF_TARGET_HL=y"
 set_config "CONFIG_IP6_NF_MATCH_HL=y"
-
+set_config "CONFIG_USB_CONFIGFS_MASS_STORAGE=y"
 # =========================================
 # 🚫 REMOVE DEBUG FLAGS (FIXED LOGIC)
 # =========================================
