@@ -19,8 +19,8 @@ elif [ "$KVER" == "6.1" ]; then
 fi
 
 KERNEL_NAME="Arkael"
-USER="Zeroz"
-HOST="ZeroZ"
+USER="arqzey"
+HOST="Arch-linux"
 TIMEZONE="Asia/Jakarta"
 ANYKERNEL_REPO="https://github.com/Arkael-Dev/AnyKernel3"
 
