@@ -37,9 +37,9 @@ if [ "$KVER" == "6.6" ]; then
   ANYKERNEL_BRANCH="master"
   KERNEL_BRANCH="linuxstable"
 elif [ "$KVER" == "6.1" ]; then
-  KERNEL_REPO="https://github.com/Arkael-Dev/ArkaelKernel.git"
+  KERNEL_REPO="https://github.com/ramabondanp/android_kernel_common-6.1.git"
   ANYKERNEL_BRANCH="master"
-  KERNEL_BRANCH="android16-6.12-lts"
+  KERNEL_BRANCH="android14-6.1-staging"
 elif [ "$KVER" == "5.10" ]; then
   KERNEL_REPO="https://github.com/ramabondanp/android_kernel_common-5.10.git"
   ANYKERNEL_BRANCH="master"
