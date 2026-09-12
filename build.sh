@@ -309,35 +309,105 @@ AVC_BOOL_EOF
   fi
 
 elif [ "$KSU" == "sukisu" ]; then
-  log "Setting up SukiSU-Ultra for KVER $KVER..."
-  
-  log "Running SukiSU setup from builtin branch..."
-  curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/refs/heads/main/kernel/setup.sh" | bash -s main
-  if [ "$KVER" == "5.10" ]; then
-    log "Applying SUSFS patches for GKI 5.10 (SukiSU Method)..."
-    SUSFS_BRANCH="gki-android12-5.10"
-    git clone https://gitlab.com/simonpunk/susfs4ksu/ -b $SUSFS_BRANCH sus
-    rm -rf sus/.git
-    susfs=sus/kernel_patches
-    cp -r $susfs/fs .
-    cp -r $susfs/include .
-    cp -r $susfs/50_add_susfs_in_${SUSFS_BRANCH}.patch .
-    patch -p1 < 50_add_susfs_in_${SUSFS_BRANCH}.patch || true
+  log "Setting up ReSukiSU & SUSFS for KVER $KVER..."
+
+  # Remove existing KernelSU
+  for KSU_PATH in drivers/staging/kernelsu drivers/kernelsu KernelSU KernelSU-Next; do
+    if [ -d "$KSU_PATH" ] || [ -L "$KSU_PATH" ]; then
+      log "Removing existing $KSU_PATH"
+      KSU_DIR=$(dirname "$KSU_PATH")
+      [ -f "$KSU_DIR/Kconfig" ] && sed -i '/kernelsu/d' "$KSU_DIR/Kconfig"
+      [ -f "$KSU_DIR/Makefile" ] && sed -i '/kernelsu/d' "$KSU_DIR/Makefile"
+      rm -rf "$KSU_PATH"
+    fi
+  done
+
+  # ReSukiSU
+  log "Running ReSukiSU setup from main branch..."
+  curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash
+
+  # SUSFS (ReSukiSU & SUSFS method)
+  if susfs_included; then
+    if [ "$KVER" == "6.6" ]; then
+      SUSFS_BRANCH="gki-android15-6.6"
+    elif [ "$KVER" == "6.1" ]; then
+      SUSFS_BRANCH="gki-android14-6.1"
+    elif [ "$KVER" == "5.10" ]; then
+      SUSFS_BRANCH="gki-android12-5.10"
+    fi
+
+    if [ -d "$WORKDIR/susfs4ksu" ]; then
+      SUSFS_DIR="$WORKDIR/susfs4ksu"
+    else
+      SUSFS_DIR="$WORKDIR/susfs"
+    fi
+    if [ ! -d "$SUSFS_DIR" ]; then
+      git clone --depth=1 -q https://gitlab.com/simonpunk/susfs4ksu -b "$SUSFS_BRANCH" "$SUSFS_DIR"
+    fi
+
+    SUSFS_PATCHES="${SUSFS_DIR}/kernel_patches"
+    cp -R "$SUSFS_PATCHES"/fs/* ./fs/
+    cp -R "$SUSFS_PATCHES"/include/* ./include/
+
+    patch -p1 < "$SUSFS_PATCHES/50_add_susfs_in_${SUSFS_BRANCH}.patch" || true
+
+    # Apply extra ReSukiSU and SUSFS configs
+    cat << EOF >> arch/arm64/configs/$KERNEL_DEFCONFIG
+# Extras
+CONFIG_OVERLAY_FS_XINO_AUTO=y
+CONFIG_KALLSYMS=y
+CONFIG_TMPFS_POSIX_ACL=y
+# KSU
+CONFIG_KSU=y
+# CONFIG_KSU_DEBUG is not set
+# CONFIG_KSU_TOOLKIT_SUPPORT is not set
+# CONFIG_KSU_DISABLE_MANAGER is not set
+# CONFIG_KSU_DISABLE_POLICY is not set
+CONFIG_KSU_MULTI_MANAGER_SUPPORT=y
+# CONFIG_KSU_TRACEPOINT_HOOK is not set
+# CONFIG_KSU_MANUAL_HOOK is not set
+CONFIG_KSU_SUSFS=y
+CONFIG_KSU_SUSFS_SUS_PATH=y
+CONFIG_KSU_SUSFS_SUS_MOUNT=y
+CONFIG_KSU_SUSFS_SUS_KSTAT=y
+CONFIG_KSU_SUSFS_SPOOF_UNNAME=y
+CONFIG_KSU_SUSFS_ENABLE_LOG=y
+CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
+CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
+CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
+CONFIG_KSU_SUSFS_SUS_MAP=y
+# Added LTO & Compiler Optimization
+CONFIG_LTO=y
+CONFIG_LTO_CLANG=y
+CONFIG_ARCH_SUPPORTS_LTO_CLANG=y
+CONFIG_ARCH_SUPPORTS_LTO_CLANG_THIN=y
+CONFIG_HAS_LTO_CLANG=y
+# CONFIG_LTO_NONE is not set
+# CONFIG_LTO_CLANG_FULL is not set
+CONFIG_LTO_CLANG_THIN=y
+EOF
+
     SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
+  else
+    log "SUSFS not included, skipping ReSukiSU & SUSFS patch."
+  fi
+
+  if [ "$KVER" == "5.10" ]; then
     config --enable CONFIG_KPM
     config --enable CONFIG_KSU_MULTI_MANAGER_SUPPORT
-    config --enable CONFIG_KSU_SUSFS
-    log "[✓] SukiSU & SUSFS patched for $KVER."
-  else
-    config --enable CONFIG_KSU_SUSFS
-    log "SUSFS config enabled for $KVER. Applying patches in Standard block..."
   fi
+  config --enable CONFIG_KSU_SUSFS
+  log "[✓] ReSukiSU & SUSFS patched for $KVER."
 fi
 
 if susfs_included; then
   if [ "$KSU" != "sukisu" ] || ([ "$KSU" == "sukisu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ])); then
     log "Applying kernel-side susfs patches (Standard Method)"
-    SUSFS_DIR="$WORKDIR/susfs"
+    if [ -d "$WORKDIR/susfs4ksu" ]; then
+      SUSFS_DIR="$WORKDIR/susfs4ksu"
+    else
+      SUSFS_DIR="$WORKDIR/susfs"
+    fi
     SUSFS_PATCHES="${SUSFS_DIR}/kernel_patches"
     if [ "$KVER" == "6.6" ]; then
       SUSFS_BRANCH=gki-android15-6.6
@@ -346,10 +416,16 @@ if susfs_included; then
     elif [ "$KVER" == "5.10" ]; then
       SUSFS_BRANCH=gki-android12-5.10
     fi
-    git clone --depth=1 -q https://gitlab.com/simonpunk/susfs4ksu -b $SUSFS_BRANCH $SUSFS_DIR
-    cp -R $SUSFS_PATCHES/fs/* ./fs
-    cp -R $SUSFS_PATCHES/include/* ./include
-    patch -p1 < $SUSFS_PATCHES/50_add_susfs_in_${SUSFS_BRANCH}.patch || true
+    if [ ! -d "$SUSFS_DIR" ]; then
+      git clone --depth=1 -q https://gitlab.com/simonpunk/susfs4ksu -b $SUSFS_BRANCH $SUSFS_DIR
+    fi
+    if [ ! -f ./fs/susfs.c ]; then
+      cp -R $SUSFS_PATCHES/fs/* ./fs
+      cp -R $SUSFS_PATCHES/include/* ./include
+      patch -p1 < $SUSFS_PATCHES/50_add_susfs_in_${SUSFS_BRANCH}.patch || true
+    else
+      log "SUSFS patches already applied (ReSukiSU & SUSFS method), skipping duplicate."
+    fi
     
     if [ $(echo "$LINUX_VERSION_CODE" | head -c4) -eq 6630 ]; then
       patch -p1 < $KERNEL_PATCHES/susfs/namespace.c_fix.patch || true
@@ -420,7 +496,7 @@ EOF
     SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
     config --enable CONFIG_KSU_SUSFS
   else
-    log "Skipping standard SUSFS patch (Handled by SukiSU 5.10 custom method)."
+    log "Skipping standard SUSFS patch (Handled by ReSukiSU & SUSFS method)."
   fi
 else
   config --disable CONFIG_KSU_SUSFS
