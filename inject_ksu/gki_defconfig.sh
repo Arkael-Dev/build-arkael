@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-#DCONFIG BY kingfinix98@gmail.com
+# DCONFIG BY kingfinix98@gmail.com
 
 DEFCONFIG="arch/arm64/configs/gki_defconfig"
 
 echo "⚙️ Added KSU & SuSFS configuration"
-
-cat >> $DEFCONFIG <<EOF
+cat >> "$DEFCONFIG" <<EOF
 CONFIG_KSU=y
 CONFIG_KPM=y
 CONFIG_KSU_MULTI_MANAGER_SUPPORT=y
@@ -13,10 +12,10 @@ CONFIG_KPROBES=y
 CONFIG_KPROBE_EVENTS=y
 EOF
 
-if [ "$KSU" == "SukiSU" ]; then
+if [ "$KSU" = "SukiSU" ]; then
     if [ "$KSU_SUSFS" = "true" ]; then
         echo "🔧 Mode: SukiSU + SuSFS Enabled"
-        cat >> $DEFCONFIG <<EOF
+        cat >> "$DEFCONFIG" <<EOF
 CONFIG_KSU_SUSFS=y
 EOF
     else
@@ -24,8 +23,8 @@ EOF
     fi
 
 elif [ "$KSU_SUSFS" = "true" ]; then
-  echo "🔧 Mode: SuSFS Hook Enabled"
-  cat >> $DEFCONFIG <<EOF
+    echo "🔧 Mode: SuSFS Hook Enabled"
+    cat >> "$DEFCONFIG" <<EOF
 CONFIG_KSU_SUSFS=y
 CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y
 CONFIG_KSU_SUSFS_SUS_PATH=y
@@ -48,8 +47,8 @@ CONFIG_KSU_HAS_MANUAL_HOOK=n
 EOF
 
 else
-  echo "🔧 Mode: Kprobes Hook Standard"
-  cat >> $DEFCONFIG <<EOF
+    echo "🔧 Mode: Kprobes Hook Standard"
+    cat >> "$DEFCONFIG" <<EOF
 CONFIG_KSU_SUSFS=n
 CONFIG_KSU_SUSFS_SUS_SU=n
 CONFIG_KSU_MANUAL_HOOK=n
@@ -60,7 +59,7 @@ EOF
 fi
 
 echo "⚙️ Adding Universal Performance Tuning"
-cat >> $DEFCONFIG <<EOF
+cat >> "$DEFCONFIG" <<EOF
 CONFIG_TMPFS_XATTR=y
 CONFIG_NO_HZ=y
 CONFIG_TMPFS_POSIX_ACL=y
@@ -89,6 +88,19 @@ CONFIG_USB_CONFIGFS_MASS_STORAGE=y
 CONFIG_MGLRU=y
 CONFIG_MGLRU_ENHANCEMENTS=y
 
+# TCP Congestion Control
+CONFIG_TCP_CONG_WESTWOOD=n
+CONFIG_TCP_CONG_HTCP=n
+CONFIG_TCP_CONG_BBR=y
+CONFIG_TCP_CONG_BBR3=y
+CONFIG_DEFAULT_BBR3=y
+CONFIG_DEFAULT_TCP_CONG="bbr3"
+
+# IPv6
+CONFIG_IPV6_ROUTER_PREF=y
+CONFIG_IPV6_ROUTE_INFO=y
+CONFIG_IPV6_OPTIMISTIC_DAD=y
+
 # IPC
 CONFIG_SYSVIPC=y
 CONFIG_POSIX_MQUEUE=y
@@ -100,8 +112,7 @@ CONFIG_PID_NS=y
 # HW Access Support
 CONFIG_DEVTMPFS=y
 
-# --- Below configs are optional but recommended ---
-
+# --- Optional but recommended ---
 # Networking (Docker/NAT support)
 CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
 
@@ -116,20 +127,19 @@ CONFIG_IP_SET_HASH_IP=y
 CONFIG_IP_SET_HASH_NET=y
 CONFIG_NETFILTER_XT_SET=y
 
-# Enable xattr support on tmpfs
-# (required for NixOS setcap wrappers in /run/wrappers)
+# xattr for tmpfs (NixOS compatibility)
 CONFIG_TMPFS_XATTR=y
 EOF
 
-if [ "$KVER" == "5.10" ]; then
-  echo "⚙️ Adding VorteX Native C-Script Dependencies (5.10 Only)"
-  cat >> $DEFCONFIG <<EOF
+if [ "$KVER" = "5.10" ]; then
+    echo "⚙️ Adding VorteX Native C-Script Dependencies (5.10 Only)"
+    cat >> "$DEFCONFIG" <<EOF
 CONFIG_ANDROID_LOW_MEMORY_KILLER=y
 CONFIG_DEVFREQ_GOV_PERFORMANCE=y
 EOF
 
-  echo "⚙️ Added LTO & Compiler Optimization (KVER 5.10 Only)"
-  cat >> $DEFCONFIG <<EOF
+    echo "⚙️ Added LTO & Compiler Optimization (KVER 5.10 Only)"
+    cat >> "$DEFCONFIG" <<EOF
 CONFIG_LTO=y
 CONFIG_LTO_CLANG=y
 CONFIG_ARCH_SUPPORTS_LTO_CLANG=y
@@ -140,14 +150,14 @@ CONFIG_HAS_LTO_CLANG=y
 CONFIG_LTO_CLANG_THIN=y
 EOF
 else
-  echo "⚙️ LTO & VorteX Optimization skipped (For KVER 6.1 & 6.6)"
+    echo "⚙️ LTO & VorteX Optimization skipped (For KVER 6.1 & 6.6)"
 fi
 
 # ==========================================
 # VorteX Native FPS Engine Include
 # ==========================================
 echo "⚙️ Adding VorteX Native FPS Engine Module"
-cat >> $DEFCONFIG <<EOF
+cat >> "$DEFCONFIG" <<EOF
 CONFIG_KSM=y
 CONFIG_CPU_IDLE=y
 CONFIG_VORTEX_FPS_ENGINE=m
