@@ -163,10 +163,10 @@ fi
 # Aktifkan dengan: NH=true
 # ============================================================
 if [ "$NH" == "true" ]; then
-  if [ "$KVER" == "6.1" ]; then
-    log "Kernel 6.1 GKID: gunakan branch GKID-NH (NetHunter patch dilewati)"
+  if [ "$KVER" == "6.x" ]; then
+    log "Kernel 6.x : gunakan branch (NetHunter patch dilewati)"
   else
-    NH_PATCH_BASE="https://raw.githubusercontent.com/Arkael-Dev/build-arkael/refs/heads/6.x/kernel-patches"
+    NH_PATCH_BASE="https://github.com/Arkael-Dev/build-arkael/tree/6.x/kernel-patches"
 
     log "Applying NetHunter patches (monitor mode + packet injection)..."
     curl -LSs "$NH_PATCH_BASE/0001-mac80211-cfg80211-Add-monitor-mode-and-packet-inject.patch" -o nethunter_mac80211.patch
