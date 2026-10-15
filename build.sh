@@ -9,6 +9,7 @@ WORKDIR="$(pwd)"
 
 export GOVERNOR_CHOICE="${GOVERNOR_CHOICE:-vortexcore}"
 export VORTEX_GKI_FILE="${VORTEX_GKI_FILE:-vortex_gki.c}"
+export NETHUNTER_PATCHES_DISABLED="${NETHUNTER_PATCHES_DISABLED:-false}"
 
 if [ "$KVER" == "6.6" ]; then
   RELEASE="v0.3"
@@ -65,7 +66,7 @@ sudo timedatectl set-timezone "$TIMEZONE" || export TZ="$TIMEZONE"
 log "🔧 Build Configuration:"
 log "   Governor Selected : ${GOVERNOR_CHOICE}"
 log "   Vortex GKI File   : ${VORTEX_GKI_FILE}"
-log "   NetHunter Patches : ENABLED (always on)"
+log "   NetHunter Patches : ${NETHUNTER_PATCHES_DISABLED:-false}"
 
 log "Cloning kernel source from $(simplify_gh_url "$KERNEL_REPO")"
 git clone -q --depth=1 $KERNEL_REPO -b $KERNEL_BRANCH $KSRC
@@ -160,8 +161,10 @@ if [ "$KVER" == "6.1" ]; then
 fi
 
 # ===== NetHunter: Monitor Mode & Packet Injection (ALL GKI: 5.10 / 6.1 / 6.6) =====
-# Always ON. Set No_DS=true di workflow untuk skip (emergency button).
-if [ "${No_DS:-false}" != "true" ] \
+# Guard: allow disabling incompatible NetHunter patches from CI/env without affecting SUSFS / KSU logic.
+if [ "${NETHUNTER_PATCHES_DISABLED:-false}" = "true" ]; then
+  log "NetHunter patches disabled by env (NETHUNTER_PATCHES_DISABLED=true)."
+elif [ "${No_DS:-false}" != "true" ] \
   && { [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; }; then
 
   log "Applying NetHunter patches for GKI $KVER..."
@@ -222,7 +225,7 @@ EOF
 
   log "[✓] NetHunter patches applied for GKI $KVER."
 else
-  log "NetHunter patches skipped (No_DS=${No_DS:-false}, KVER=$KVER)."
+  log "NetHunter patches skipped (No_DS=${No_DS:-false}, KVER=$KVER, NETHUNTER_PATCHES_DISABLED=${NETHUNTER_PATCHES_DISABLED:-false})."
 fi
 
 log "Injecting custom KSU & SuSFS configs from GitHub..."
