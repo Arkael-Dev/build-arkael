@@ -158,6 +158,39 @@ if [ "$KVER" == "6.1" ]; then
   fi
 fi
 
+# ============================================================
+# NetHunter Patches (monitor mode, packet injection, rtw88)
+# Aktifkan dengan: NH=true
+# ============================================================
+if [ "$NH" == "true" ]; then
+  if [ "$KVER" == "6.1" ]; then
+    log "Kernel 6.1 GKID: gunakan branch GKID-NH (NetHunter patch dilewati)"
+  else
+    NH_PATCH_BASE="https://raw.githubusercontent.com/Arkael-Dev/build-arkael/refs/heads/6.x/kernel-patches"
+
+    log "Applying NetHunter patches (monitor mode + packet injection)..."
+    curl -LSs "$NH_PATCH_BASE/0001-mac80211-cfg80211-Add-monitor-mode-and-packet-inject.patch" -o nethunter_mac80211.patch
+    patch -p1 --forward < nethunter_mac80211.patch || log "NetHunter mac80211 patch skipped or already applied."
+    rm -f nethunter_mac80211.patch
+
+    log "Cloning rtw88 dari aArkael-Dev/rtw88..."
+    git clone -q --depth=1 "https://github.com/Arkael-Dev/rtw88"
+    rm -rf "drivers/net/wireless/realtek/rtw88"
+    mv rtw88 "drivers/net/wireless/realtek/"
+
+    if [ "$KVER" == "5.10" ]; then
+      log "Applying rtw88 rtw8723x fix (kernel < 6.1)..."
+      curl -LSs "$NH_PATCH_BASE/0001-wifi-rtw88-rtw8723x-avoid-shared-loop-variable-name-.patch" -o nethunter_rtw8723x.patch
+      patch -p1 --forward < nethunter_rtw8723x.patch || log "NetHunter rtw8723x patch skipped or already applied."
+      rm -f nethunter_rtw8723x.patch
+    fi
+
+    log "[✓] NetHunter patches selesai diterapkan (kernel $KVER)"
+  fi
+else
+  log "NH tidak di-set 'true' — patch NetHunter dilewati. Gunakan: NH=true"
+fi
+
 log "Injecting custom KSU & SuSFS configs from GitHub..."
 export KSU
 export KSU_SUSFS
