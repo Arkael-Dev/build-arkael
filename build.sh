@@ -3,15 +3,26 @@
 # * © 2025-2026. All Rights Reserved.
 # * Original Author: Arkael-Dev
 # * Signed-off-by: kingfinix98@gmail.com
+# *
+# * Build Script Arkael Kernel — SATU KESATUAN
+# * (Build + Governor + KSU/SuSFS + NetHunter Patches:
+# *  SysVIPC droidspaces, Monitor Mode & Packet Injection, Driver Realtek rtw88)
 # */
 
 WORKDIR="$(pwd)"
 
+# ============================================================
+# ⚙️ KONFIGURASI BUILD
+# ============================================================
+
 export GOVERNOR_CHOICE="${GOVERNOR_CHOICE:-vortexcore}"
 export VORTEX_GKI_FILE="${VORTEX_GKI_FILE:-vortex_gki.c}"
 
-# NetHunter (monitor mode, packet injection, rtw88, droidspaces) -> yes/no
-export NETHUNTER="${NETHUNTER:-yes}"
+# Versi kernel (selaras dengan patch NetHunter)
+KVER="${KVER:-6.1}"
+
+# Toggle patch NetHunter (yes = aktif | no = lewati)
+NETHUNTER="${NETHUNTER:-yes}"
 
 if [ "$KVER" == "6.6" ]; then
   RELEASE="v0.3"
@@ -20,6 +31,7 @@ elif [ "$KVER" == "5.10" ]; then
 elif [ "$KVER" == "6.1" ]; then
   RELEASE="v0.1"
 fi
+RELEASE="${RELEASE:-v0.1}"   # fallback aman jika KVER tidak dikenal
 
 KERNEL_NAME="Arkael"
 USER="arqzey"
@@ -57,111 +69,24 @@ AK3_ZIP_NAME="$KERNEL_NAME-REL-KVER-VARIANT-BUILD_DATE.zip"
 OUTDIR="$WORKDIR/out"
 KSRC="$WORKDIR/ksrc"
 KERNEL_PATCHES="$WORKDIR/kernel-patches"
-ARKAEL_PATCHES_URL="https://raw.githubusercontent.com/Arkael-Dev/build-arkael/6.x/kernel-patches"
+
+# Sumber patch NetHunter (monitor mode & packet injection + patch rtw88 5.10)
+NETHUNTER_PATCHES_URL="https://raw.githubusercontent.com/Arkael-Dev/build-arkael/6.x/kernel-patches"
 
 exec > >(tee $WORKDIR/build.log) 2>&1
-trap 'error "Failed at line $LINENO [$BASH_COMMAND]"' ERR
+trap 'error "Gagal di baris $LINENO [$BASH_COMMAND]"' ERR
 
 source $WORKDIR/functions.sh
 
-# ---------------------------------------------------------------------------
-# NetHunter kernel patches — Arkael-Dev
-# Dijalankan dari root source kernel ($KSRC), memakai log() & error() dari
-# functions.sh serta KVER dari build ini.
-# ---------------------------------------------------------------------------
-apply_patch_file() {
-  local patch_file="$1"
-
-  if [[ ! -f "$patch_file" ]]; then
-    error "Patch tidak ditemukan: $patch_file"
-  fi
-
-  log "Applying $(basename "$patch_file")"
-  if ! patch -p1 --forward --input="$patch_file"; then
-    error "Gagal menerapkan patch: $patch_file"
-  fi
-}
-
-apply_nethunter_patches() {
-  local NH_VERSION="$KVER"
-
-  # Validasi source kernel
-  if [[ ! -d "$(pwd)/drivers/net/wireless" ]]; then
-    error "Jalankan patch NetHunter dari root source kernel Linux."
-  fi
-
-  # Patch kompatibilitas SysVIPC
-  if [[ "$NH_VERSION" == "6.12" ]] ||
-     [[ "$(printf '%s\n' "$NH_VERSION" "6.12" | sort -V | tail -n1)" == "$NH_VERSION" && "$NH_VERSION" != "6.12" ]]; then
-    apply_patch_file \
-      "$KERNEL_PATCHES/droidspaces/001.GKI-6.12-or-above-fix_sysvipc_kabi.patch"
-  else
-    apply_patch_file \
-      "$KERNEL_PATCHES/droidspaces/001.GKI-below-6.12-fix_sysvipc_kabi_6_7_8.patch"
-
-    if [[ "$NH_VERSION" == "5.10" ]]; then
-      apply_patch_file \
-        "$KERNEL_PATCHES/droidspaces/002.5.10_or_lower_use_android_abi_padding_for_posix_mqueue.patch"
-    fi
-  fi
-
-  local TMP_DIR
-  TMP_DIR="$(mktemp -d)"
-
-  # Patch NetHunter: monitor mode dan packet injection
-  local MONITOR_PATCH="0001-mac80211-cfg80211-Add-monitor-mode-and-packet-inject.patch"
-
-  log "Downloading NetHunter monitor mode patch"
-  if ! curl -fLsS \
-    "${ARKAEL_PATCHES_URL}/${MONITOR_PATCH}" \
-    -o "$TMP_DIR/$MONITOR_PATCH"; then
-    error "Gagal mengunduh $MONITOR_PATCH"
-  fi
-
-  apply_patch_file "$TMP_DIR/$MONITOR_PATCH"
-
-  # Driver Realtek rtw88
-  local RTW88_REPO="https://github.com/Arkael-Dev/rtw88"
-  local RTW88_DEST="drivers/net/wireless/realtek/rtw88"
-
-  log "Cloning driver rtw88"
-  if ! git clone -q --depth=1 "$RTW88_REPO" "$TMP_DIR/rtw88"; then
-    error "Gagal meng-clone driver rtw88"
-  fi
-
-  if [[ -e "$RTW88_DEST" ]]; then
-    error "Direktori $RTW88_DEST sudah ada. Periksa driver sebelum melanjutkan."
-  fi
-
-  mv "$TMP_DIR/rtw88" "$RTW88_DEST"
-
-  # Patch tambahan untuk kernel 5.10
-  if [[ "$NH_VERSION" == "5.10" ]]; then
-    local RTW88_PATCH="0001-wifi-rtw88-rtw8723x-avoid-shared-loop-variable-name-.patch"
-
-    log "Downloading rtw88 compatibility patch"
-    if ! curl -fLsS \
-      "${ARKAEL_PATCHES_URL}/${RTW88_PATCH}" \
-      -o "$TMP_DIR/$RTW88_PATCH"; then
-      error "Gagal mengunduh $RTW88_PATCH"
-    fi
-
-    apply_patch_file "$TMP_DIR/$RTW88_PATCH"
-  fi
-
-  rm -rf "$TMP_DIR"
-
-  log "Semua patch NetHunter selesai diterapkan."
-}
-
 sudo timedatectl set-timezone "$TIMEZONE" || export TZ="$TIMEZONE"
 
-log "🔧 Build Configuration:"
-log "   Governor Selected : ${GOVERNOR_CHOICE}"
-log "   Vortex GKI File   : ${VORTEX_GKI_FILE}"
-log "   NetHunter Patches : ${NETHUNTER}"
+log "🔧 Konfigurasi Build:"
+log "   Versi Kernel       : ${KVER}"
+log "   Governor Terpilih  : ${GOVERNOR_CHOICE}"
+log "   Vortex GKI File    : ${VORTEX_GKI_FILE}"
+log "   NetHunter Patches  : ${NETHUNTER^^}"
 
-log "Cloning kernel source from $(simplify_gh_url "$KERNEL_REPO")"
+log "📦 Meng-clone source kernel dari $(simplify_gh_url "$KERNEL_REPO")"
 git clone -q --depth=1 $KERNEL_REPO -b $KERNEL_BRANCH $KSRC
 
 cd $KSRC
@@ -170,21 +95,14 @@ LINUX_VERSION_CODE=${LINUX_VERSION//./}
 DEFCONFIG_FILE=$(find ./arch/arm64/configs -name "$KERNEL_DEFCONFIG")
 
 if [ "$KVER" == "5.10" ]; then
-  log "📸 Applying Infinix GT 20 Pro Camera Fix..."
+  log "📸 Menerapkan Infinix GT 20 Pro Camera Fix..."
   curl -L "https://github.com/ramabondanp/android_kernel_common-5.10/commit/4fe04b60009e.patch" -o infinix_cam.patch
-  patch -p1 < infinix_cam.patch || log "Camera patch already embedded."
+  patch -p1 < infinix_cam.patch || log "Camera patch sudah tertanam di source."
   rm infinix_cam.patch
 fi
 
-if [ "$NETHUNTER" == "yes" ]; then
-  log "🐝 Applying NetHunter patches (monitor mode, injection, rtw88, droidspaces)..."
-  apply_nethunter_patches
-else
-  log "Skipping NetHunter patches (NETHUNTER=${NETHUNTER})."
-fi
-
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
-  log "Injecting Arkael Ultra-Safe Kernel Patch (${VORTEX_GKI_FILE})..."
+  log "💉 Menyuntikkan Arkael Ultra-Safe Kernel Patch (${VORTEX_GKI_FILE})..."
   mkdir -p "$KSRC/drivers/misc"
   cp "$KERNEL_PATCHES/${VORTEX_GKI_FILE}" "$KSRC/drivers/misc/vortex_gki.c"
   sed -i '/vortex_gki/d' "$KSRC/drivers/misc/Makefile"
@@ -203,18 +121,18 @@ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
     GOV_CONFIG="VORTEXCORE"
   fi
 
-  log "Injecting ${GOV_NAME_CAP} Custom Governor..."
+  log "💉 Menyuntikkan Custom Governor ${GOV_NAME_CAP}..."
 
-  [ -f "$WORKDIR/governor-${GOV_NAME}.c" ] || error "governor-${GOV_NAME}.c not found in $WORKDIR!"
+  [ -f "$WORKDIR/governor-${GOV_NAME}.c" ] || error "governor-${GOV_NAME}.c tidak ditemukan di $WORKDIR!"
 
   cp "$WORKDIR/governor-${GOV_NAME}.c" "$KSRC/drivers/cpufreq/governor-${GOV_NAME}.c"
 
   # BUILT-IN (obj-y)
   sed -i "/governor-${GOV_NAME}.o/d" "$KSRC/drivers/cpufreq/Makefile"
   echo "obj-y += governor-${GOV_NAME}.o" >> "$KSRC/drivers/cpufreq/Makefile"
-  log "${GOV_NAME_CAP} added to cpufreq Makefile (built-in)."
+  log "${GOV_NAME_CAP} ditambahkan ke cpufreq Makefile (built-in)."
 
-  # Kconfig: write to tmp file first, then inject before endmenu
+  # Kconfig: tulis ke file tmp dulu, lalu suntik sebelum endmenu
   if ! grep -q "CPU_FREQ_GOV_${GOV_CONFIG}" "$KSRC/drivers/cpufreq/Kconfig"; then
     KCONF_TMP="$WORKDIR/.gov_kconf_tmp"
     cat > "$KCONF_TMP" << KEOF
@@ -225,7 +143,7 @@ config CPU_FREQ_GOV_${GOV_CONFIG}
     default y
 KEOF
 
-    # Insert before 'endmenu' using awk (safe for multiline)
+    # Sisipkan sebelum 'endmenu' menggunakan awk (aman untuk multiline)
     awk "
       /endmenu/ {
         system(\"cat $KCONF_TMP\")
@@ -234,33 +152,135 @@ KEOF
     " "$KSRC/drivers/cpufreq/Kconfig" > "$KSRC/drivers/cpufreq/Kconfig.tmp"
     mv "$KSRC/drivers/cpufreq/Kconfig.tmp" "$KSRC/drivers/cpufreq/Kconfig"
     rm -f "$KCONF_TMP"
-    log "${GOV_NAME_CAP} added to cpufreq Kconfig (bool, default y)."
+    log "${GOV_NAME_CAP} ditambahkan ke cpufreq Kconfig (bool, default y)."
   fi
 fi
 
-log "Applying inject.sh patch..."
+log "Menerapkan patch Inject 300Hz..."
 wget -qO Inject_300hz.sh https://raw.githubusercontent.com/Arkael-Dev/build-arkael/refs/heads/6.x/inject_ksu/Inject_300hz.sh
 bash Inject_300hz.sh
 rm Inject_300hz.sh
 
 if [ "$KVER" == "6.1" ]; then
-  log "Applying WiFi SM8650 patch..."
-  curl -LSs https://github.com/OnePlus-12-Development/android_kernel_qcom_sm8650/commit/3e0cb08.patch | patch -p1 --forward || log "WiFi SM8650 patch skipped or already applied."
+  log "Menerapkan patch WiFi SM8650..."
+  curl -LSs https://github.com/OnePlus-12-Development/android_kernel_qcom_sm8650/commit/3e0cb08.patch | patch -p1 --forward || log "Patch WiFi SM8650 dilewati atau sudah diterapkan."
 
   TARGET_FILE="drivers/bluetooth/btqca.h"
   if [ -f "$TARGET_FILE" ]; then
     if grep -q "QCA_WCN3988" "$TARGET_FILE"; then
-      log "[INFO] Patch already applied: QCA_WCN3988 exists."
+      log "[INFO] Patch sudah diterapkan: QCA_WCN3988 sudah ada."
     else
       sed -i '/QCA_WCN3998,/a\  QCA_WCN3988,' "$TARGET_FILE"
-      log "[SUCCESS] Patch btqca applied successfully."
+      log "[SUCCESS] Patch btqca berhasil diterapkan."
     fi
   else
-    log "[WARNING] File $TARGET_FILE not found, skip patch."
+    log "[WARNING] File $TARGET_FILE tidak ditemukan, lewati patch."
   fi
 fi
 
-log "Injecting custom KSU & SuSFS configs from GitHub..."
+# ============================================================
+# 📡 NETHUNTER KERNEL PATCHES — SATU KESATUAN DENGAN BUILD ARKAEL
+#    1. Kompatibilitas SysVIPC (droidspaces)
+#    2. Monitor mode & packet injection (mac80211/cfg80211)
+#    3. Driver Realtek rtw88 (+ patch khusus kernel 5.10)
+# ============================================================
+
+apply_patch_file() {
+    local patch_file="$1"
+
+    if [ ! -f "$patch_file" ]; then
+        error "Patch tidak ditemukan: $patch_file"
+    fi
+
+    log "🩹 Menerapkan $(basename "$patch_file")..."
+
+    if patch -p1 --forward --input="$patch_file"; then
+        log "[✓] Patch berhasil diterapkan: $(basename "$patch_file")"
+    else
+        error "Gagal menerapkan patch: $patch_file"
+    fi
+}
+
+if [ "$NETHUNTER" == "yes" ]; then
+
+  # Validasi struktur source kernel
+  if [ ! -d "./drivers/net/wireless" ]; then
+      error "Struktur source kernel tidak valid: ./drivers/net/wireless tidak ditemukan."
+  fi
+
+  NH_TMP_DIR="$(mktemp -d)"
+
+  # --- 1. Patch kompatibilitas SysVIPC (droidspaces) ---
+  log "🛠️ Menerapkan patch kompatibilitas SysVIPC (GKI $KVER)..."
+  if [[ "$KVER" == "6.12" ]] ||
+     [[ "$(printf '%s\n' "$KVER" "6.12" | sort -V | tail -n1)" == "$KVER" && "$KVER" != "6.12" ]]; then
+      apply_patch_file \
+          "$KERNEL_PATCHES/droidspaces/001.GKI-6.12-or-above-fix_sysvipc_kabi.patch"
+  else
+      apply_patch_file \
+          "$KERNEL_PATCHES/droidspaces/001.GKI-below-6.12-fix_sysvipc_kabi_6_7_8.patch"
+
+      if [ "$KVER" == "5.10" ]; then
+          apply_patch_file \
+              "$KERNEL_PATCHES/droidspaces/002.5.10_or_lower_use_android_abi_padding_for_posix_mqueue.patch"
+      fi
+  fi
+
+  # --- 2. Patch NetHunter: monitor mode & packet injection ---
+  NH_MONITOR_PATCH="0001-mac80211-cfg80211-Add-monitor-mode-and-packet-inject.patch"
+
+  log "⬇️  Mengunduh patch monitor mode & packet injection NetHunter..."
+  if ! curl -fLsS \
+      "${NETHUNTER_PATCHES_URL}/${NH_MONITOR_PATCH}" \
+      -o "$NH_TMP_DIR/$NH_MONITOR_PATCH"; then
+      error "Gagal mengunduh $NH_MONITOR_PATCH"
+  fi
+
+  apply_patch_file "$NH_TMP_DIR/$NH_MONITOR_PATCH"
+
+  # --- 3. Driver Realtek rtw88 ---
+  NH_RTW88_REPO="https://github.com/Arkael-Dev/rtw88"
+  NH_RTW88_DEST="drivers/net/wireless/realtek/rtw88"
+
+  log "📡 Meng-clone driver Realtek rtw88..."
+
+  if [ -e "$NH_RTW88_DEST" ]; then
+      error "Direktori $NH_RTW88_DEST sudah ada. Periksa driver sebelum melanjutkan."
+  fi
+
+  if ! git clone --depth=1 "$NH_RTW88_REPO" "$NH_TMP_DIR/rtw88"; then
+      error "Gagal meng-clone driver rtw88"
+  fi
+
+  mv "$NH_TMP_DIR/rtw88" "$NH_RTW88_DEST"
+
+  # --- Patch tambahan rtw88 untuk kernel 5.10 ---
+  if [ "$KVER" == "5.10" ]; then
+      NH_RTW88_PATCH="0001-wifi-rtw88-rtw8723x-avoid-shared-loop-variable-name-.patch"
+
+      log "⬇️  Mengunduh patch kompatibilitas rtw88 (kernel 5.10)..."
+      if ! curl -fLsS \
+          "${NETHUNTER_PATCHES_URL}/${NH_RTW88_PATCH}" \
+          -o "$NH_TMP_DIR/$NH_RTW88_PATCH"; then
+          error "Gagal mengunduh $NH_RTW88_PATCH"
+      fi
+
+      apply_patch_file "$NH_TMP_DIR/$NH_RTW88_PATCH"
+  fi
+
+  rm -rf "$NH_TMP_DIR"
+
+  log "[✓] Semua patch NetHunter selesai diterapkan (SysVIPC + Monitor Mode + rtw88)."
+
+else
+  log "⏭️ Patch NetHunter dinonaktifkan (NETHUNTER=$NETHUNTER), melewati tahap ini."
+fi
+
+# ============================================================
+# 💉 INJEKSI KONFIGURASI KSU & SuSFS
+# ============================================================
+
+log "Menyuntikkan konfigurasi KSU & SuSFS kustom dari GitHub..."
 export KSU
 export KSU_SUSFS
 if [ "$KVER" == "5.10" ]; then
@@ -274,7 +294,7 @@ elif [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
 fi
 cd $WORKDIR
 
-log "Setting Kernel variant..."
+log "Mengatur varian kernel..."
 case "$KSU" in
   "yes") VARIANT="KSU" ;;
   "sukisu") VARIANT="SukiSU" ;;
@@ -285,16 +305,20 @@ susfs_included && VARIANT+="+SuSFS"
 AK3_ZIP_NAME=${AK3_ZIP_NAME//KVER/$LINUX_VERSION}
 AK3_ZIP_NAME=${AK3_ZIP_NAME//VARIANT/$VARIANT}
 
+# ============================================================
+# 🔽 TOOLCHAIN (Clang + GNU Assembler)
+# ============================================================
+
 CLANG_DIR="$WORKDIR/clang"
 CLANG_BIN="${CLANG_DIR}/bin"
 if [ -z "$CLANG_BRANCH" ]; then
-  log "🔽 Downloading Clang..."
+  log "🔽 Mengunduh Clang..."
   wget -qO clang-archive "$CLANG_URL"
   mkdir -p "$CLANG_DIR"
   case "$(basename $CLANG_URL)" in
     *.tar.* | *.tgz) tar -xf clang-archive -C "$CLANG_DIR" ;;
     *.7z) 7z x clang-archive -o${CLANG_DIR}/ -bd -y > /dev/null ;;
-    *) error "Unsupported file format" ;;
+    *) error "Format file tidak didukung" ;;
   esac
   rm clang-archive
 
@@ -305,11 +329,11 @@ if [ -z "$CLANG_BRANCH" ]; then
     rm -rf $SINGLE_DIR
   fi
 else
-  log "🔽 Cloning Clang..."
+  log "🔽 Meng-clone Clang..."
   git clone --depth=1 -q "$CLANG_URL" -b "$CLANG_BRANCH" "$CLANG_DIR"
 fi
 
-log "Cloning GNU Assembler..."
+log "🔽 Meng-clone GNU Assembler..."
 GAS_DIR="$WORKDIR/gas"
 git clone --depth=1 -q \
   https://android.googlesource.com/platform/prebuilts/gas/linux-x86 \
@@ -320,12 +344,16 @@ export PATH="${CLANG_BIN}:${GAS_DIR}:$PATH"
 
 COMPILER_STRING=$(clang -v 2>&1 | head -n 1 | sed 's/(https..*//' | sed 's/ version//')
 
+# ============================================================
+# 🔑 SETUP KERNELSU / SukiSU
+# ============================================================
+
 cd $KSRC
 
 if ksu_included; then
   for KSU_PATH in drivers/staging/kernelsu drivers/kernelsu KernelSU KernelSU-Next; do
     if [ -d $KSU_PATH ]; then
-      log "KernelSU driver found in $KSU_PATH, Removing..."
+      log "Driver KernelSU ditemukan di $KSU_PATH, menghapus..."
       KSU_DIR=$(dirname "$KSU_PATH")
       [ -f "$KSU_DIR/Kconfig" ] && sed -i '/kernelsu/d' $KSU_DIR/Kconfig
       [ -f "$KSU_DIR/Makefile" ] && sed -i '/kernelsu/d' $KSU_DIR/Makefile
@@ -339,29 +367,29 @@ if ksu_included; then
   cd KernelSU-Next
   patch -p1 < $KERNEL_PATCHES/ksu/ksun-add-more-managers-support.patch
   cd $OLDPWD
-  
-  log "Applying fix for undefined SUSFS symbols (KernelSU-Next)..."
+
+  log "Menerapkan perbaikan simbol SUSFS yang undefined (KernelSU-Next)..."
   if [ -f "drivers/kernelsu/supercalls.c" ]; then
     sed -i 's/#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME/#if 0 \/\* CONFIG_KSU_SUSFS_SPOOF_UNAME Disabled to fix build \*\//' drivers/kernelsu/supercalls.c || true
-    log "SUSFS symbol fix applied for KernelSU-Next."
+    log "Perbaikan simbol SUSFS diterapkan untuk KernelSU-Next."
   else
-    log "Skipping obsolete SUSFS uname fix (Handled natively in KernelSU-Next supercalls.c)."
+    log "Melewati perbaikan SUSFS uname usang (Ditangani native di KernelSU-Next supercalls.c)."
   fi
 
   if [ "$KVER" == "5.10" ]; then
-    log "Applying fix for duplicate symbol __stack_chk_guard (GKI 5.10)..."
+    log "Menerapkan perbaikan simbol ganda __stack_chk_guard (GKI 5.10)..."
     if [ -f "drivers/kernelsu/ksu.c" ]; then
       sed -i '/^#if.*CONFIG_STACKPROTECTOR_PER_TASK/c\#if 0 \/\/ Disabled to fix duplicate symbol' drivers/kernelsu/ksu.c || true
-      log "Stack protector fix applied."
+      log "Perbaikan stack protector diterapkan."
     else
-      log "Skipping obsolete stack protector fix (File not found in KernelSU-Next)."
+      log "Melewati perbaikan stack protector usang (File tidak ditemukan di KernelSU-Next)."
     fi
   fi
 
-  log "Applying AVC spoof compatibility fix (ALL GKI)..."
+  log "Menerapkan perbaikan kompatibilitas AVC spoof (SEMUA GKI)..."
   if [ -f "drivers/kernelsu/extras.c" ]; then
     EXTRAS_FIX_TMP="$WORKDIR/.extras_avc_fix_tmp"
-    
+
     if grep -q "susfs_avc_log_spoofing_key_true" "drivers/kernelsu/extras.c"; then
       cat << 'AVC_STATIC_KEY_EOF' > "$EXTRAS_FIX_TMP"
 #ifdef CONFIG_KSU_SUSFS
@@ -371,7 +399,7 @@ struct static_key_true susfs_avc_log_spoofing_key_true = STATIC_KEY_TRUE_INIT;
 #endif
 #endif
 AVC_STATIC_KEY_EOF
-      log "Detected Static Key pattern, applying weak definition fix..."
+      log "Pola Static Key terdeteksi, menerapkan perbaikan definisi weak..."
     elif grep -q "susfs_is_avc_log_spoofing_enabled" "drivers/kernelsu/extras.c"; then
       cat << 'AVC_BOOL_EOF' > "$EXTRAS_FIX_TMP"
 #ifdef CONFIG_KSU_SUSFS
@@ -381,42 +409,42 @@ DEFINE_STATIC_KEY_FALSE(susfs_is_avc_log_spoofing_key_true);
 #endif
 #endif
 AVC_BOOL_EOF
-      log "Detected Boolean pattern, applying weak definition fix..."
+      log "Pola Boolean terdeteksi, menerapkan perbaikan definisi weak..."
     else
-      log "[INFO] No SUSFS AVC spoof symbols found in extras.c, skipping fix."
+      log "[INFO] Simbol SUSFS AVC spoof tidak ditemukan di extras.c, lewati perbaikan."
       rm -f "$EXTRAS_FIX_TMP"
       EXTRAS_FIX_TMP=""
     fi
-    
+
     if [ -n "$EXTRAS_FIX_TMP" ] && [ -f "$EXTRAS_FIX_TMP" ]; then
       if ! grep -q "__attribute__((weak))" "drivers/kernelsu/extras.c"; then
         LAST_INCLUDE_LINE=$(grep -n '#include' "drivers/kernelsu/extras.c" | tail -1 | cut -d: -f1)
-        
+
         if [ -n "$LAST_INCLUDE_LINE" ] && [ "$LAST_INCLUDE_LINE" -gt 0 ]; then
           sed -i "${LAST_INCLUDE_LINE}r ${EXTRAS_FIX_TMP}" "drivers/kernelsu/extras.c"
-          log "[SUCCESS] AVC spoof fix injected into extras.c."
+          log "[SUCCESS] Perbaikan AVC spoof disuntikkan ke extras.c."
         else
           cat "$EXTRAS_FIX_TMP" "drivers/kernelsu/extras.c" > "drivers/kernelsu/extras.c.tmp"
           mv "drivers/kernelsu/extras.c.tmp" "drivers/kernelsu/extras.c"
-          log "[SUCCESS] AVC spoof fix prepended to extras.c."
+          log "[SUCCESS] Perbaikan AVC spoof ditambahkan di awal extras.c."
         fi
       else
-        log "[INFO] AVC spoof fix already present in extras.c."
+        log "[INFO] Perbaikan AVC spoof sudah ada di extras.c."
       fi
-      
+
       rm -f "$EXTRAS_FIX_TMP"
     fi
   else
-    log "[WARNING] drivers/kernelsu/extras.c not found! Skipping AVC spoof fix."
+    log "[WARNING] drivers/kernelsu/extras.c tidak ditemukan! Melewati perbaikan AVC spoof."
   fi
 
 elif [ "$KSU" == "sukisu" ]; then
-  log "Setting up ReSukiSU & SUSFS for KVER $KVER..."
+  log "Menyiapkan ReSukiSU & SUSFS untuk KVER $KVER..."
 
-  # Remove existing KernelSU
+  # Hapus KernelSU yang sudah ada
   for KSU_PATH in drivers/staging/kernelsu drivers/kernelsu KernelSU KernelSU-Next; do
     if [ -d "$KSU_PATH" ] || [ -L "$KSU_PATH" ]; then
-      log "Removing existing $KSU_PATH"
+      log "Menghapus $KSU_PATH yang sudah ada"
       KSU_DIR=$(dirname "$KSU_PATH")
       [ -f "$KSU_DIR/Kconfig" ] && sed -i '/kernelsu/d' "$KSU_DIR/Kconfig"
       [ -f "$KSU_DIR/Makefile" ] && sed -i '/kernelsu/d' "$KSU_DIR/Makefile"
@@ -425,10 +453,10 @@ elif [ "$KSU" == "sukisu" ]; then
   done
 
   # ReSukiSU
-  log "Running ReSukiSU setup from main branch..."
+  log "Menjalankan setup ReSukiSU dari branch main..."
   curl -LSs "https://raw.githubusercontent.com/Baka-SU/BakaSU/refs/heads/main/kernel/setup.sh" | bash
 
-  # SUSFS (ReSukiSU & SUSFS method)
+  # SUSFS (metode ReSukiSU & SUSFS)
   if susfs_included; then
     if [ "$KVER" == "6.6" ]; then
       SUSFS_BRANCH="gki-android15-6.6"
@@ -453,7 +481,7 @@ elif [ "$KSU" == "sukisu" ]; then
 
     patch -p1 < "$SUSFS_PATCHES/50_add_susfs_in_${SUSFS_BRANCH}.patch" || true
 
-    # Apply extra ReSukiSU and SUSFS configs
+    # Terapkan config tambahan ReSukiSU & SUSFS
     cat << EOF >> arch/arm64/configs/$KERNEL_DEFCONFIG
 # Extras
 CONFIG_OVERLAY_FS_XINO_AUTO=y
@@ -491,7 +519,7 @@ EOF
 
     SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
   else
-    log "SUSFS not included, skipping ReSukiSU & SUSFS patch."
+    log "SUSFS tidak disertakan, melewati patch ReSukiSU & SUSFS."
   fi
 
   if [ "$KVER" == "5.10" ]; then
@@ -499,12 +527,16 @@ EOF
     config --enable CONFIG_KSU_MULTI_MANAGER_SUPPORT
   fi
   config --enable CONFIG_KSU_SUSFS
-  log "[✓] ReSukiSU & SUSFS patched for $KVER."
+  log "[✓] ReSukiSU & SUSFS selesai dipatch untuk $KVER."
 fi
+
+# ============================================================
+# 🛡️ PATCH SUSFS SISI KERNEL (METODE STANDAR)
+# ============================================================
 
 if susfs_included; then
   if [ "$KSU" != "sukisu" ] || ([ "$KSU" == "sukisu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ])); then
-    log "Applying kernel-side susfs patches (Standard Method)"
+    log "Menerapkan patch susfs sisi kernel (Metode Standar)"
     if [ -d "$WORKDIR/susfs4ksu" ]; then
       SUSFS_DIR="$WORKDIR/susfs4ksu"
     else
@@ -526,9 +558,9 @@ if susfs_included; then
       cp -R $SUSFS_PATCHES/include/* ./include
       patch -p1 < $SUSFS_PATCHES/50_add_susfs_in_${SUSFS_BRANCH}.patch || true
     else
-      log "SUSFS patches already applied (ReSukiSU & SUSFS method), skipping duplicate."
+      log "Patch SUSFS sudah diterapkan (metode ReSukiSU & SUSFS), lewati duplikasi."
     fi
-    
+
     if [ $(echo "$LINUX_VERSION_CODE" | head -c4) -eq 6630 ]; then
       patch -p1 < $KERNEL_PATCHES/susfs/namespace.c_fix.patch || true
       patch -p1 < $KERNEL_PATCHES/Susfs/task_mmu.c_fix.patch || true
@@ -536,9 +568,9 @@ if susfs_included; then
       patch -p1 < $KERNEL_PATCHES/susfs/task_mmu.c_fix-k6.6.58.patch || true
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c2) -eq 61 ]; then
       patch -p1 < $KERNEL_PATCHES/susfs/fs_proc_base.c-fix-k6.1.patch || true
-      
+
       NS_INJECT_FILE="$WORKDIR/.ns_inject_tmp"
-      
+
       cat << 'EOF' > "$NS_INJECT_FILE"
 
 #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
@@ -560,16 +592,16 @@ EOF
 
       if ! grep -q "static DEFINE_IDA(susfs_mnt_id_ida);" ./fs/namespace.c; then
         sed -i '/#include "internal.h"/r '"$NS_INJECT_FILE" ./fs/namespace.c
-        log "SUSFS definitions injected successfully."
+        log "Definisi SUSFS berhasil disuntikkan."
       else
-        log "SUSFS definitions already exist."
+        log "Definisi SUSFS sudah ada."
       fi
-      
+
       rm -f "$NS_INJECT_FILE"
 
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c3) -eq 510 ]; then
       if [ "$KSU" != "sukisu" ]; then
-        log "Fixing sucompat.c ksu_handle_stat for GKI 5.10..."
+        log "Memperbaiki sucompat.c ksu_handle_stat untuk GKI 5.10..."
         bash $KERNEL_PATCHES/susfs/fix-sucompat-k510-sed.sh
       fi
       patch -p1 < $KERNEL_PATCHES/susfs/pershoot-susfs-k5.10.patch || true
@@ -578,18 +610,18 @@ EOF
     if [ $(echo "$LINUX_VERSION_CODE" | head -c1) -eq 6 ]; then
       if [ "$KSU" == "yes" ]; then
         if [ "$KVER" == "6.1" ]; then
-          log "Applying manual statfs CRC fix for KernelSU Next GKI 6.1..."
+          log "Menerapkan perbaikan CRC statfs manual untuk KernelSU Next GKI 6.1..."
           sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
           sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
         elif [ "$KVER" == "6.6" ]; then
-          log "Applying manual statfs CRC fix for KernelSU Next GKI 6.6..."
+          log "Menerapkan perbaikan CRC statfs manual untuk KernelSU Next GKI 6.6..."
           sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
           sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
         else
           patch -p1 < $KERNEL_PATCHES/Susfs/fix-statfs-crc-mismatch-susfs.patch || true
         fi
       elif [ "$KSU" == "sukisu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]); then
-        log "Applying manual statfs CRC fix for SukiSU GKI $KVER..."
+        log "Menerapkan perbaikan CRC statfs manual untuk SukiSU GKI $KVER..."
         sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
         sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
       fi
@@ -598,11 +630,15 @@ EOF
     SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
     config --enable CONFIG_KSU_SUSFS
   else
-    log "Skipping standard SUSFS patch (Handled by ReSukiSU & SUSFS method)."
+    log "Melewati patch SUSFS standar (Ditangani oleh metode ReSukiSU & SUSFS)."
   fi
 else
   config --disable CONFIG_KSU_SUSFS
 fi
+
+# ============================================================
+# 🏷️ VERSI & LINGKUNGAN BUILD
+# ============================================================
 
 if [ $TODO == "kernel" ]; then
   LATEST_COMMIT_HASH=$(git rev-parse --short HEAD)
@@ -656,22 +692,27 @@ text=$(
 💉 *Variant*: ${KSU}
 ඞ *SuSFS*: $(susfs_included && echo "$SUSFS_VERSION" || echo "None")
 🎮 *Governor*: ${GOVERNOR_CHOICE^^}
+🛡️ *NetHunter*: $([ "$NETHUNTER" == "yes" ] && echo "Aktif (Monitor Mode + Injection + rtw88)" || echo "Nonaktif")
 ⚙️ *Compiler*: $COMPILER_STRING
 EOF
 )
 
-log "Generating config..."
+# ============================================================
+# 🧩 KONFIGURASI KERNEL
+# ============================================================
+
+log "Membuat konfigurasi..."
 make ${MAKE_ARGS[@]} $KERNEL_DEFCONFIG
 
-log "Enabling Arkael kernel dependencies..."
+log "Mengaktifkan dependensi kernel Arkael..."
 config --enable CONFIG_TCP_CONG_WESTWOOD
 config --enable CONFIG_DEVFREQ_GOV_SCHEDUTIL
 
-# Enable selected governor (bool default y ensures it's already on,
-# but we explicitly enable it here too for safety)
+# Aktifkan governor terpilih (bool default y memastikan sudah aktif,
+# tapi tetap kita aktifkan eksplisit di sini demi keamanan)
 config --enable CONFIG_CPU_FREQ_GOV_${GOV_CONFIG}
 
-# Set as default governor
+# Jadikan governor default
 config --set-str CONFIG_CPU_FREQ_DEFAULT_GOV_${GOV_CONFIG} y
 config --set-str CONFIG_CPU_FREQ_GOV "${GOV_NAME}"
 
@@ -683,25 +724,50 @@ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   config --disable CONFIG_KSU_INPUT_HOOK
 fi
 
+# 📡 Aktifkan dependensi wireless NetHunter (cfg80211/mac80211 + rtw88)
+if [ "$NETHUNTER" == "yes" ]; then
+  log "Mengaktifkan dependensi wireless NetHunter..."
+  config --enable CONFIG_WIRELESS
+  config --enable CONFIG_CFG80211
+  config --enable CONFIG_MAC80211
+  config --enable CONFIG_WLAN
+  # Driver Realtek rtw88 — sesuaikan varian chip dengan dongle/SDIO kamu
+  config --enable CONFIG_RTW88
+  config --enable CONFIG_RTW88_USB
+  config --enable CONFIG_RTW88_8822BU
+  config --enable CONFIG_RTW88_8822CU
+  config --enable CONFIG_RTW88_8723DU
+  config --enable CONFIG_RTW88_8821CU
+  config --enable CONFIG_RTW88_8723CS
+  config --enable CONFIG_RTW88_8723DS
+  config --enable CONFIG_RTW88_8821CS
+  config --enable CONFIG_RTW88_8822CS
+  log "[✓] Dependensi NetHunter (wireless + rtw88) diaktifkan."
+fi
+
 if [ "$DEFCONFIG_TO_MERGE" ]; then
-  log "Merging configs..."
+  log "Menggabungkan konfigurasi..."
   if [ -f "scripts/kconfig/merge_config.sh" ]; then
     for config in $DEFCONFIG_TO_MERGE; do
       make ${MAKE_ARGS[@]} scripts/kconfig/merge_config.sh $config
     done
   else
-    error "scripts/kconfig/merge_config.sh does not exist in the kernel source"
+    error "scripts/kconfig/merge_config.sh tidak ada di source kernel"
   fi
   make ${MAKE_ARGS[@]} olddefconfig
 fi
 
 if [ $TODO == "defconfig" ]; then
-  log "Uploading defconfig..."
+  log "Mengunggah defconfig..."
   upload_file $OUTDIR/.config
   exit 0
 fi
 
-log "Building kernel..."
+# ============================================================
+# 🔨 BUILD KERNEL
+# ============================================================
+
+log "Membangun kernel..."
 make ${MAKE_ARGS[@]}
 
 if [ $(echo "$LINUX_VERSION_CODE" | head -c1) -eq 6 ]; then
@@ -710,32 +776,34 @@ else
   $KMI_CHECK "$KSRC/android/abi_gki_aarch64.xml" "$MODULE_SYMVERS" || true
 fi
 
-log "Applying KPM Patch..."
+log "Menerapkan KPM Patch..."
 if [ "$KSU" == "sukisu" ]; then
   cd $OUTDIR/arch/arm64/boot
   if [ -f Image ]; then
-    echo "✅ Image found, applying KPM patch for ${VARIANT}..."
+    echo "✅ Image ditemukan, menerapkan KPM patch untuk ${VARIANT}..."
     curl -LSs "https://github.com/Arkael-Dev/SukiSU_patch/raw/refs/heads/main/kpm/patch_linux" -o patch
     chmod 777 patch
     ./patch
     if [ -f oImage ]; then
       mv -f oImage Image
       ls -lh Image
-      log "✅ KPM Patch applied successfully for ${VARIANT}."
+      log "✅ KPM Patch berhasil diterapkan untuk ${VARIANT}."
     else
-      log "Error: oImage not found!"
+      log "Error: oImage tidak ditemukan!"
     fi
   else
-    log "Warning: Image file not found in $PWD. Skipping KPM patch."
+    log "Warning: File Image tidak ditemukan di $PWD. Melewati KPM patch."
   fi
 else
-  log "Skipping KPM patch (Not KPM-enabled variant: ${VARIANT})."
+  log "Melewati KPM patch (Bukan varian berkemampuan KPM: ${VARIANT})."
 fi
 cd $WORKDIR
 
-cd $WORKDIR
+# ============================================================
+# 📦 PEMASANGAN ANYKERNEL3
+# ============================================================
 
-log "Cloning anykernel from $(simplify_gh_url "$ANYKERNEL_REPO")"
+log "Meng-clone AnyKernel3 dari $(simplify_gh_url "$ANYKERNEL_REPO")"
 git clone -q --depth=1 $ANYKERNEL_REPO -b $ANYKERNEL_BRANCH anykernel
 
 if [ $STATUS == "BETA" ]; then
@@ -754,7 +822,7 @@ else
 fi
 
 cd anykernel
-log "Zipping anykernel..."
+log "Mengemas AnyKernel3..."
 cp $KERNEL_IMAGE .
 zip -r9 $WORKDIR/$AK3_ZIP_NAME ./*
 cd $OLDPWD
@@ -778,7 +846,7 @@ if [ $STATUS == "BETA" ]; then
   upload_file "$WORKDIR/$AK3_ZIP_NAME" "$text"
   upload_file "$WORKDIR/build.log"
 else
-  send_msg "✅ Build Succeeded for ${KERNEL_NAME} ${VARIANT} variant (Governor: ${GOVERNOR_CHOICE^^})."
+  send_msg "✅ Build Sukses untuk ${KERNEL_NAME} ${VARIANT} variant (Governor: ${GOVERNOR_CHOICE^^}, NetHunter: ${NETHUNTER^^})."
 fi
 
 exit 0
