@@ -136,6 +136,14 @@ KEOF
   fi
 fi
 
+log "Applying thermal game_mode patch..."
+if patch -p1 --forward --dry-run -s < "$KERNEL_PATCHES/0001-thermal-core-add-game-mode-trip-offset.patch" > /dev/null 2>&1; then
+  patch -p1 --forward < "$KERNEL_PATCHES/0001-thermal-core-add-game-mode-trip-offset.patch"
+  log "Thermal game_mode patch applied."
+else
+  log "Thermal game_mode patch skipped (already applied or not compatible with KVER $KVER)."
+fi
+
 log "Applying inject.sh patch..."
 wget -qO Inject_300hz.sh https://raw.githubusercontent.com/Arkael-Dev/build-arkael/refs/heads/6.x/inject_ksu/Inject_300hz.sh
 bash Inject_300hz.sh
