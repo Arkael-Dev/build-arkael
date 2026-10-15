@@ -10,6 +10,9 @@ WORKDIR="$(pwd)"
 export GOVERNOR_CHOICE="${GOVERNOR_CHOICE:-vortexcore}"
 export VORTEX_GKI_FILE="${VORTEX_GKI_FILE:-vortex_gki.c}"
 
+# NetHunter (monitor mode, packet injection, rtw88, droidspaces) -> yes/no
+export NETHUNTER="${NETHUNTER:-yes}"
+
 if [ "$KVER" == "6.6" ]; then
   RELEASE="v0.3"
 elif [ "$KVER" == "5.10" ]; then
@@ -54,17 +57,109 @@ AK3_ZIP_NAME="$KERNEL_NAME-REL-KVER-VARIANT-BUILD_DATE.zip"
 OUTDIR="$WORKDIR/out"
 KSRC="$WORKDIR/ksrc"
 KERNEL_PATCHES="$WORKDIR/kernel-patches"
+ARKAEL_PATCHES_URL="https://raw.githubusercontent.com/Arkael-Dev/build-arkael/6.x/kernel-patches"
 
 exec > >(tee $WORKDIR/build.log) 2>&1
 trap 'error "Failed at line $LINENO [$BASH_COMMAND]"' ERR
 
 source $WORKDIR/functions.sh
 
+# ---------------------------------------------------------------------------
+# NetHunter kernel patches — Arkael-Dev
+# Dijalankan dari root source kernel ($KSRC), memakai log() & error() dari
+# functions.sh serta KVER dari build ini.
+# ---------------------------------------------------------------------------
+apply_patch_file() {
+  local patch_file="$1"
+
+  if [[ ! -f "$patch_file" ]]; then
+    error "Patch tidak ditemukan: $patch_file"
+  fi
+
+  log "Applying $(basename "$patch_file")"
+  if ! patch -p1 --forward --input="$patch_file"; then
+    error "Gagal menerapkan patch: $patch_file"
+  fi
+}
+
+apply_nethunter_patches() {
+  local NH_VERSION="$KVER"
+
+  # Validasi source kernel
+  if [[ ! -d "$(pwd)/drivers/net/wireless" ]]; then
+    error "Jalankan patch NetHunter dari root source kernel Linux."
+  fi
+
+  # Patch kompatibilitas SysVIPC
+  if [[ "$NH_VERSION" == "6.12" ]] ||
+     [[ "$(printf '%s\n' "$NH_VERSION" "6.12" | sort -V | tail -n1)" == "$NH_VERSION" && "$NH_VERSION" != "6.12" ]]; then
+    apply_patch_file \
+      "$KERNEL_PATCHES/droidspaces/001.GKI-6.12-or-above-fix_sysvipc_kabi.patch"
+  else
+    apply_patch_file \
+      "$KERNEL_PATCHES/droidspaces/001.GKI-below-6.12-fix_sysvipc_kabi_6_7_8.patch"
+
+    if [[ "$NH_VERSION" == "5.10" ]]; then
+      apply_patch_file \
+        "$KERNEL_PATCHES/droidspaces/002.5.10_or_lower_use_android_abi_padding_for_posix_mqueue.patch"
+    fi
+  fi
+
+  local TMP_DIR
+  TMP_DIR="$(mktemp -d)"
+
+  # Patch NetHunter: monitor mode dan packet injection
+  local MONITOR_PATCH="0001-mac80211-cfg80211-Add-monitor-mode-and-packet-inject.patch"
+
+  log "Downloading NetHunter monitor mode patch"
+  if ! curl -fLsS \
+    "${ARKAEL_PATCHES_URL}/${MONITOR_PATCH}" \
+    -o "$TMP_DIR/$MONITOR_PATCH"; then
+    error "Gagal mengunduh $MONITOR_PATCH"
+  fi
+
+  apply_patch_file "$TMP_DIR/$MONITOR_PATCH"
+
+  # Driver Realtek rtw88
+  local RTW88_REPO="https://github.com/Arkael-Dev/rtw88"
+  local RTW88_DEST="drivers/net/wireless/realtek/rtw88"
+
+  log "Cloning driver rtw88"
+  if ! git clone -q --depth=1 "$RTW88_REPO" "$TMP_DIR/rtw88"; then
+    error "Gagal meng-clone driver rtw88"
+  fi
+
+  if [[ -e "$RTW88_DEST" ]]; then
+    error "Direktori $RTW88_DEST sudah ada. Periksa driver sebelum melanjutkan."
+  fi
+
+  mv "$TMP_DIR/rtw88" "$RTW88_DEST"
+
+  # Patch tambahan untuk kernel 5.10
+  if [[ "$NH_VERSION" == "5.10" ]]; then
+    local RTW88_PATCH="0001-wifi-rtw88-rtw8723x-avoid-shared-loop-variable-name-.patch"
+
+    log "Downloading rtw88 compatibility patch"
+    if ! curl -fLsS \
+      "${ARKAEL_PATCHES_URL}/${RTW88_PATCH}" \
+      -o "$TMP_DIR/$RTW88_PATCH"; then
+      error "Gagal mengunduh $RTW88_PATCH"
+    fi
+
+    apply_patch_file "$TMP_DIR/$RTW88_PATCH"
+  fi
+
+  rm -rf "$TMP_DIR"
+
+  log "Semua patch NetHunter selesai diterapkan."
+}
+
 sudo timedatectl set-timezone "$TIMEZONE" || export TZ="$TIMEZONE"
 
 log "🔧 Build Configuration:"
 log "   Governor Selected : ${GOVERNOR_CHOICE}"
 log "   Vortex GKI File   : ${VORTEX_GKI_FILE}"
+log "   NetHunter Patches : ${NETHUNTER}"
 
 log "Cloning kernel source from $(simplify_gh_url "$KERNEL_REPO")"
 git clone -q --depth=1 $KERNEL_REPO -b $KERNEL_BRANCH $KSRC
@@ -79,6 +174,13 @@ if [ "$KVER" == "5.10" ]; then
   curl -L "https://github.com/ramabondanp/android_kernel_common-5.10/commit/4fe04b60009e.patch" -o infinix_cam.patch
   patch -p1 < infinix_cam.patch || log "Camera patch already embedded."
   rm infinix_cam.patch
+fi
+
+if [ "$NETHUNTER" == "yes" ]; then
+  log "🐝 Applying NetHunter patches (monitor mode, injection, rtw88, droidspaces)..."
+  apply_nethunter_patches
+else
+  log "Skipping NetHunter patches (NETHUNTER=${NETHUNTER})."
 fi
 
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
@@ -156,39 +258,6 @@ if [ "$KVER" == "6.1" ]; then
   else
     log "[WARNING] File $TARGET_FILE not found, skip patch."
   fi
-fi
-
-# ============================================================
-# NetHunter Patches (monitor mode, packet injection, rtw88)
-# Aktifkan dengan: NH=true
-# ============================================================
-if [ "$NH" == "true" ]; then
-  if [ "$KVER" == "6.x" ]; then
-    log "Kernel 6.x : gunakan branch (NetHunter patch dilewati)"
-  else
-    NH_PATCH_BASE="https://github.com/Arkael-Dev/build-arkael/tree/6.x/kernel-patches"
-
-    log "Applying NetHunter patches (monitor mode + packet injection)..."
-    curl -LSs "$NH_PATCH_BASE/0001-mac80211-cfg80211-Add-monitor-mode-and-packet-inject.patch" -o nethunter_mac80211.patch
-    patch -p1 --forward < nethunter_mac80211.patch || log "NetHunter mac80211 patch skipped or already applied."
-    rm -f nethunter_mac80211.patch
-
-    log "Cloning rtw88 dari aArkael-Dev/rtw88..."
-    git clone -q --depth=1 "https://github.com/Arkael-Dev/rtw88"
-    rm -rf "drivers/net/wireless/realtek/rtw88"
-    mv rtw88 "drivers/net/wireless/realtek/"
-
-    if [ "$KVER" == "5.10" ]; then
-      log "Applying rtw88 rtw8723x fix (kernel < 6.1)..."
-      curl -LSs "$NH_PATCH_BASE/0001-wifi-rtw88-rtw8723x-avoid-shared-loop-variable-name-.patch" -o nethunter_rtw8723x.patch
-      patch -p1 --forward < nethunter_rtw8723x.patch || log "NetHunter rtw8723x patch skipped or already applied."
-      rm -f nethunter_rtw8723x.patch
-    fi
-
-    log "[✓] NetHunter patches selesai diterapkan (kernel $KVER)"
-  fi
-else
-  log "NH tidak di-set 'true' — patch NetHunter dilewati. Gunakan: NH=true"
 fi
 
 log "Injecting custom KSU & SuSFS configs from GitHub..."
