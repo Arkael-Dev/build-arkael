@@ -9,7 +9,6 @@ WORKDIR="$(pwd)"
 
 export GOVERNOR_CHOICE="${GOVERNOR_CHOICE:-vortexcore}"
 export VORTEX_GKI_FILE="${VORTEX_GKI_FILE:-vortex_gki.c}"
-export NETHUNTER_PATCHES_DISABLED="${NETHUNTER_PATCHES_DISABLED:-false}"
 
 if [ "$KVER" == "6.6" ]; then
   RELEASE="v0.3"
@@ -66,7 +65,6 @@ sudo timedatectl set-timezone "$TIMEZONE" || export TZ="$TIMEZONE"
 log "🔧 Build Configuration:"
 log "   Governor Selected : ${GOVERNOR_CHOICE}"
 log "   Vortex GKI File   : ${VORTEX_GKI_FILE}"
-log "   NetHunter Patches : ${NETHUNTER_PATCHES_DISABLED:-false}"
 
 log "Cloning kernel source from $(simplify_gh_url "$KERNEL_REPO")"
 git clone -q --depth=1 $KERNEL_REPO -b $KERNEL_BRANCH $KSRC
@@ -158,74 +156,6 @@ if [ "$KVER" == "6.1" ]; then
   else
     log "[WARNING] File $TARGET_FILE not found, skip patch."
   fi
-fi
-
-# ===== NetHunter: Monitor Mode & Packet Injection (ALL GKI: 5.10 / 6.1 / 6.6) =====
-# Guard: allow disabling incompatible NetHunter patches from CI/env without affecting SUSFS / KSU logic.
-if [ "${NETHUNTER_PATCHES_DISABLED:-false}" = "true" ]; then
-  log "NetHunter patches disabled by env (NETHUNTER_PATCHES_DISABLED=true)."
-elif [ "${No_DS:-false}" != "true" ] \
-  && { [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; }; then
-
-  log "Applying NetHunter patches for GKI $KVER..."
-
-  # 1) mac80211/cfg80211 monitor mode + packet injection (SEMUA versi GKI)
-  if [ -f "$KERNEL_PATCHES/0001-mac80211-cfg80211-Add-monitor-mode-and-packet-inject.patch" ]; then
-    patch -p1 --forward \
-      < "$KERNEL_PATCHES/0001-mac80211-cfg80211-Add-monitor-mode-and-packet-inject.patch" \
-      || log "NetHunter mac80211/cfg80211 patch skipped or already applied."
-  else
-    log "[WARNING] NetHunter mac80211/cfg80211 patch not found in $KERNEL_PATCHES, skip."
-  fi
-
-  # 2) Ganti rtw88 stok dengan fork NetHunter-ready (SEMUA versi GKI)
-  rm -rf "$WORKDIR/rtw88"
-  if git clone -q --depth=1 "https://github.com/ahmed-alnassif/rtw88" "$WORKDIR/rtw88"; then
-    rm -rf drivers/net/wireless/realtek/rtw88
-    mv "$WORKDIR/rtw88" drivers/net/wireless/realtek/rtw88
-    log "rtw88 replaced with NetHunter-ready driver."
-  else
-    log "[WARNING] Failed to clone rtw88 fork, keeping stock in-tree rtw88."
-  fi
-
-  # 3) Fix shared loop variable rtw8723x (hanya GKI < 6.1 => 5.10)
-  if [ "$KVER" == "5.10" ]; then
-    if [ -f "$KERNEL_PATCHES/0001-wifi-rtw88-rtw8723x-avoid-shared-loop-variable-name-.patch" ]; then
-      patch -p1 --forward \
-        < "$KERNEL_PATCHES/0001-wifi-rtw88-rtw8723x-avoid-shared-loop-variable-name-.patch" \
-        || log "rtw8723x loop-variable patch skipped or already applied."
-    else
-      log "[WARNING] rtw8723x patch not found in $KERNEL_PATCHES, skip."
-    fi
-  fi
-
-  # 4) Aktifkan driver WiFi NetHunter langsung di defconfig (built-in, ikut ke Image)
-  if [ -f "arch/arm64/configs/$KERNEL_DEFCONFIG" ]; then
-    cat << EOF >> "arch/arm64/configs/$KERNEL_DEFCONFIG"
-
-# NetHunter (Monitor mode & packet injection)
-CONFIG_CFG80211=y
-CONFIG_MAC80211=y
-CONFIG_MAC80211_MESH=y
-CONFIG_RTW88=y
-CONFIG_RTW88_8723DE=y
-CONFIG_RTW88_8723DU=y
-CONFIG_RTW88_8723CS=y
-CONFIG_RTW88_8821CE=y
-CONFIG_RTW88_8821CU=y
-CONFIG_RTW88_8822BE=y
-CONFIG_RTW88_8822BU=y
-CONFIG_RTW88_8822CE=y
-CONFIG_RTW88_8822CU=y
-EOF
-    log "NetHunter WiFi configs injected into $KERNEL_DEFCONFIG."
-  else
-    log "[WARNING] arch/arm64/configs/$KERNEL_DEFCONFIG not found, skip config injection."
-  fi
-
-  log "[✓] NetHunter patches applied for GKI $KVER."
-else
-  log "NetHunter patches skipped (No_DS=${No_DS:-false}, KVER=$KVER, NETHUNTER_PATCHES_DISABLED=${NETHUNTER_PATCHES_DISABLED:-false})."
 fi
 
 log "Injecting custom KSU & SuSFS configs from GitHub..."
@@ -624,7 +554,6 @@ text=$(
 💉 *Variant*: ${KSU}
 ඞ *SuSFS*: $(susfs_included && echo "$SUSFS_VERSION" || echo "None")
 🎮 *Governor*: ${GOVERNOR_CHOICE^^}
-📡 *NetHunter*: Enabled
 ⚙️ *Compiler*: $COMPILER_STRING
 EOF
 )
