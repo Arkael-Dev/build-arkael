@@ -65,7 +65,7 @@ sudo timedatectl set-timezone "$TIMEZONE" || export TZ="$TIMEZONE"
 log "🔧 Build Configuration:"
 log "   Governor Selected : ${GOVERNOR_CHOICE}"
 log "   Vortex GKI File   : ${VORTEX_GKI_FILE}"
-log "   NetHunter Patches : ${NH:-false}"
+log "   NetHunter Patches : ENABLED (always on)"
 
 log "Cloning kernel source from $(simplify_gh_url "$KERNEL_REPO")"
 git clone -q --depth=1 $KERNEL_REPO -b $KERNEL_BRANCH $KSRC
@@ -160,7 +160,8 @@ if [ "$KVER" == "6.1" ]; then
 fi
 
 # ===== NetHunter: Monitor Mode & Packet Injection (ALL GKI: 5.10 / 6.1 / 6.6) =====
-if [ "${NH:-false}" == "true" ] && [ "${No_DS:-false}" == "false" ] \
+# Always ON. Set No_DS=true di workflow untuk skip (emergency button).
+if [ "${No_DS:-false}" != "true" ] \
   && { [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; }; then
 
   log "Applying NetHunter patches for GKI $KVER..."
@@ -221,7 +222,7 @@ EOF
 
   log "[✓] NetHunter patches applied for GKI $KVER."
 else
-  log "NetHunter patches skipped (NH=${NH:-false}, No_DS=${No_DS:-false}, KVER=$KVER)."
+  log "NetHunter patches skipped (No_DS=${No_DS:-false}, KVER=$KVER)."
 fi
 
 log "Injecting custom KSU & SuSFS configs from GitHub..."
@@ -620,7 +621,7 @@ text=$(
 💉 *Variant*: ${KSU}
 ඞ *SuSFS*: $(susfs_included && echo "$SUSFS_VERSION" || echo "None")
 🎮 *Governor*: ${GOVERNOR_CHOICE^^}
-📡 *NetHunter*: ${NH:-false}
+📡 *NetHunter*: Enabled
 ⚙️ *Compiler*: $COMPILER_STRING
 EOF
 )
