@@ -43,7 +43,7 @@ elif [ "$KVER" == "6.1" ]; then
 elif [ "$KVER" == "5.10" ]; then
   KERNEL_REPO="https://github.com/Arkael-Dev/arkael-kernel-a12-5.10.git"
   ANYKERNEL_BRANCH="master"
-  KERNEL_BRANCH="arkael-linux-stable"
+  KERNEL_BRANCH="arkael-dev"
 fi
 DEFCONFIG_TO_MERGE=""
 GKI_RELEASES_REPO="https://github.com/Arkael-Dev/build-arkael/releases"
@@ -134,14 +134,6 @@ KEOF
     rm -f "$KCONF_TMP"
     log "${GOV_NAME_CAP} added to cpufreq Kconfig (bool, default y)."
   fi
-fi
-
-log "Applying thermal game_mode patch..."
-if patch -p1 --forward --dry-run -s < "$KERNEL_PATCHES/0001-thermal-core-add-game-mode-trip-offset.patch" > /dev/null 2>&1; then
-  patch -p1 --forward < "$KERNEL_PATCHES/0001-thermal-core-add-game-mode-trip-offset.patch"
-  log "Thermal game_mode patch applied."
-else
-  log "Thermal game_mode patch skipped (already applied or not compatible with KVER $KVER)."
 fi
 
 log "Applying inject.sh patch..."
@@ -332,7 +324,7 @@ elif [ "$KSU" == "sukisu" ]; then
 
   # ReSukiSU
   log "Running ReSukiSU setup from main branch..."
-  curl -LSs "https://raw.githubusercontent.com/Baka-SU/BakaSU/refs/heads/main/kernel/setup.sh" | bash
+  curl -LSs "https://raw.githubusercontent.com/Arkael-Dev/BakaSU/refs/heads/main/kernel/setup.sh" | bash
 
   # SUSFS (ReSukiSU & SUSFS method)
   if susfs_included; then
