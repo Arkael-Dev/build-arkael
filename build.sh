@@ -324,7 +324,7 @@ elif [ "$KSU" == "sukisu" ]; then
 
   # ReSukiSU
   log "Running ReSukiSU setup from main branch..."
-  curl -LSs "https://raw.githubusercontent.com/Arkael-Dev/BakaSU/refs/heads/main/kernel/setup.sh" | bash
+  curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/refs/heads/main/kernel/setup.sh" | bash
 
   # SUSFS (ReSukiSU & SUSFS method)
   if susfs_included; then
