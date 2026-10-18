@@ -45,7 +45,7 @@ send_release_notification() {
 
 ✅ *Build Status*: SUCCESS
 📦 *Total Variants*: ${TOTAL_ZIPS} ZIPs
-🐧 *Kernel Versions*: 5.10, 6.1, 6.6
+🐧 *Kernel Versions*: 5.10, 6.1, 6.6, 6.12
 📅 *Build Date*: ${BUILD_TIMESTAMP}
 🔐 *Root Options*: KSU, SukiSU, VNL
 
@@ -58,6 +58,7 @@ send_release_notification() {
 🔵 GKI 5.10 (Android 12)
 🟢 GKI 6.1 (Android 14)
 🟣 GKI 6.6 (Android 15)
+🟠 GKI 6.12 (Android 16)
 
 Each version includes:
 • VNL (Vanilla/No Root)
@@ -272,7 +273,7 @@ apply_stack_protector_fix() {
 apply_statfs_susfs_fix() {
   if [[ -z "$LINUX_VERSION_CODE" ]]; then return 1; fi
   if [ $(echo "$LINUX_VERSION_CODE" | head -c1) -eq 6 ]; then
-    if ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]) && [ -f "fs/statfs.c" ]; then
+    if ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ] || [ "$KVER" == "6.12" ]) && [ -f "fs/statfs.c" ]; then
       log "Applying statfs CRC fix for $(get_variant_name) GKI $KVER..."
       sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
       sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c

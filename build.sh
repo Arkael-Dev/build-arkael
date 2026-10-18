@@ -10,7 +10,9 @@ WORKDIR="$(pwd)"
 export GOVERNOR_CHOICE="${GOVERNOR_CHOICE:-vortexcore}"
 export VORTEX_GKI_FILE="${VORTEX_GKI_FILE:-vortex_gki.c}"
 
-if [ "$KVER" == "6.6" ]; then
+if [ "$KVER" == "6.12" ]; then
+  RELEASE="v0.1"
+elif [ "$KVER" == "6.6" ]; then
   RELEASE="v0.3"
 elif [ "$KVER" == "5.10" ]; then
   RELEASE="v0.3"
@@ -28,11 +30,17 @@ if [ "$KVER" == "5.10" ]; then
   KERNEL_DEFCONFIG="gki_defconfig"
 elif [ "$KVER" == "6.1" ]; then
   KERNEL_DEFCONFIG="gki_defconfig"
+elif [ "$KVER" == "6.12" ]; then
+  KERNEL_DEFCONFIG="gki_defconfig"
 else
   KERNEL_DEFCONFIG="gki_defconfig"
 fi
 
-if [ "$KVER" == "6.6" ]; then
+if [ "$KVER" == "6.12" ]; then
+  KERNEL_REPO="https://github.com/Arkael-Dev/arkael-kernel-a12-5.10.git"
+  ANYKERNEL_BRANCH="master"
+  KERNEL_BRANCH="arkael-6.12-kernel"
+elif [ "$KVER" == "6.6" ]; then
   KERNEL_REPO="https://github.com/Arkael-Dev/kernel-common-android-15.6.6.git"
   ANYKERNEL_BRANCH="master"
   KERNEL_BRANCH="linuxstable"
@@ -81,7 +89,7 @@ if [ "$KVER" == "5.10" ]; then
   rm infinix_cam.patch
 fi
 
-if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
+if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ] || [ "$KVER" == "6.12" ]; then
   log "Injecting Arkael Ultra-Safe Kernel Patch (${VORTEX_GKI_FILE})..."
   mkdir -p "$KSRC/drivers/misc"
   cp "$KERNEL_PATCHES/${VORTEX_GKI_FILE}" "$KSRC/drivers/misc/vortex_gki.c"
@@ -89,7 +97,7 @@ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
   echo "obj-y += vortex_gki.o" >> "$KSRC/drivers/misc/Makefile"
 fi
 
-if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
+if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ] || [ "$KVER" == "6.12" ]; then
 
   if [[ "${GOVERNOR_CHOICE,,}" == "arkael" ]]; then
     GOV_NAME="arkael"
@@ -165,7 +173,7 @@ if [ "$KVER" == "5.10" ]; then
   wget -qO inject.sh https://raw.githubusercontent.com/Arkael-Dev/build-arkael/refs/heads/6.x/inject_ksu/gki_defconfig.sh
   bash inject.sh
   rm inject.sh
-elif [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
+elif [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ] || [ "$KVER" == "6.12" ]; then
   wget -qO inject.sh https://raw.githubusercontent.com/Arkael-Dev/build-arkael/refs/heads/6.x/inject_ksu/gki-deconfig-6.1.sh
   bash inject.sh
   rm inject.sh
@@ -328,7 +336,9 @@ elif [ "$KSU" == "sukisu" ]; then
 
   # SUSFS (ReSukiSU & SUSFS method)
   if susfs_included; then
-    if [ "$KVER" == "6.6" ]; then
+    if [ "$KVER" == "6.12" ]; then
+      SUSFS_BRANCH="gki-android16-6.12"
+    elif [ "$KVER" == "6.6" ]; then
       SUSFS_BRANCH="gki-android15-6.6"
     elif [ "$KVER" == "6.1" ]; then
       SUSFS_BRANCH="gki-android14-6.1"
@@ -401,7 +411,7 @@ EOF
 fi
 
 if susfs_included; then
-  if [ "$KSU" != "sukisu" ] || ([ "$KSU" == "sukisu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ])); then
+  if [ "$KSU" != "sukisu" ] || ([ "$KSU" == "sukisu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ] || [ "$KVER" == "6.12" ])); then
     log "Applying kernel-side susfs patches (Standard Method)"
     if [ -d "$WORKDIR/susfs4ksu" ]; then
       SUSFS_DIR="$WORKDIR/susfs4ksu"
@@ -409,7 +419,9 @@ if susfs_included; then
       SUSFS_DIR="$WORKDIR/susfs"
     fi
     SUSFS_PATCHES="${SUSFS_DIR}/kernel_patches"
-    if [ "$KVER" == "6.6" ]; then
+    if [ "$KVER" == "6.12" ]; then
+      SUSFS_BRANCH=gki-android16-6.12
+    elif [ "$KVER" == "6.6" ]; then
       SUSFS_BRANCH=gki-android15-6.6
     elif [ "$KVER" == "6.1" ]; then
       SUSFS_BRANCH=gki-android14-6.1
@@ -432,7 +444,7 @@ if susfs_included; then
       patch -p1 < $KERNEL_PATCHES/Susfs/task_mmu.c_fix.patch || true
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c4) -eq 6658 ]; then
       patch -p1 < $KERNEL_PATCHES/susfs/task_mmu.c_fix-k6.6.58.patch || true
-    elif [ $(echo "$LINUX_VERSION_CODE" | head -c2) -eq 61 ]; then
+    elif [ "$KVER" == "6.1" ]; then
       patch -p1 < $KERNEL_PATCHES/susfs/fs_proc_base.c-fix-k6.1.patch || true
       
       NS_INJECT_FILE="$WORKDIR/.ns_inject_tmp"
@@ -465,6 +477,9 @@ EOF
       
       rm -f "$NS_INJECT_FILE"
 
+    elif [ "$KVER" == "6.12" ]; then
+      log "GKI 6.12: using SUSFS ${SUSFS_BRANCH} patch as-is."
+
     elif [ $(echo "$LINUX_VERSION_CODE" | head -c3) -eq 510 ]; then
       if [ "$KSU" != "sukisu" ]; then
         log "Fixing sucompat.c ksu_handle_stat for GKI 5.10..."
@@ -479,14 +494,14 @@ EOF
           log "Applying manual statfs CRC fix for KernelSU Next GKI 6.1..."
           sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
           sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
-        elif [ "$KVER" == "6.6" ]; then
-          log "Applying manual statfs CRC fix for KernelSU Next GKI 6.6..."
+        elif [ "$KVER" == "6.6" ] || [ "$KVER" == "6.12" ]; then
+          log "Applying manual statfs CRC fix for KernelSU Next GKI $KVER..."
           sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
           sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
         else
           patch -p1 < $KERNEL_PATCHES/Susfs/fix-statfs-crc-mismatch-susfs.patch || true
         fi
-      elif [ "$KSU" == "sukisu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]); then
+      elif [ "$KSU" == "sukisu" ] && ([ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ] || [ "$KVER" == "6.12" ]); then
         log "Applying manual statfs CRC fix for SukiSU GKI $KVER..."
         sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
         sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
@@ -573,7 +588,7 @@ config --enable CONFIG_CPU_FREQ_GOV_${GOV_CONFIG}
 config --set-str CONFIG_CPU_FREQ_DEFAULT_GOV_${GOV_CONFIG} y
 config --set-str CONFIG_CPU_FREQ_GOV "${GOV_NAME}"
 
-if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ]; then
+if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ] || [ "$KVER" == "6.12" ]; then
   config --enable CONFIG_ANDROID_LOW_MEMORY_KILLER
   config --enable CONFIG_KSM
   config --enable CONFIG_CPU_IDLE
