@@ -615,6 +615,18 @@ if [ $TODO == "defconfig" ]; then
 fi
 
 log "Building kernel..."
+
+# [FIX] GKI 6.12 only: KSU-Next samsung_kdp.c needs sched.h
+KMAJ=$(awk '/^VERSION *=/{print $3; exit}' "$KSRC/Makefile")
+KMIN=$(awk '/^PATCHLEVEL *=/{print $3; exit}' "$KSRC/Makefile")
+if [ "$KMAJ.$KMIN" = "6.12" ]; then
+  KDP="$KSRC/drivers/kernelsu/compat/samsung_kdp.c"
+  if [ -f "$KDP" ] && ! grep -q "linux/sched.h" "$KDP"; then
+    sed -i '0,/^#include/s//#include <linux\/sched.h>\n#include/' "$KDP"
+    log "Applied sched.h fix for samsung_kdp.c (GKI 6.12)"
+  fi
+fi
+
 make ${MAKE_ARGS[@]}
 
 if [ $(echo "$LINUX_VERSION_CODE" | head -c1) -eq 6 ]; then
