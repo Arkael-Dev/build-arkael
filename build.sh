@@ -616,15 +616,15 @@ fi
 
 log "Building kernel..."
 
+
 # [FIX] GKI 6.12 only: KSU-Next samsung_kdp.c needs sched.h
 KMAJ=$(awk '/^VERSION *=/{print $3; exit}' "$KSRC/Makefile")
 KMIN=$(awk '/^PATCHLEVEL *=/{print $3; exit}' "$KSRC/Makefile")
-if [ "$KMAJ.$KMIN" = "6.12" ]; then
-  KDP="$KSRC/drivers/kernelsu/compat/samsung_kdp.c"
-  if [ -f "$KDP" ] && ! grep -q "linux/sched.h" "$KDP"; then
-    sed -i '0,/^#include/s//#include <linux\/sched.h>\n#include/' "$KDP"
-    log "Applied sched.h fix for samsung_kdp.c (GKI 6.12)"
-  fi
+KDP="$KSRC/drivers/kernelsu/compat/samsung_kdp.c"
+log "KDP fix check: kernel=$KMAJ.$KMIN, file exists: $([ -f "$KDP" ] && echo yes || echo no)"
+if [ "$KMAJ.$KMIN" = "6.12" ] && [ -f "$KDP" ] && ! grep -q "ARKAEL_SCHED_FIX" "$KDP"; then
+  sed -i '1i #include <linux/sched.h> /* ARKAEL_SCHED_FIX */' "$KDP"
+  log "Applied sched.h fix for samsung_kdp.c (GKI 6.12)"
 fi
 
 make ${MAKE_ARGS[@]}
