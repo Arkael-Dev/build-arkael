@@ -39,7 +39,7 @@ fi
 if [ "$KVER" == "6.12" ]; then
   KERNEL_REPO="https://github.com/Arkael-Dev/arkael-kernel-a12-5.10.git"
   ANYKERNEL_BRANCH="master"
-  KERNEL_BRANCH="kernel-6.12"
+  KERNEL_BRANCH="arkael-6.12-kernel"
 elif [ "$KVER" == "6.6" ]; then
   KERNEL_REPO="https://github.com/Arkael-Dev/kernel-common-android-15.6.6.git"
   ANYKERNEL_BRANCH="master"
@@ -614,34 +614,7 @@ if [ $TODO == "defconfig" ]; then
   exit 0
 fi
 
-# [FIX] pahole per-CPU var limit (4096): disable BTF, GKI 6.12 only
-BMAJ=$(awk '/^VERSION *=/{print $3; exit}' "$KSRC/Makefile")
-BMIN=$(awk '/^PATCHLEVEL *=/{print $3; exit}' "$KSRC/Makefile")
-if [ "$BMAJ.$BMIN" = "6.12" ]; then
-  log "Disabling DEBUG_INFO_BTF (pahole per-CPU limit, GKI 6.12)"
-  "$KSRC/scripts/config" --file "$OUTDIR/.config" -d DEBUG_INFO_BTF -d DEBUG_INFO_BTF_MODULES
-  make ${MAKE_ARGS[@]} olddefconfig
-  grep -n "BTF" "$OUTDIR/.config" || true
-fi
-# END-FIX-BTF
-
 log "Building kernel..."
-
-
-
-# [FIX] GKI 6.12 only: KSU-Next samsung_kdp.c needs pid.h for task_pid_nr()
-KMAJ=$(awk '/^VERSION *=/{print $3; exit}' "$KSRC/Makefile")
-KMIN=$(awk '/^PATCHLEVEL *=/{print $3; exit}' "$KSRC/Makefile")
-KDP="$KSRC/drivers/kernelsu/compat/samsung_kdp.c"
-log "KDP fix check: kernel=$KMAJ.$KMIN, file exists: $([ -f "$KDP" ] && echo yes || echo no)"
-if [ "$KMAJ.$KMIN" = "6.12" ] && [ -f "$KDP" ] && ! grep -q "ARKAEL_SCHED_FIX" "$KDP"; then
-  sed -i '1i #include <linux/pid.h>\n#include <linux/sched.h> /* ARKAEL_SCHED_FIX */' "$KDP"
-  sed -i 's/task_pid_nr(target)/(target)->pid/g' "$KDP"
-  log "Applied pid.h/sched.h fix for samsung_kdp.c (GKI 6.12)"
-  head -n 4 "$KDP"
-  grep -n "task_pid_nr\|->pid" "$KDP" || true
-fi
-
 make ${MAKE_ARGS[@]}
 
 if [ $(echo "$LINUX_VERSION_CODE" | head -c1) -eq 6 ]; then
