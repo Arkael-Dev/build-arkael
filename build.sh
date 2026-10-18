@@ -614,6 +614,17 @@ if [ $TODO == "defconfig" ]; then
   exit 0
 fi
 
+# [FIX] pahole per-CPU var limit (4096): disable BTF, GKI 6.12 only
+BMAJ=$(awk '/^VERSION *=/{print $3; exit}' "$KSRC/Makefile")
+BMIN=$(awk '/^PATCHLEVEL *=/{print $3; exit}' "$KSRC/Makefile")
+if [ "$BMAJ.$BMIN" = "6.12" ]; then
+  log "Disabling DEBUG_INFO_BTF (pahole per-CPU limit, GKI 6.12)"
+  "$KSRC/scripts/config" --file "$OUTDIR/.config" -d DEBUG_INFO_BTF -d DEBUG_INFO_BTF_MODULES
+  make ${MAKE_ARGS[@]} olddefconfig
+  grep -n "BTF" "$OUTDIR/.config" || true
+fi
+# END-FIX-BTF
+
 log "Building kernel..."
 
 
