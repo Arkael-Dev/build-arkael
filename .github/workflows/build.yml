@@ -399,6 +399,7 @@ jobs:
             flex \
             libssl-dev \
             libelf-dev \
+            libdw-dev \
             dwarves \
             cpio \
             wget \
