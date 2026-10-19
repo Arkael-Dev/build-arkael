@@ -517,6 +517,15 @@ else
   config --disable CONFIG_KSU_SUSFS
 fi
 
+# GKI 6.12 only: KernelSU-Next compile fix, Baseband Guard, networking,
+# DroidSpaces, NTSync, unicode fix and misc configs (see gki-6.12.sh).
+# Must stay before `make $KERNEL_DEFCONFIG` so the defconfig edits take effect.
+if [ "$KVER" == "6.12" ]; then
+  [ -f "$WORKDIR/gki-6.12.sh" ] || error "gki-6.12.sh not found in $WORKDIR!"
+  source "$WORKDIR/gki-6.12.sh"
+  gki612_setup_all
+fi
+
 if [ $TODO == "kernel" ]; then
   LATEST_COMMIT_HASH=$(git rev-parse --short HEAD)
   if [ $STATUS == "BETA" ]; then
