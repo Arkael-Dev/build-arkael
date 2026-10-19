@@ -239,11 +239,9 @@ if ksu_included; then
     fi
   done
 
-  install_ksu 'pershoot/KernelSU-Next' 'dev-susfs'
   config --enable CONFIG_KSU
 
   cd KernelSU-Next
-  patch -p1 < $KERNEL_PATCHES/ksu/ksun-add-more-managers-support.patch
   cd $OLDPWD
   
   log "Applying fix for undefined SUSFS symbols (KernelSU-Next)..."
