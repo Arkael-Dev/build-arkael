@@ -239,9 +239,21 @@ if ksu_included; then
     fi
   done
 
+  if [ "$KVER" == "6.12" ]; then
+    log "GKI 6.12: KernelSU-Next official (branch dev) via setup.sh"
+    curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/dev/kernel/setup.sh" | bash -s dev
+  else
+    install_ksu 'pershoot/KernelSU-Next' 'dev-susfs'
+  fi
   config --enable CONFIG_KSU
 
   cd KernelSU-Next
+  if [ "$KVER" == "6.12" ]; then
+    P="$KERNEL_PATCHES/ksu/ksun-add-more-managers-support.patch"
+    patch -p1 --dry-run < $P >/dev/null 2>&1 && patch -p1 < $P || log "managers patch skipped (6.12 dev)"
+  else
+    patch -p1 < $KERNEL_PATCHES/ksu/ksun-add-more-managers-support.patch
+  fi
   cd $OLDPWD
   
   log "Applying fix for undefined SUSFS symbols (KernelSU-Next)..."
