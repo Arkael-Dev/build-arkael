@@ -584,12 +584,14 @@ fi
 
 text=$(
   cat << EOF
-🐧 *Linux Version*: $LINUX_VERSION
-📅 *Build Date*: $KBUILD_BUILD_TIMESTAMP
-💉 *Variant*: ${KSU}
-ඞ *SuSFS*: $(susfs_included && echo "$SUSFS_VERSION" || echo "None")
-🎮 *Governor*: ${GOV_LABEL}
-⚙️ *Compiler*: $COMPILER_STRING
+📦 *${KERNEL_NAME} Kernel*
+━━━━━━━━━━━━━━━━
+🐧 *Linux*: \`${LINUX_VERSION}\`
+💉 *Variant*: \`${VARIANT}\`
+ඞ *SuSFS*: \`$(susfs_included && echo "$SUSFS_VERSION" || echo "None")\`
+🎮 *Governor*: \`${GOV_LABEL}\`
+⚙️ *Compiler*: \`${COMPILER_STRING}\`
+📅 *Build*: \`${KBUILD_BUILD_TIMESTAMP}\`
 EOF
 )
 
