@@ -496,7 +496,16 @@ EOF
         log "Fixing sucompat.c ksu_handle_stat for GKI 5.10..."
         bash $KERNEL_PATCHES/susfs/fix-sucompat-k510-sed.sh
       fi
-      patch -p1 < $KERNEL_PATCHES/susfs/pershoot-susfs-k5.10.patch || true
+      # pershoot-susfs-k5.10.patch targets the old (v2.0/2.1) fs/susfs.c. Current
+      # susfs4ksu + KernelSU-Next (susfs v2.3.0) no longer use its helpers, so only
+      # apply it when ALL hunks still match (git apply is all-or-nothing) instead of
+      # leaving partial hunks and .rej files behind.
+      PERSHOOT_PATCH="$KERNEL_PATCHES/susfs/pershoot-susfs-k5.10.patch"
+      if git apply --check "$PERSHOOT_PATCH" >/dev/null 2>&1; then
+        git apply "$PERSHOOT_PATCH" && log "pershoot-susfs-k5.10.patch applied."
+      else
+        log "[INFO] pershoot-susfs-k5.10.patch no longer matches this susfs4ksu branch, skipping."
+      fi
     fi
 
     if [ $(echo "$LINUX_VERSION_CODE" | head -c1) -eq 6 ]; then
