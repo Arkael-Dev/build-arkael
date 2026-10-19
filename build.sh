@@ -97,7 +97,8 @@ if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ] || [ "$
   echo "obj-y += vortex_gki.o" >> "$KSRC/drivers/misc/Makefile"
 fi
 
-if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ] || [ "$KVER" == "6.12" ]; then
+GOV_LABEL="-"; if [ "$KVER" == "5.10" ]; then GOV_LABEL="${GOVERNOR_CHOICE^^}"; fi
+if [ "$KVER" == "5.10" ]; then
 
   if [[ "${GOVERNOR_CHOICE,,}" == "arkael" ]]; then
     GOV_NAME="arkael"
@@ -587,7 +588,7 @@ text=$(
 📅 *Build Date*: $KBUILD_BUILD_TIMESTAMP
 💉 *Variant*: ${KSU}
 ඞ *SuSFS*: $(susfs_included && echo "$SUSFS_VERSION" || echo "None")
-🎮 *Governor*: ${GOVERNOR_CHOICE^^}
+🎮 *Governor*: ${GOV_LABEL}
 ⚙️ *Compiler*: $COMPILER_STRING
 EOF
 )
@@ -599,6 +600,7 @@ log "Enabling Arkael kernel dependencies..."
 config --enable CONFIG_TCP_CONG_WESTWOOD
 config --enable CONFIG_DEVFREQ_GOV_SCHEDUTIL
 
+if [ "$KVER" == "5.10" ]; then
 # Enable selected governor (bool default y ensures it's already on,
 # but we explicitly enable it here too for safety)
 config --enable CONFIG_CPU_FREQ_GOV_${GOV_CONFIG}
@@ -606,6 +608,7 @@ config --enable CONFIG_CPU_FREQ_GOV_${GOV_CONFIG}
 # Set as default governor
 config --set-str CONFIG_CPU_FREQ_DEFAULT_GOV_${GOV_CONFIG} y
 config --set-str CONFIG_CPU_FREQ_GOV "${GOV_NAME}"
+fi
 
 if [ "$KVER" == "5.10" ] || [ "$KVER" == "6.1" ] || [ "$KVER" == "6.6" ] || [ "$KVER" == "6.12" ]; then
   config --enable CONFIG_ANDROID_LOW_MEMORY_KILLER
@@ -712,7 +715,7 @@ if [ $STATUS == "BETA" ]; then
   upload_file "$WORKDIR/$AK3_ZIP_NAME" "$text"
   upload_file "$WORKDIR/build.log"
 else
-  send_msg "✅ Build Succeeded for ${KERNEL_NAME} ${VARIANT} variant (Governor: ${GOVERNOR_CHOICE^^})."
+  send_msg "✅ Build Succeeded for ${KERNEL_NAME} ${VARIANT} variant (Governor: ${GOV_LABEL})."
 fi
 
 exit 0
