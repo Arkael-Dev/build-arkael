@@ -104,6 +104,22 @@ _gki612_wk_patches() {
 # including <linux/sched.h>, which clang rejects
 # (-Wimplicit-function-declaration). Newer commits already include it, so this
 # is skipped when the header is present or the file does not exist.
+gki612_fix_kernelsu_compat() {
+  local f="drivers/kernelsu/compat/samsung_kdp.c"
+
+  if [ ! -f "$f" ]; then
+    log "[INFO] $f not found, skipping KernelSU compat fix."
+    return 0
+  fi
+
+  grep -q '#include <linux/sched.h>' "$f" || \
+    sed -i --follow-symlinks '0,/^#include/s|^#include|#include <linux/sched.h>\n#include|' "$f"
+
+  sed -i --follow-symlinks 's/task_pid_nr(target)/(target)->pid/' "$f"
+  grep -q 'task_pid_nr(target)' "$f" && error "task_pid_nr fix failed in samsung_kdp.c"
+
+  log "[SUCCESS] samsung_kdp.c patched (task_pid_nr -> ->pid)."
+}
 
 # ---------------------------------------------------------------------------
 # Baseband Guard
