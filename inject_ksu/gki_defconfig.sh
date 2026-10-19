@@ -3,6 +3,13 @@
 
 DEFCONFIG="arch/arm64/configs/gki_defconfig"
 
+# Only enable the governor that build.sh actually injected (Kconfig + Makefile).
+# Setting the other one would reference a symbol that does not exist.
+case "${GOVERNOR_CHOICE,,}" in
+    arkael) GOV_CFG="CONFIG_CPU_FREQ_GOV_ARKAEL=y" ;;
+    *)      GOV_CFG="CONFIG_CPU_FREQ_GOV_VORTEXCORE=y" ;;
+esac
+
 echo "⚙️ Added KSU & SuSFS configuration"
 cat >> "$DEFCONFIG" <<EOF
 CONFIG_KSU=y
@@ -65,15 +72,11 @@ CONFIG_NO_HZ=y
 CONFIG_TMPFS_POSIX_ACL=y
 CONFIG_IP_NF_TARGET_TTL=y
 CONFIG_TCP_CONG_ADVANCED=y
-CONFIG_TCP_CONG_WESTWOOD=n
-CONFIG_TCP_CONG_BBR=y
-CONFIG_TCP_BBR3=y
 CONFIG_NET_SCHED=y
 CONFIG_NET_SCH_FQ=y
 # CONFIG_IOSCHED_BFQ is not set
 # CONFIG_BFQ_GROUP_IOSCHED is not set
 CONFIG_MQ_IOSCHED_ADIOS=y
-# CONFIG_DEFAULT_MQ_DEADLINE is not set
 # CONFIG_DEFAULT_FQ_CODEL is not set
 CONFIG_HZ_300=y
 CONFIG_HZ=300
@@ -81,20 +84,16 @@ CONFIG_CPU_FREQ=y
 CONFIG_SWAP=y
 CONFIG_CPU_FREQ_GOV_SCHEDUTIL=y
 CONFIG_CPU_FREQ_GOV_REFLEX=y
-CONFIG_CPU_FREQ_GOV_VORTEXCORE=y
-CONFIG_CPU_FREQ_GOV_ARKAEL=y
+${GOV_CFG}
 CONFIG_CPU_FREQ_GOV_ONDEMAND=y
 CONFIG_USB_CONFIGFS_MASS_STORAGE=y
-CONFIG_MGLRU=y
-CONFIG_MGLRU_ENHANCEMENTS=y
 
-# TCP Congestion Control
+# TCP Congestion Control (BBRv3 does not exist in this 5.10 tree -> plain BBR)
 CONFIG_TCP_CONG_WESTWOOD=n
 CONFIG_TCP_CONG_HTCP=n
 CONFIG_TCP_CONG_BBR=y
-CONFIG_TCP_CONG_BBR3=y
-CONFIG_DEFAULT_BBR3=y
-CONFIG_DEFAULT_TCP_CONG="bbr3"
+CONFIG_DEFAULT_BBR=y
+# CONFIG_DEFAULT_CUBIC is not set
 
 # IPv6
 CONFIG_IPV6_ROUTER_PREF=y
@@ -134,7 +133,6 @@ EOF
 if [ "$KVER" = "5.10" ]; then
     echo "⚙️ Adding VorteX Native C-Script Dependencies (5.10 Only)"
     cat >> "$DEFCONFIG" <<EOF
-CONFIG_ANDROID_LOW_MEMORY_KILLER=y
 CONFIG_DEVFREQ_GOV_PERFORMANCE=y
 EOF
 
@@ -160,5 +158,28 @@ echo "⚙️ Adding VorteX Native FPS Engine Module"
 cat >> "$DEFCONFIG" <<EOF
 CONFIG_KSM=y
 CONFIG_CPU_IDLE=y
-CONFIG_VORTEX_FPS_ENGINE=m
 EOF
+
+# ==========================================
+# Dedupe: keep only the LAST occurrence of every CONFIG_* symbol.
+# Everything above is appended with `cat >>`, so earlier copies (from the
+# stock defconfig or from this script) would otherwise trigger
+# "override: reassigning" warnings. Last value wins, same as Kconfig.
+# ==========================================
+echo "🧹 Deduplicating $DEFCONFIG"
+awk '
+{
+    lines[NR] = $0
+    if (match($0, /^(# )?CONFIG_[A-Za-z0-9_]+/)) {
+        k = substr($0, RSTART, RLENGTH)
+        sub(/^# /, "", k)
+        key[NR] = k
+        last[k] = NR
+    }
+}
+END {
+    for (i = 1; i <= NR; i++)
+        if (!(i in key) || last[key[i]] == i)
+            print lines[i]
+}
+' "$DEFCONFIG" > "$DEFCONFIG.tmp" && mv "$DEFCONFIG.tmp" "$DEFCONFIG"
