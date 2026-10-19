@@ -495,6 +495,14 @@ EOF
       if [ "$KSU" != "sukisu" ]; then
         log "Fixing sucompat.c ksu_handle_stat for GKI 5.10..."
         bash $KERNEL_PATCHES/susfs/fix-sucompat-k510-sed.sh
+
+        # susfs 5.10 patch hooks fs/exec.c with ksu_setup_preinit_file and
+        # ksu_preinit_handle_post_execveat, which pershoot/KernelSU-Next
+        # dev-susfs does not define (it handles preinit via syscall_event_bridge).
+        if [ -f fs/exec.c ] && ! grep -q "^#define KSU_NO_PREINIT" fs/exec.c; then
+          sed -i '1i #define KSU_NO_PREINIT' fs/exec.c
+          log "KSU_NO_PREINIT defined in fs/exec.c (GKI 5.10)."
+        fi
       fi
       # pershoot-susfs-k5.10.patch targets the old (v2.0/2.1) fs/susfs.c. Current
       # susfs4ksu + KernelSU-Next (susfs v2.3.0) no longer use its helpers, so only
