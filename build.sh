@@ -624,6 +624,7 @@ if [ $TODO == "defconfig" ]; then
 fi
 
 log "Building kernel..."
+if [ "$KVER" == "6.12" ]; then gki612_fix_kernelsu_compat; grep -n "sched.h" drivers/kernelsu/compat/samsung_kdp.c || true; fi
 make ${MAKE_ARGS[@]}
 
 if [ $(echo "$LINUX_VERSION_CODE" | head -c1) -eq 6 ]; then
