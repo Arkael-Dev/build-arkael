@@ -304,11 +304,27 @@ EOF
 # Entry point (called once from build.sh)
 # ---------------------------------------------------------------------------
 
+gki612_install_pahole() {
+  log "[INFO] Installing latest pahole (apt pahole hits the 4096 per-CPU var limit)"
+  sudo apt-get install -y -qq cmake libdw-dev libelf-dev zlib1g-dev || error "pahole deps install failed"
+  local d="$WORKDIR/pahole-src"
+  rm -rf "$d"
+  git clone --depth=1 --recurse-submodules --shallow-submodules \
+    https://git.kernel.org/pub/scm/devel/pahole/pahole.git "$d" || error "pahole clone failed"
+  ( cd "$d" && cmake -B build -D__LIB=lib -DCMAKE_BUILD_TYPE=Release . \
+    && cmake --build build -j"$(nproc)" \
+    && sudo cmake --install build ) || error "pahole build failed"
+  sudo ldconfig
+  hash -r
+  log "[INFO] pahole: $(pahole --version) at $(command -v pahole)"
+}
+
 gki612_setup_all() {
   log "=== GKI 6.12 specific setup ==="
   [ -f scripts/config ] || error "gki612: must run from the kernel source root ($KSRC)"
   mkdir -p "$GKI612_EXT_DIR"
 
+  gki612_install_pahole
   gki612_fix_kernelsu_compat
   gki612_setup_bbg
   gki612_setup_networking
