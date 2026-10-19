@@ -669,6 +669,7 @@ cd $WORKDIR
 cd $WORKDIR
 
 log "Cloning anykernel from $(simplify_gh_url "$ANYKERNEL_REPO")"
+if [ "$KVER" == "6.12" ]; then ANYKERNEL_BRANCH="gki-2.0"; fi
 git clone -q --depth=1 $ANYKERNEL_REPO -b $ANYKERNEL_BRANCH anykernel
 
 if [ $STATUS == "BETA" ]; then
