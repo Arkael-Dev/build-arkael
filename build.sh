@@ -24,7 +24,7 @@ KERNEL_NAME="Arkael"
 USER="arqzey"
 HOST="Arch-linux"
 TIMEZONE="Asia/Jakarta"
-ANYKERNEL_REPO="https://github.com/Arkael-Dev/AnyKernel3"
+ANYKERNEL_REPO="https://github.com/Arkael-Dev/AnyKernel"
 
 if [ "$KVER" == "5.10" ]; then
   KERNEL_DEFCONFIG="gki_defconfig"
