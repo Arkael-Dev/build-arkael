@@ -51,7 +51,7 @@ elif [ "$KVER" == "6.1" ]; then
 elif [ "$KVER" == "5.10" ]; then
   KERNEL_REPO="https://github.com/Arkael-Dev/arkael-kernel-a12-5.10.git"
   ANYKERNEL_BRANCH="gki-2.0"
-  KERNEL_BRANCH="arkael-bore"
+  KERNEL_BRANCH="arkael-linux-stable"
 fi
 DEFCONFIG_TO_MERGE=""
 GKI_RELEASES_REPO="https://github.com/Arkael-Dev/build-arkael/releases"
