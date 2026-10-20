@@ -602,7 +602,7 @@ fi
 text=$(
   cat << EOF
 📦 *${KERNEL_NAME} Kernel*
-━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━
 🐧 *Linux*: \`${LINUX_VERSION}\`
 💉 *Variant*: \`${VARIANT}\`
 ඞ *SuSFS*: \`$(susfs_included && echo "$SUSFS_VERSION" || echo "None")\`
@@ -695,7 +695,7 @@ if [ "$KVER" == "6.12" ]; then ANYKERNEL_BRANCH="gki-2.0"; fi
 git clone -q --depth=1 $ANYKERNEL_REPO -b $ANYKERNEL_BRANCH anykernel
 
 if [ $STATUS == "BETA" ]; then
-  BUILD_DATE=$(date -d "$KBUILD_BUILD_TIMESTAMP" +"%Y%m%d-%H%M")
+  BUILD_DATE=$(date -u +"%Y%m%d-%H%M")
   AK3_ZIP_NAME=${AK3_ZIP_NAME//BUILD_DATE/$BUILD_DATE}
   AK3_ZIP_NAME=${AK3_ZIP_NAME//-REL/}
   sed -i \
