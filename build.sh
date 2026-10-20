@@ -516,7 +516,7 @@ fi
 
 export KBUILD_BUILD_USER="$USER"
 export KBUILD_BUILD_HOST="$HOST"
-export KBUILD_BUILD_TIMESTAMP=$(date)
+export KBUILD_BUILD_TIMESTAMP="$(TZ=UTC date)"
 export KCFLAGS="-w"
 if [ $(echo "$LINUX_VERSION_CODE" | head -c1) -eq 6 ]; then
   MAKE_ARGS=(
