@@ -86,7 +86,7 @@ ksu_included() { [ "$KSU" == "yes" ]; return $?; }
 
 kpm_enabled() { [ "$KSU" == "vortexsu" ] || [ "$KSU" == "sukisu" ]; return $?; }
 
-is_ksu_variant() { [ "$KSU" == "yes" ] || [ "$KSU" == "vortexsu" ] || [ "$KSU" == "sukisu" ]; return $?; }
+is_ksu_variant() { [ "$KSU" == "yes" ] || [ "$KSU" == "vortexsu" ] || [ "$KSU" == "sukisu" ] || [ "$KSU" == "sukisu-ultra" ] || [ "$KSU" == "finasu" ]; return $?; }
 
 susfs_included() { [ "$KSU_SUSFS" == "true" ]; return $?; }
 
@@ -96,7 +96,9 @@ get_variant_name() {
   case "$KSU" in
     "yes")       echo "KSU" ;;
     "vortexsu")  echo "VorteXSU" ;;
-    "sukisu")    echo "SukiSU-Ultra" ;;
+    "sukisu")    echo "ReSukiSU (BakaSU)" ;;
+    "sukisu-ultra") echo "SukiSU-Ultra" ;;
+    "finasu")    echo "FinaSU" ;;
     "no")        echo "VNL" ;;
     *)          echo "Unknown" ;;
   esac

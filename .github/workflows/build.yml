@@ -47,6 +47,8 @@ on:
           - "no"           # Vanilla - No Root
           - "yes"          # KernelSU-Next (Standard)
           - "sukisu"       # SukiSU-Ultra (KPM Enabled)
+          - "sukisu-ultra"   # SukiSU-Ultra upstream (susfs_new)
+          - "finasu"         # FinaSU
 
       KSU_SUSFS:
         description: '🛡️ Enable SuSFS (Hide Root)?'
@@ -192,7 +194,7 @@ jobs:
             "yes")
               _info "Variant: Standard KernelSU-Next"
               ;;
-            "sukisu")
+            "sukisu"|"sukisu-ultra"|"finasu")
               _info "Variant: SukiSU-Ultra (KPM Enabled)"
               ;;
             "no")

@@ -176,6 +176,8 @@ log "Setting Kernel variant..."
 case "$KSU" in
   "yes") VARIANT="KSU" ;;
   "sukisu") VARIANT="SukiSU" ;;
+  "sukisu-ultra") VARIANT="SukiSU-Ultra" ;;
+  "finasu") VARIANT="FinaSU" ;;
   "no") VARIANT="VNL" ;;
 esac
 susfs_included && VARIANT+="+SuSFS"
@@ -307,6 +309,39 @@ AVC_BOOL_EOF
   else
     log "[WARNING] drivers/kernelsu/extras.c not found! Skipping AVC spoof fix."
   fi
+
+elif [ "$KSU" == "sukisu-ultra" ] || [ "$KSU" == "finasu" ]; then
+  log "Setting up $KSU for KVER $KVER..."
+
+  for KSU_PATH in drivers/staging/kernelsu drivers/kernelsu KernelSU KernelSU-Next FinaSU; do
+    if [ -d "$KSU_PATH" ] || [ -L "$KSU_PATH" ]; then
+      log "Removing existing $KSU_PATH"
+      KSU_DIR=$(dirname "$KSU_PATH")
+      [ -f "$KSU_DIR/Kconfig" ] && sed -i '/kernelsu/d' "$KSU_DIR/Kconfig"
+      [ -f "$KSU_DIR/Makefile" ] && sed -i '/kernelsu/d' "$KSU_DIR/Makefile"
+      rm -rf "$KSU_PATH"
+    fi
+  done
+
+  if [ "$KSU" == "sukisu-ultra" ]; then
+    install_ksu 'SukiSU-Ultra/SukiSU-Ultra' 'susfs_new'
+  else
+    log "Running FinaSU setup (default ref: dev)..."
+    FINASU_SETUP="https://raw.githubusercontent.com/LyraVoid/FinaSU/master/kernel/setup.sh"
+    curl -LSs "$FINASU_SETUP" | bash \
+      || { log "FinaSU ref dev gagal, fallback ke master"; curl -LSs "$FINASU_SETUP" | FOLKSU_REF=master bash; }
+  fi
+  config --enable CONFIG_KSU
+
+  if [ "$KVER" == "5.10" ]; then
+    KSU_PREINIT=$(find -L drivers/kernelsu -name preinit.c 2>/dev/null | head -1)
+    if [ -n "$KSU_PREINIT" ] && grep -qE '(^|[^_[:alnum:]])close_fd\(' "$KSU_PREINIT"; then
+      log "Fix close_fd for GKI 5.10 ($KSU_PREINIT)..."
+      sed -i -E 's/(^|[^_[:alnum:]])close_fd\(/\1__close_fd(current->files, /g' "$KSU_PREINIT"
+      grep -q "linux/fdtable.h" "$KSU_PREINIT" || sed -i '0,/#include/s//#include <linux\/fdtable.h>\n#include/' "$KSU_PREINIT"
+    fi
+  fi
+  log "[✓] $KSU setup done for $KVER."
 
 elif [ "$KSU" == "sukisu" ]; then
   log "Setting up ReSukiSU & SUSFS for KVER $KVER..."
