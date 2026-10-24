@@ -470,7 +470,12 @@ EOF
         log "Fixing sucompat.c ksu_handle_stat for GKI 5.10..."
         bash $KERNEL_PATCHES/susfs/fix-sucompat-k510-sed.sh
       fi
-      patch -p1 < $KERNEL_PATCHES/susfs/pershoot-susfs-k5.10.patch || true
+      # pershoot-susfs-k5.10.patch dibuang: obsolete untuk susfs v2.3.0 / KSU-Next dev-susfs
+      if ! grep -q "__GENKSYMS__" fs/statfs.c; then
+        log "Applying manual statfs CRC fix for GKI 5.10..."
+        sed -i '/#include <linux\/susfs_def.h>/i #ifndef __GENKSYMS__' fs/statfs.c
+        sed -i '/#include <linux\/susfs_def.h>/a #endif' fs/statfs.c
+      fi
     fi
 
     if [ $(echo "$LINUX_VERSION_CODE" | head -c1) -eq 6 ]; then
