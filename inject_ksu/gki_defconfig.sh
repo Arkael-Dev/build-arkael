@@ -3,6 +3,11 @@
 
 DEFCONFIG="arch/arm64/configs/gki_defconfig"
 
+if [ ! -f "$DEFCONFIG" ]; then
+    echo "❌ $DEFCONFIG tidak ditemukan (jalankan dari root source kernel)"
+    exit 1
+fi
+
 echo "⚙️ Added KSU & SuSFS configuration"
 cat >> "$DEFCONFIG" <<EOF
 CONFIG_KSU=y
@@ -58,6 +63,15 @@ CONFIG_KSU_SYSCALL_HOOK=n
 EOF
 fi
 
+# --- Pilih nama default TCP congestion control sesuai isi tree ---
+# BBRv3 patch Google mendaftarkan algoritma dengan nama "bbr".
+# "bbr3" hanya valid kalau tree punya TCP_CONG_BBR3 (patch custom).
+TCP_DEFAULT="bbr"
+if grep -qs "config TCP_CONG_BBR3" net/ipv4/Kconfig; then
+    TCP_DEFAULT="bbr3"
+fi
+echo "🌐 Default TCP congestion control: $TCP_DEFAULT"
+
 echo "⚙️ Adding Universal Performance Tuning"
 cat >> "$DEFCONFIG" <<EOF
 CONFIG_TMPFS_XATTR=y
@@ -65,9 +79,6 @@ CONFIG_NO_HZ=y
 CONFIG_TMPFS_POSIX_ACL=y
 CONFIG_IP_NF_TARGET_TTL=y
 CONFIG_TCP_CONG_ADVANCED=y
-CONFIG_TCP_CONG_WESTWOOD=n
-CONFIG_TCP_CONG_BBR=y
-CONFIG_TCP_BBR3=y
 CONFIG_NET_SCHED=y
 CONFIG_NET_SCH_FQ=y
 # CONFIG_IOSCHED_BFQ is not set
@@ -85,6 +96,10 @@ CONFIG_CPU_FREQ_GOV_VORTEXCORE=y
 CONFIG_CPU_FREQ_GOV_ARKAEL=y
 CONFIG_CPU_FREQ_GOV_ONDEMAND=y
 CONFIG_USB_CONFIGFS_MASS_STORAGE=y
+
+# MGLRU: nama upstream/tree 5.10 adalah LRU_GEN.
+# MGLRU / MGLRU_ENHANCEMENTS dipertahankan kalau tree custom memang punya.
+CONFIG_LRU_GEN=y
 CONFIG_MGLRU=y
 CONFIG_MGLRU_ENHANCEMENTS=y
 # CONFIG_LRU_GEN_ENABLED is not set
@@ -93,9 +108,10 @@ CONFIG_MGLRU_ENHANCEMENTS=y
 CONFIG_TCP_CONG_WESTWOOD=n
 CONFIG_TCP_CONG_HTCP=n
 CONFIG_TCP_CONG_BBR=y
+CONFIG_TCP_BBR3=y
 CONFIG_TCP_CONG_BBR3=y
 CONFIG_DEFAULT_BBR3=y
-CONFIG_DEFAULT_TCP_CONG="bbr3"
+CONFIG_DEFAULT_TCP_CONG="$TCP_DEFAULT"
 
 # IPv6
 CONFIG_IPV6_ROUTER_PREF=y
@@ -127,9 +143,6 @@ CONFIG_IP_SET=y
 CONFIG_IP_SET_HASH_IP=y
 CONFIG_IP_SET_HASH_NET=y
 CONFIG_NETFILTER_XT_SET=y
-
-# xattr for tmpfs (NixOS compatibility)
-CONFIG_TMPFS_XATTR=y
 EOF
 
 if [ "$KVER" = "5.10" ]; then
@@ -163,3 +176,46 @@ CONFIG_KSM=y
 CONFIG_CPU_IDLE=y
 CONFIG_VORTEX_FPS_ENGINE=m
 EOF
+
+# ==========================================
+# RAM Saving (aman untuk GKI 5.10, tanpa ubah ABI modul)
+# ==========================================
+echo "⚙️ Adding RAM Saving configuration"
+cat >> "$DEFCONFIG" <<EOF
+# THP boros RAM di perangkat mobile
+# CONFIG_TRANSPARENT_HUGEPAGE is not set
+# Fitur debug yang memakan memori
+# CONFIG_PAGE_OWNER is not set
+# CONFIG_PAGE_POISONING is not set
+# CONFIG_DEBUG_PAGEALLOC is not set
+# CONFIG_DEBUG_KMEMLEAK is not set
+# CONFIG_DEBUG_OBJECTS is not set
+# CONFIG_KASAN is not set
+# Dibutuhkan lmkd & reclaim yang efisien
+CONFIG_PSI=y
+CONFIG_MEMCG=y
+CONFIG_COMPACTION=y
+CONFIG_CRYPTO_LZ4=y
+EOF
+
+# ==========================================
+# Dedupe: per simbol hanya simpan assignment TERAKHIR
+# (menghapus duplikat & konflik, aman kalau skrip dijalankan ulang)
+# ==========================================
+echo "🧹 Removing duplicate/conflicting config lines"
+TMP="$(mktemp)"
+awk '
+    function sym(line,   s) {
+        if (match(line, /^(# )?CONFIG_[A-Za-z0-9_]+/)) {
+            s = substr(line, RSTART, RLENGTH)
+            sub(/^# /, "", s)
+            return s
+        }
+        return ""
+    }
+    NR == FNR { s = sym($0); if (s != "") last[s] = FNR; next }
+    { s = sym($0); if (s == "" || last[s] == FNR) print }
+' "$DEFCONFIG" "$DEFCONFIG" > "$TMP" && cat "$TMP" > "$DEFCONFIG"
+rm -f "$TMP"
+
+echo "✅ Defconfig injection done"
