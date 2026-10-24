@@ -2,11 +2,12 @@ diff --git a/kernel/apk_sign.c b/kernel/apk_sign.c
 index 6890889..661c56c 100644
 --- a/kernel/apk_sign.c
 +++ b/kernel/apk_sign.c
-@@ -29,6 +29,7 @@ static apk_sign_key_t apk_sign_keys[] = {
+@@ -29,6 +29,8 @@ static apk_sign_key_t apk_sign_keys[] = {
  	{ EXPECTED_SIZE_RSUNTK, EXPECTED_HASH_RSUNTK }, // RKSU
  	{ EXPECTED_SIZE_5EC1CFF, EXPECTED_HASH_5EC1CFF }, // MKSU
  	{ EXPECTED_SIZE_KOWX712, EXPECTED_HASH_KOWX712 }, // KowSU
 +        { EXPECTED_SIZE_MAMBO, EXPECTED_HASH_MAMBO }, // MamboSU
++        { EXPECTED_SIZE_FINASU, EXPECTED_HASH_FINASU }, // FinaSU
  #ifdef EXPECTED_SIZE
  	{ EXPECTED_SIZE, EXPECTED_HASH }, // Custom
  #endif
@@ -14,7 +15,7 @@ diff --git a/kernel/manager_sign.h b/kernel/manager_sign.h
 index a0db171..92478a1 100644
 --- a/kernel/manager_sign.h
 +++ b/kernel/manager_sign.h
-@@ -23,6 +23,11 @@
+@@ -23,6 +23,16 @@
  #define EXPECTED_HASH_KOWX712                                                  \
  	"484fcba6e6c43b1fb09700633bf2fb4758f13cb0b2f4457b80d075084b26c588"
  
@@ -22,6 +23,11 @@ index a0db171..92478a1 100644
 +#define EXPECTED_SIZE_MAMBO 0x384
 +#define EXPECTED_HASH_MAMBO \
 +	"a9462b8b98ea1ca7901b0cbdcebfaa35f0aa95e51b01d66e6b6d2c81b97746d8"
++
++// FinaSU (CN=FolkSU)
++#define EXPECTED_SIZE_FINASU 0x2cc
++#define EXPECTED_HASH_FINASU \
++       "2d89b50aaf1db013c2b6738f973f48b62ea21a3a8d7216bfec3521065d448458"
 +
  typedef struct {
  	u32 size;

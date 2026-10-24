@@ -333,6 +333,12 @@ elif [ "$KSU" == "sukisu-ultra" ] || [ "$KSU" == "finasu" ]; then
   fi
   config --enable CONFIG_KSU
 
+  if [ "$KSU" == "finasu" ]; then
+    export KSU_EXPECTED_SIZE2=0x2cc
+    export KSU_EXPECTED_HASH2=2d89b50aaf1db013c2b6738f973f48b62ea21a3a8d7216bfec3521065d448458
+    log "FinaSU manager signature set (CN=FolkSU)."
+  fi
+
   if [ "$KVER" == "5.10" ]; then
     KSU_PREINIT=$(find -L drivers/kernelsu -name preinit.c 2>/dev/null | head -1)
     if [ -n "$KSU_PREINIT" ] && grep -qE '(^|[^_[:alnum:]])close_fd\(' "$KSU_PREINIT"; then
