@@ -183,9 +183,7 @@ EOF
 echo "⚙️ Adding RAM Saving configuration"
 cat >> "$DEFCONFIG" <<EOF
 # THP boros RAM di perangkat mobile
-# CONFIG_TRANSPARENT_HUGEPAGE is not set
 # Fitur debug yang memakan memori
-# CONFIG_PAGE_OWNER is not set
 # CONFIG_PAGE_POISONING is not set
 # CONFIG_DEBUG_PAGEALLOC is not set
 # CONFIG_DEBUG_KMEMLEAK is not set
