@@ -397,6 +397,11 @@ EOF
     config --enable CONFIG_KSU_MULTI_MANAGER_SUPPORT
   fi
   config --enable CONFIG_KSU_SUSFS
+  if [ "$KVER" == "5.10" ] && [ -f drivers/kernelsu/preinit/preinit.c ]; then
+    log "Fix close_fd for GKI 5.10 (ReSukiSU preinit.c)..."
+    sed -i -E 's/\bclose_fd\(/__close_fd(current->files, /g' drivers/kernelsu/preinit/preinit.c
+    grep -q "linux/fdtable.h" drivers/kernelsu/preinit/preinit.c || sed -i '0,/#include/s//#include <linux\/fdtable.h>\n#include/' drivers/kernelsu/preinit/preinit.c
+  fi
   log "[✓] ReSukiSU & SUSFS patched for $KVER."
 fi
 
