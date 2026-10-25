@@ -246,10 +246,34 @@ index 3e0b27fa..1be71478 100644
              void *envp, int *flags);
  int ksu_handle_execveat_init(struct filename *filename, struct user_arg_ptr *argv_user, struct user_arg_ptr *envp_user);
 diff --git a/kernel/hook/syscall_event_bridge.c b/kernel/hook/syscall_event_bridge.c
-index db5b8442..a3f210e0 100644
+index db5b8442..018ba653 100644
 --- a/kernel/hook/syscall_event_bridge.c
 +++ b/kernel/hook/syscall_event_bridge.c
-@@ -73,6 +73,14 @@ void ksu_stop_ksud_execve_hook()
+@@ -55,7 +55,11 @@ long __nocfi ksu_hook_newfstatat(int orig_nr, const struct pt_regs *regs)
+ 	if (!static_branch_likely(&ksu_su_compat_enabled))
+ 		return ksu_syscall_table[orig_nr](regs);
+ 
++#if defined(CONFIG_KSU_SUSFS) || defined(CONFIG_KSU_MANUAL_HOOK)
++	return ksu_syscall_table[orig_nr](regs);
++#else
+ 	return ksu_handle_stat_sucompat(orig_nr, (struct pt_regs *)regs);
++#endif
+ }
+ 
+ long __nocfi ksu_hook_faccessat(int orig_nr, const struct pt_regs *regs)
+@@ -63,7 +67,11 @@ long __nocfi ksu_hook_faccessat(int orig_nr, const struct pt_regs *regs)
+ 	if (!static_branch_likely(&ksu_su_compat_enabled))
+ 		return ksu_syscall_table[orig_nr](regs);
+ 
++#if defined(CONFIG_KSU_SUSFS) || defined(CONFIG_KSU_MANUAL_HOOK)
++	return ksu_syscall_table[orig_nr](regs);
++#else
+ 	return ksu_handle_faccessat_sucompat(orig_nr, (struct pt_regs *)regs);
++#endif
+ }
+ 
+ DEFINE_STATIC_KEY_TRUE(ksud_execve_key);
+@@ -73,6 +81,14 @@ void ksu_stop_ksud_execve_hook()
  	static_branch_disable(&ksud_execve_key);
  }
  
@@ -264,7 +288,7 @@ index db5b8442..a3f210e0 100644
  static long __nocfi ksu_hook_execve_common(int orig_nr, const struct pt_regs *regs, bool execveat)
  {
  	const char __user **filename_user =
-@@ -120,6 +128,7 @@ static long __nocfi ksu_hook_execve_common(int orig_nr, const struct pt_regs *re
+@@ -120,6 +136,7 @@ static long __nocfi ksu_hook_execve_common(int orig_nr, const struct pt_regs *re
  	ksu_sulog_emit_pending(pending_root_execve, ret, GFP_KERNEL);
  	return ret;
  }
@@ -272,6 +296,65 @@ index db5b8442..a3f210e0 100644
  
  long __nocfi ksu_hook_execve(int orig_nr, const struct pt_regs *regs)
  {
+diff --git a/kernel/preinit/preinit.c b/kernel/preinit/preinit.c
+index 4210c823..87542f00 100644
+--- a/kernel/preinit/preinit.c
++++ b/kernel/preinit/preinit.c
+@@ -31,7 +31,7 @@ static struct file *ksu_preinit_file;
+ 
+ void __init ksu_preinit_init(void)
+ {
+-#if !defined(CONFIG_KPROBES) && !defined(CONFIG_KSU_SUSFS)
++#if !defined(CONFIG_KPROBES) && !defined(CONFIG_KSU_SUSFS) && !defined(CONFIG_KSU_MANUAL_HOOK)
+     pr_info("preinit: unsupported under current hook provider\n");
+     return;
+ #else
+@@ -86,7 +86,7 @@ void ksu_preinit_exit(void)
+     ksu_preinit_release();
+ }
+ 
+-#ifdef CONFIG_KSU_SUSFS
++#if defined(CONFIG_KSU_SUSFS) || defined(CONFIG_KSU_MANUAL_HOOK)
+ static bool is_selinux_setup_susfs(struct user_arg_ptr *argv_user)
+ {
+     static const char expected[] = "selinux_setup";
+diff --git a/kernel/preinit/preinit.h b/kernel/preinit/preinit.h
+index 7e83a4c9..8f8cb243 100644
+--- a/kernel/preinit/preinit.h
++++ b/kernel/preinit/preinit.h
+@@ -22,7 +22,7 @@ void ksu_preinit_release(void);
+ // Whether the runner is built in and not disabled with preinit=0.
+ bool ksu_preinit_enabled_param(void);
+ 
+-#ifdef CONFIG_KSU_SUSFS
++#if defined(CONFIG_KSU_SUSFS) || defined(CONFIG_KSU_MANUAL_HOOK)
+ int ksu_setup_preinit_file(struct filename **filename_ptr, struct user_arg_ptr *argv_user);
+ int ksu_preinit_handle_post_execveat(int *fd, struct filename **filename_ptr,
+                  void *argv_user, void *envp_user,
+@@ -48,7 +48,7 @@ static inline bool ksu_preinit_enabled_param(void)
+ {
+     return false;
+ }
+-#ifdef CONFIG_KSU_SUSFS
++#if defined(CONFIG_KSU_SUSFS) || defined(CONFIG_KSU_MANUAL_HOOK)
+ static inline int ksu_setup_preinit_file(struct filename **filename_ptr, struct user_arg_ptr *argv_user)
+ {
+     return -EINVAL;
+diff --git a/kernel/runtime/boot_event.c b/kernel/runtime/boot_event.c
+index b171b358..8001cc6a 100644
+--- a/kernel/runtime/boot_event.c
++++ b/kernel/runtime/boot_event.c
+@@ -94,3 +94,10 @@ void on_boot_completed(void)
+     ksu_selinux_hide_drop_backup_if_unused();
+     ksu_avc_spoof_late_init();
+ }
++
++#if defined(CONFIG_KSU_MANUAL_HOOK) && !defined(CONFIG_KSU_SUSFS)
++/* mode manual hook: definisi asli ada di blok non-manual ksud_integration.c */
++void __weak ksu_stop_input_hook_runtime(void)
++{
++}
++#endif
 diff --git a/kernel/runtime/ksud_integration.c b/kernel/runtime/ksud_integration.c
 index 0a80e4d2..22694a46 100644
 --- a/kernel/runtime/ksud_integration.c
