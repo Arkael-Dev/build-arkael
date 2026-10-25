@@ -1,0 +1,242 @@
+# manual-hook-v1.7 sisi KernelSU-Next: guard KSU_MANUAL_HOOK di sucompat.c/.h,
+# makro KSU_DIRECT_HOOK di ksud_integration.c, opsi Kconfig KSU_MANUAL_HOOK.
+# Pasangan dari manual-hook-v1.7.patch. Config: KSU_MANUAL_HOOK=y, KSU_SUSFS=n.
+# Belum diuji build/boot.
+diff --git a/kernel/Kconfig b/kernel/Kconfig
+index e58f4e1..10b6bd2 100644
+--- a/kernel/Kconfig
++++ b/kernel/Kconfig
+@@ -100,6 +100,15 @@ config KSU_SAMSUNG_NO_PATCH_TEXT
+ 	  protection rejects fixmap writes. Samsung devices are detected from
+ 	  the root device-tree compatible property; other devices are unaffected.
+ 
++config KSU_MANUAL_HOOK
++    bool "KernelSU manual hook mode (tanpa SUSFS)"
++    depends on KSU
++    depends on !KSU_SUSFS
++    default n
++    help
++      Pakai hook yang ditambal langsung ke sumber kernel
++      (kernel-patches/hooks/manual-hook-v1.7.patch), bukan kprobes.
++
+ menu "KernelSU - SUSFS"
+ config KSU_SUSFS
+ 	bool "KernelSU addon - SUSFS"
+diff --git a/kernel/feature/sucompat.c b/kernel/feature/sucompat.c
+index 783697d..efca9f1 100644
+--- a/kernel/feature/sucompat.c
++++ b/kernel/feature/sucompat.c
+@@ -21,8 +21,10 @@
+ #include <linux/fs_struct.h>
+ 
+ #include <linux/task_work.h>
++#if defined(CONFIG_KSU_SUSFS) || defined(CONFIG_KSU_MANUAL_HOOK)
+ #ifdef CONFIG_KSU_SUSFS
+ #include <linux/susfs_def.h>
++#endif
+ #include <linux/minmax.h>
+ #include "selinux/selinux.h"
+ #include "objsec.h"
+@@ -109,8 +111,8 @@ static bool is_ksud_exists()
+ 	return true;
+ }
+ 
+-#ifdef CONFIG_KSU_SUSFS
+-static bool ksu_str_ends_with(const char *str, size_t str_len, const char *suffix)
++#if defined(CONFIG_KSU_SUSFS) || defined(CONFIG_KSU_MANUAL_HOOK)
++static bool __maybe_unused ksu_str_ends_with(const char *str, size_t str_len, const char *suffix)
+ {
+     size_t suffix_len = strlen(suffix);
+     if (suffix_len > str_len)
+@@ -118,7 +120,7 @@ static bool ksu_str_ends_with(const char *str, size_t str_len, const char *suffi
+     return memcmp(str + str_len - suffix_len, suffix, suffix_len) == 0;
+ }
+ 
+-static bool ksu_is_zygote_or_adbd(const char *name, size_t len)
++static bool __maybe_unused ksu_is_zygote_or_adbd(const char *name, size_t len)
+ {
+     if (len < 5)
+         return false;
+@@ -163,7 +165,9 @@ int ksu_handle_execveat_init(struct filename *filename, struct user_arg_ptr *arg
+             pending_sucompat = ksu_sulog_capture_sucompat_kernel(filename->name, (const char __user *const __user *)argv_user->ptr.native, GFP_KERNEL);
+             ksu_sulog_emit_pending(pending_sucompat, ret, GFP_KERNEL);
+             return 0;
+-        } else {
++        }
++#ifdef CONFIG_KSU_SUSFS
++        else {
+             size_t len = strlen(filename->name);
+             if (likely(!ksu_is_zygote_or_adbd(filename->name, len)) &&
+                         !susfs_is_current_proc_no_su())
+@@ -173,6 +177,7 @@ int ksu_handle_execveat_init(struct filename *filename, struct user_arg_ptr *arg
+                 return 0;
+             }
+         }
++#endif
+ 
+ #ifdef CONFIG_COMPAT
+         if (unlikely(envp_user->is_compat))
+@@ -379,7 +384,7 @@ int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags)
+ }
+ #endif
+ 
+-#if defined(CONFIG_KPROBES) && !defined(CONFIG_KSU_SUSFS)
++#if defined(CONFIG_KPROBES) && !defined(CONFIG_KSU_SUSFS) && !defined(CONFIG_KSU_MANUAL_HOOK)
+ long ksu_handle_faccessat_sucompat(int orig_nr, struct pt_regs *regs)
+ {
+ 	const char __user **filename_user, *orig_filename;
+diff --git a/kernel/feature/sucompat.h b/kernel/feature/sucompat.h
+index 3e0b27f..1be7147 100644
+--- a/kernel/feature/sucompat.h
++++ b/kernel/feature/sucompat.h
+@@ -19,6 +19,16 @@ void ksu_sucompat_exit(void);
+ int ksu_handle_faccessat(int *dfd, struct filename **filename, int *mode, int *__unused_flags);
+ int ksu_handle_stat(int *dfd, struct filename **filename, int *flags);
+ 
++int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
++            void *envp, int *flags);
++int ksu_handle_execveat_init(struct filename *filename, struct user_arg_ptr *argv_user, struct user_arg_ptr *envp_user);
++int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
++                 void *argv_user, void *envp_user,
++                 int *flags);
++int ksu_handle_post_execveat_sucompat(int *fd, struct filename **filename_ptr,
++                 void *argv_user, void *envp_user,
++                 int *flags, int *retval);
++#elif defined(CONFIG_KSU_MANUAL_HOOK)
+ int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
+             void *envp, int *flags);
+ int ksu_handle_execveat_init(struct filename *filename, struct user_arg_ptr *argv_user, struct user_arg_ptr *envp_user);
+diff --git a/kernel/runtime/ksud_integration.c b/kernel/runtime/ksud_integration.c
+index 0a80e4d..f5bdcd5 100644
+--- a/kernel/runtime/ksud_integration.c
++++ b/kernel/runtime/ksud_integration.c
+@@ -33,7 +33,11 @@
+ 
+ #include "linux/jump_label.h"
+ 
+-#ifdef CONFIG_KSU_SUSFS
++#if defined(CONFIG_KSU_SUSFS) || defined(CONFIG_KSU_MANUAL_HOOK)
++#define KSU_DIRECT_HOOK 1
++#endif
++
++#ifdef KSU_DIRECT_HOOK
+ DEFINE_STATIC_KEY_TRUE(ksu_is_init_rc_hook_enabled);
+ DEFINE_STATIC_KEY_TRUE(ksu_is_input_hook_enabled);
+ #endif
+@@ -61,7 +65,7 @@ static const char KERNEL_SU_RC[] =
+     "\n";
+ // clang-format on
+ 
+-#ifndef CONFIG_KSU_SUSFS
++#ifndef KSU_DIRECT_HOOK
+ static void stop_init_rc_hook();
+ static void stop_execve_hook();
+ #endif
+@@ -136,7 +140,7 @@ static bool check_argv(struct user_arg_ptr argv, int index, const char *expected
+     if (!p || IS_ERR(p))
+         goto fail;
+ 
+-    #ifdef CONFIG_KSU_SUSFS
++    #ifdef KSU_DIRECT_HOOK
+     if (strncpy_from_user(buf, p, buf_len) <= 0)
+         goto fail;
+     #else
+@@ -152,7 +156,7 @@ fail:
+     return false;
+ }
+ 
+-#ifdef CONFIG_KSU_SUSFS
++#ifdef KSU_DIRECT_HOOK
+ extern int ksu_handle_execveat_init(struct filename *filename, struct user_arg_ptr *argv_user, struct user_arg_ptr *envp_user);
+ 
+ // IMPORTANT NOTE: the call from execve_handler_pre WON'T provided correct value for envp and flags in GKI version
+@@ -505,7 +509,7 @@ static void ksu_install_rc_hook(struct file *file)
+         return;
+     }
+     rc_hooked = true;
+-#ifdef CONFIG_KSU_SUSFS
++#ifdef KSU_DIRECT_HOOK
+     if (static_key_enabled(&ksu_is_init_rc_hook_enabled)) {
+         static_branch_disable(&ksu_is_init_rc_hook_enabled);
+         pr_info("ksu_init_rc_hook is disabled\n");
+@@ -547,7 +551,7 @@ void ksu_handle_sys_read(unsigned int fd, char __user **buf_ptr, size_t *count_p
+     fput(file);
+ }
+ 
+-#ifdef CONFIG_KSU_SUSFS
++#ifdef KSU_DIRECT_HOOK
+ void ksu_handle_vfs_fstat(int fd, loff_t *kstat_size_ptr)
+ {
+     loff_t new_size = *kstat_size_ptr + ksu_rc_len;
+@@ -574,7 +578,7 @@ static bool is_volumedown_enough(unsigned int count)
+ 
+ int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code, int *value)
+ {
+-#ifdef CONFIG_KSU_SUSFS
++#ifdef KSU_DIRECT_HOOK
+     if (!static_branch_unlikely(&ksu_is_input_hook_enabled))
+         return 0;
+ #endif
+@@ -583,7 +587,7 @@ int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code, int *v
+         int val = *value;
+         pr_info("KEY_VOLUMEDOWN val: %d\n", val);
+         if (val) {
+-#ifdef CONFIG_KSU_SUSFS
++#ifdef KSU_DIRECT_HOOK
+             // - We cannot call static_branch_disable() here as we are within the
+             //   spinlock section, which is not sleepable.
+             // - So if volumedown is enough, just do nothing until it gets disabled by on_post_fs_data().
+@@ -592,7 +596,7 @@ int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code, int *v
+ #endif
+             // key pressed, count it
+             volumedown_pressed_count += 1;
+-#ifndef CONFIG_KSU_SUSFS
++#ifndef KSU_DIRECT_HOOK
+             if (is_volumedown_enough(volumedown_pressed_count)) {
+                 ksu_stop_input_hook_runtime();
+             }
+@@ -616,7 +620,7 @@ bool ksu_is_safe_mode()
+     }
+ 
+     // stop hook first!
+-#ifdef CONFIG_KSU_SUSFS
++#ifdef KSU_DIRECT_HOOK
+     if (static_key_enabled(&ksu_is_input_hook_enabled)) {
+         static_branch_disable(&ksu_is_input_hook_enabled);
+         pr_info("ksu_input_hook is disabled\n");
+@@ -657,7 +661,7 @@ static void ksu_execve_hook_ksud_common(const char __user *filename_user, const
+         return;
+     }
+ 
+-#ifdef CONFIG_KSU_SUSFS
++#ifdef KSU_DIRECT_HOOK
+     // Not supported in hook mode for SuSFS
+ #else
+     ksu_handle_execveat_ksud(path, &argv);
+@@ -680,7 +684,7 @@ void ksu_execveat_hook_ksud(const struct pt_regs *regs)
+     ksu_execve_hook_ksud_common(filename_user, argv_user);
+ }
+ 
+-#ifndef CONFIG_KSU_SUSFS
++#ifndef KSU_DIRECT_HOOK
+ static long (*orig_sys_read)(const struct pt_regs *regs);
+ static long ksu_sys_read(const struct pt_regs *regs)
+ {
+@@ -770,7 +774,7 @@ void ksu_stop_input_hook_runtime(void)
+ // ksud: module support
+ void __init ksu_ksud_init()
+ {
+-#if !defined(CONFIG_KSU_SUSFS) && defined(CONFIG_KPROBES)
++#if !defined(KSU_DIRECT_HOOK) && defined(CONFIG_KPROBES)
+     int ret;
+ 
+     ksu_syscall_table_hook(__NR_read, ksu_sys_read, &orig_sys_read);
+@@ -785,7 +789,7 @@ void __init ksu_ksud_init()
+ 
+ void __exit ksu_ksud_exit()
+ {
+-#if !defined(CONFIG_KSU_SUSFS) && defined(CONFIG_KPROBES)
++#if !defined(KSU_DIRECT_HOOK) && defined(CONFIG_KPROBES)
+     // TODO:
+     // this should be done before unregister vfs_read_kp
+     // stop_init_rc_hook();
