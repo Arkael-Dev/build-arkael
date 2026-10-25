@@ -501,10 +501,21 @@ index 0a80e4d2..22694a46 100644
      // this should be done before unregister vfs_read_kp
      // stop_init_rc_hook();
 diff --git a/kernel/supercall/dispatch.c b/kernel/supercall/dispatch.c
-index 16ceab17..32b4e75b 100644
+index 16ceab17..554482e9 100644
 --- a/kernel/supercall/dispatch.c
 +++ b/kernel/supercall/dispatch.c
-@@ -1156,6 +1156,17 @@ void ksu_supercall_cleanup_state(void)
+@@ -763,7 +763,9 @@ static int do_get_hook_mode(void __user *arg)
+ {
+     struct ksu_get_hook_mode_cmd cmd = {0};
+ 
+-#ifndef CONFIG_KSU_SUSFS
++#if defined(CONFIG_KSU_MANUAL_HOOK) && !defined(CONFIG_KSU_SUSFS)
++    strscpy(cmd.mode, "Inline", sizeof(cmd.mode));
++#elif !defined(CONFIG_KSU_SUSFS)
+ #ifdef CONFIG_HAVE_SYSCALL_TRACEPOINTS
+     strscpy(cmd.mode, "Tracepoint", sizeof(cmd.mode));
+ #else
+@@ -1156,6 +1158,17 @@ void ksu_supercall_cleanup_state(void)
      up_write(&mount_list_lock);
  }
  
