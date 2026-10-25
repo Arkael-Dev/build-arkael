@@ -54,6 +54,15 @@ CONFIG_KSU_MANUAL_HOOK=n
 CONFIG_KSU_HAS_MANUAL_HOOK=n
 EOF
 
+elif [ "$KSU_MANUAL_HOOK" = "true" ]; then
+    echo "🔧 Mode: Manual Hook (tanpa SuSFS)"
+    cat >> "$DEFCONFIG" <<EOF
+CONFIG_KSU_SUSFS=n
+CONFIG_KSU_MANUAL_HOOK=y
+CONFIG_KSU_HAS_MANUAL_HOOK=y
+CONFIG_KSU_SYSCALL_HOOK=n
+EOF
+
 else
     echo "🔧 Mode: Kprobes Hook Standard"
     cat >> "$DEFCONFIG" <<EOF
