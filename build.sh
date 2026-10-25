@@ -258,6 +258,38 @@ if ksu_included; then
     fi
   fi
 
+  if [ "$KSU_MANUAL_HOOK" == "true" ] && [ "$KVER" == "5.10" ]; then
+    log "Applying manual-hook-v1.7 (KSU_MANUAL_HOOK=true)..."
+    HOOK_DIR="$KERNEL_PATCHES/hooks"
+
+    if [ ! -f "$HOOK_DIR/manual-hook-v1.7.patch" ] || [ ! -f "$HOOK_DIR/manual-hook-v1.7-ksun.patch" ]; then
+      error "manual-hook-v1.7 patch files not found in $HOOK_DIR"
+    fi
+
+    log "  -> patching kernel source ($KSRC)"
+    patch -p1 --forward < "$HOOK_DIR/manual-hook-v1.7.patch" || error "manual-hook-v1.7.patch failed to apply"
+
+    log "  -> patching KernelSU-Next"
+    cd KernelSU-Next
+    patch -p1 --forward < "$HOOK_DIR/manual-hook-v1.7-ksun.patch" || error "manual-hook-v1.7-ksun.patch failed to apply"
+    cd $OLDPWD
+
+    log "  -> switching defconfig: SUSFS off, MANUAL_HOOK on"
+    config --disable CONFIG_KSU_SUSFS
+    config --disable CONFIG_KSU_SUSFS_SUS_PATH
+    config --disable CONFIG_KSU_SUSFS_SUS_MOUNT
+    config --disable CONFIG_KSU_SUSFS_SUS_KSTAT
+    config --disable CONFIG_KSU_SUSFS_SPOOF_UNAME
+    config --disable CONFIG_KSU_SUSFS_ENABLE_LOG
+    config --disable CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS
+    config --disable CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
+    config --disable CONFIG_KSU_SUSFS_OPEN_REDIRECT
+    config --disable CONFIG_KSU_SUSFS_SUS_MAP
+    config --enable CONFIG_KSU_MANUAL_HOOK
+  elif [ "$KSU_MANUAL_HOOK" == "true" ]; then
+    log "WARNING: KSU_MANUAL_HOOK=true is only wired for KVER=5.10 right now; ignoring for KVER=$KVER."
+  fi
+
   log "Applying AVC spoof compatibility fix (ALL GKI)..."
   if [ -f "drivers/kernelsu/extras.c" ]; then
     EXTRAS_FIX_TMP="$WORKDIR/.extras_avc_fix_tmp"
