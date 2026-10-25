@@ -501,16 +501,18 @@ index 0a80e4d2..22694a46 100644
      // this should be done before unregister vfs_read_kp
      // stop_init_rc_hook();
 diff --git a/kernel/supercall/dispatch.c b/kernel/supercall/dispatch.c
-index 16ceab17..11f8e73c 100644
+index 16ceab17..7fc6bf70 100644
 --- a/kernel/supercall/dispatch.c
 +++ b/kernel/supercall/dispatch.c
-@@ -1156,6 +1156,13 @@ void ksu_supercall_cleanup_state(void)
+@@ -1156,6 +1156,15 @@ void ksu_supercall_cleanup_state(void)
      up_write(&mount_list_lock);
  }
  
 +#if defined(CONFIG_KSU_MANUAL_HOOK) && !defined(CONFIG_KSU_SUSFS)
 +int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void __user **arg)
 +{
++    if (magic1 == KSU_INSTALL_MAGIC1 && magic2 == KSU_INSTALL_MAGIC2)
++        return ksu_supercall_reboot_handler(arg);
 +    return -EINVAL;
 +}
 +#endif
@@ -518,3 +520,16 @@ index 16ceab17..11f8e73c 100644
  #ifdef CONFIG_KSU_SUSFS
  /* susfs reboot commands */
  int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void __user **arg)
+diff --git a/kernel/supercall/supercall.c b/kernel/supercall/supercall.c
+index b759f699..eae74c71 100644
+--- a/kernel/supercall/supercall.c
++++ b/kernel/supercall/supercall.c
+@@ -249,7 +249,7 @@ int ksu_handle_toolkit_reboot(int magic2, unsigned int cmd, void __user *arg)
+     return -EINVAL;
+ }
+ 
+-#ifdef CONFIG_KSU_SUSFS
++#if defined(CONFIG_KSU_SUSFS) || defined(CONFIG_KSU_MANUAL_HOOK)
+ int ksu_supercall_reboot_handler(void __user **arg)
+ {
+     struct ksu_install_fd_tw *tw;
