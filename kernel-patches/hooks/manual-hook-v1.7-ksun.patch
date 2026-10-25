@@ -1,5 +1,7 @@
 # manual-hook-v1.7 sisi KernelSU-Next: guard KSU_MANUAL_HOOK di sucompat.c/.h,
-# makro KSU_DIRECT_HOOK di ksud_integration.c, opsi Kconfig KSU_MANUAL_HOOK.
+# makro KSU_DIRECT_HOOK di ksud_integration.c, opsi Kconfig KSU_MANUAL_HOOK,
+# dan core/init.c (panggil sucompat_init/setuid_hook_init di mode manual,
+# cegah hook kprobes ganda pada syscall_hook_init/syscall_hook_manager_init).
 # Pasangan dari manual-hook-v1.7.patch. Config: KSU_MANUAL_HOOK=y, KSU_SUSFS=n.
 # Belum diuji build/boot.
 diff --git a/kernel/Kconfig b/kernel/Kconfig
@@ -22,6 +24,83 @@ index e58f4e1..10b6bd2 100644
  menu "KernelSU - SUSFS"
  config KSU_SUSFS
  	bool "KernelSU addon - SUSFS"
+diff --git a/kernel/core/init.c b/kernel/core/init.c
+index 1ffa031..03c7eac 100644
+--- a/kernel/core/init.c
++++ b/kernel/core/init.c
+@@ -35,10 +35,12 @@
+ #include "compat/samsung_defex.h"
+ #include "ksu_samsung_kdp.h"
+ 
+-#ifdef CONFIG_KSU_SUSFS
+-#include <linux/susfs.h>
++#if defined(CONFIG_KSU_SUSFS) || defined(CONFIG_KSU_MANUAL_HOOK)
+ #include "hook/setuid_hook.h"
+ #include "feature/sucompat.h"
++#endif
++#ifdef CONFIG_KSU_SUSFS
++#include <linux/susfs.h>
+ extern void ksu_avc_spoof_late_init(void);
+ #endif
+ 
+@@ -173,7 +175,7 @@ int __init kernelsu_init(void)
+ 		return ret;
+ 	}
+ 
+-#if !defined(CONFIG_KSU_SUSFS) && defined(CONFIG_KPROBES)
++#if !defined(CONFIG_KSU_SUSFS) && !defined(CONFIG_KSU_MANUAL_HOOK) && defined(CONFIG_KPROBES)
+ 	ksu_syscall_hook_init();
+ #endif
+ 
+@@ -196,9 +198,11 @@ int __init kernelsu_init(void)
+ 	ksu_supercalls_init();
+ 	ksu_app_profile_init();
+ 
+-#ifdef CONFIG_KSU_SUSFS
++#if defined(CONFIG_KSU_SUSFS) || defined(CONFIG_KSU_MANUAL_HOOK)
+ 	ksu_sucompat_init();
+ 	ksu_setuid_hook_init();
++#endif
++#ifdef CONFIG_KSU_SUSFS
+ 	ksu_avc_spoof_init();
+ #endif
+ 
+@@ -217,7 +221,7 @@ int __init kernelsu_init(void)
+ 		ksu_allowlist_init();
+ 		ksu_load_allow_list();
+ 
+-#if !defined(CONFIG_KSU_SUSFS) && defined(CONFIG_KPROBES)
++#if !defined(CONFIG_KSU_SUSFS) && !defined(CONFIG_KSU_MANUAL_HOOK) && defined(CONFIG_KPROBES)
+ 		ksu_syscall_hook_manager_init();
+ #endif
+ 
+@@ -236,7 +240,7 @@ int __init kernelsu_init(void)
+ 		}
+ 
+ 	} else {
+-#if !defined(CONFIG_KSU_SUSFS) && defined(CONFIG_KPROBES)
++#if !defined(CONFIG_KSU_SUSFS) && !defined(CONFIG_KSU_MANUAL_HOOK) && defined(CONFIG_KPROBES)
+ 		ksu_syscall_hook_manager_init();
+ #endif
+ 
+@@ -262,7 +266,7 @@ int __init kernelsu_init(void)
+ void __exit kernelsu_exit(void)
+ {
+ 	// Phase 1: Stop all hooks first to prevent new callbacks
+-#if !defined(CONFIG_KSU_SUSFS) && defined(CONFIG_KPROBES)
++#if !defined(CONFIG_KSU_SUSFS) && !defined(CONFIG_KSU_MANUAL_HOOK) && defined(CONFIG_KPROBES)
+ 	ksu_syscall_hook_manager_exit();
+ #endif
+ 
+@@ -285,6 +289,8 @@ void __exit kernelsu_exit(void)
+ 
+ #ifdef CONFIG_KSU_SUSFS
+ 	ksu_avc_spoof_exit();
++#endif
++#if defined(CONFIG_KSU_SUSFS) || defined(CONFIG_KSU_MANUAL_HOOK)
+ 	ksu_sucompat_exit();
+ 	ksu_setuid_hook_exit();
+ #endif
 diff --git a/kernel/feature/sucompat.c b/kernel/feature/sucompat.c
 index 783697d..efca9f1 100644
 --- a/kernel/feature/sucompat.c
