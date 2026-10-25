@@ -4,8 +4,31 @@
 # cegah hook kprobes ganda pada syscall_hook_init/syscall_hook_manager_init).
 # Pasangan dari manual-hook-v1.7.patch. Config: KSU_MANUAL_HOOK=y, KSU_SUSFS=n.
 # Belum diuji build/boot.
+diff --git a/kernel/Kbuild b/kernel/Kbuild
+index 4a864771..713b8f33 100644
+--- a/kernel/Kbuild
++++ b/kernel/Kbuild
+@@ -26,8 +26,9 @@ kernelsu-objs += hook/$(KSU_ARCH)/patch_memory.o
+ endif
+ endif
+ 
+-# Hooks (excluded for SuSFS)
++# Hooks (excluded for SuSFS and manual hook)
+ ifneq ($(strip $(CONFIG_KSU_SUSFS)),y)
++ifneq ($(strip $(CONFIG_KSU_MANUAL_HOOK)),y)
+ ifeq ($(strip $(CONFIG_KPROBES)),y)
+ kernelsu-objs += hook/syscall_event_bridge.o
+ kernelsu-objs += hook/syscall_hook_manager.o
+@@ -37,6 +38,7 @@ kernelsu-objs += hook/$(KSU_ARCH)/syscall_hook.o
+ endif
+ endif
+ endif
++endif
+ 
+ kernelsu-objs += hook/setuid_hook.o
+ kernelsu-objs += extras.o
 diff --git a/kernel/Kconfig b/kernel/Kconfig
-index e58f4e1..10b6bd2 100644
+index e58f4e1d..10b6bd23 100644
 --- a/kernel/Kconfig
 +++ b/kernel/Kconfig
 @@ -100,6 +100,15 @@ config KSU_SAMSUNG_NO_PATCH_TEXT
@@ -25,7 +48,7 @@ index e58f4e1..10b6bd2 100644
  config KSU_SUSFS
  	bool "KernelSU addon - SUSFS"
 diff --git a/kernel/core/init.c b/kernel/core/init.c
-index 1ffa031..03c7eac 100644
+index 1ffa0311..03c7eac0 100644
 --- a/kernel/core/init.c
 +++ b/kernel/core/init.c
 @@ -35,10 +35,12 @@
@@ -102,7 +125,7 @@ index 1ffa031..03c7eac 100644
  	ksu_setuid_hook_exit();
  #endif
 diff --git a/kernel/feature/sucompat.c b/kernel/feature/sucompat.c
-index 783697d..efca9f1 100644
+index 783697df..efca9f1f 100644
 --- a/kernel/feature/sucompat.c
 +++ b/kernel/feature/sucompat.c
 @@ -21,8 +21,10 @@
@@ -165,7 +188,7 @@ index 783697d..efca9f1 100644
  {
  	const char __user **filename_user, *orig_filename;
 diff --git a/kernel/feature/sucompat.h b/kernel/feature/sucompat.h
-index 3e0b27f..1be7147 100644
+index 3e0b27fa..1be71478 100644
 --- a/kernel/feature/sucompat.h
 +++ b/kernel/feature/sucompat.h
 @@ -19,6 +19,16 @@ void ksu_sucompat_exit(void);
@@ -186,7 +209,7 @@ index 3e0b27f..1be7147 100644
              void *envp, int *flags);
  int ksu_handle_execveat_init(struct filename *filename, struct user_arg_ptr *argv_user, struct user_arg_ptr *envp_user);
 diff --git a/kernel/runtime/ksud_integration.c b/kernel/runtime/ksud_integration.c
-index 0a80e4d..f5bdcd5 100644
+index 0a80e4d2..f5bdcd5a 100644
 --- a/kernel/runtime/ksud_integration.c
 +++ b/kernel/runtime/ksud_integration.c
 @@ -33,7 +33,11 @@
