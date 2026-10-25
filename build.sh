@@ -272,6 +272,7 @@ if ksu_included; then
     log "  -> patching KernelSU-Next"
     cd KernelSU-Next
     patch -p1 --forward < "$HOOK_DIR/manual-hook-v1.7-ksun.patch" || error "manual-hook-v1.7-ksun.patch failed to apply"
+    patch -p1 --forward < "$HOOK_DIR/arkael-hook-name.patch" || error "arkael-hook-name.patch failed to apply"
     cd $OLDPWD
 
     log "  -> switching defconfig: SUSFS off, MANUAL_HOOK on"

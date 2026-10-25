@@ -1,0 +1,11 @@
+--- a/kernel/supercall/dispatch.c
++++ b/kernel/supercall/dispatch.c
+@@ -764,7 +764,7 @@
+     struct ksu_get_hook_mode_cmd cmd = {0};
+ 
+ #if defined(CONFIG_KSU_MANUAL_HOOK) && !defined(CONFIG_KSU_SUSFS)
+-    strscpy(cmd.mode, "Inline", sizeof(cmd.mode));
++    strscpy(cmd.mode, "arkael-hook", sizeof(cmd.mode));
+ #elif !defined(CONFIG_KSU_SUSFS)
+ #ifdef CONFIG_HAVE_SYSCALL_TRACEPOINTS
+     strscpy(cmd.mode, "Tracepoint", sizeof(cmd.mode));
