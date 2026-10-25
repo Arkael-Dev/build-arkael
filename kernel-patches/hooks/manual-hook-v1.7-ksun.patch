@@ -245,6 +245,33 @@ index 3e0b27fa..1be71478 100644
  int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
              void *envp, int *flags);
  int ksu_handle_execveat_init(struct filename *filename, struct user_arg_ptr *argv_user, struct user_arg_ptr *envp_user);
+diff --git a/kernel/hook/syscall_event_bridge.c b/kernel/hook/syscall_event_bridge.c
+index db5b8442..a3f210e0 100644
+--- a/kernel/hook/syscall_event_bridge.c
++++ b/kernel/hook/syscall_event_bridge.c
+@@ -73,6 +73,14 @@ void ksu_stop_ksud_execve_hook()
+ 	static_branch_disable(&ksud_execve_key);
+ }
+ 
++#if defined(CONFIG_KSU_SUSFS) || defined(CONFIG_KSU_MANUAL_HOOK)
++/* jalur syscall-hook tidak dipakai di mode ini; signature adb_root/sucompat berbeda */
++static long __nocfi ksu_hook_execve_common(int orig_nr, const struct pt_regs *regs, bool execveat)
++{
++	(void)execveat;
++	return ksu_syscall_table[orig_nr](regs);
++}
++#else
+ static long __nocfi ksu_hook_execve_common(int orig_nr, const struct pt_regs *regs, bool execveat)
+ {
+ 	const char __user **filename_user =
+@@ -120,6 +128,7 @@ static long __nocfi ksu_hook_execve_common(int orig_nr, const struct pt_regs *re
+ 	ksu_sulog_emit_pending(pending_root_execve, ret, GFP_KERNEL);
+ 	return ret;
+ }
++#endif /* SUSFS || MANUAL_HOOK */
+ 
+ long __nocfi ksu_hook_execve(int orig_nr, const struct pt_regs *regs)
+ {
 diff --git a/kernel/runtime/ksud_integration.c b/kernel/runtime/ksud_integration.c
 index 0a80e4d2..22694a46 100644
 --- a/kernel/runtime/ksud_integration.c
