@@ -28,10 +28,10 @@ index 4a864771..713b8f33 100644
  kernelsu-objs += hook/setuid_hook.o
  kernelsu-objs += extras.o
 diff --git a/kernel/Kconfig b/kernel/Kconfig
-index e58f4e1d..10b6bd23 100644
+index e58f4e1d..455cdc15 100644
 --- a/kernel/Kconfig
 +++ b/kernel/Kconfig
-@@ -100,6 +100,15 @@ config KSU_SAMSUNG_NO_PATCH_TEXT
+@@ -100,6 +100,23 @@ config KSU_SAMSUNG_NO_PATCH_TEXT
  	  protection rejects fixmap writes. Samsung devices are detected from
  	  the root device-tree compatible property; other devices are unaffected.
  
@@ -43,6 +43,14 @@ index e58f4e1d..10b6bd23 100644
 +    help
 +      Pakai hook yang ditambal langsung ke sumber kernel
 +      (kernel-patches/hooks/manual-hook-v1.7.patch), bukan kprobes.
++
++config KSU_HAS_MANUAL_HOOK
++    bool "Tandai kernel ini dibuild dengan dukungan manual hook"
++    depends on KSU
++    default n
++    help
++      Flag informasional yang dinyalakan bersamaan dengan KSU_MANUAL_HOOK
++      lewat defconfig, dipakai manager/userspace untuk deteksi fitur.
 +
  menu "KernelSU - SUSFS"
  config KSU_SUSFS
