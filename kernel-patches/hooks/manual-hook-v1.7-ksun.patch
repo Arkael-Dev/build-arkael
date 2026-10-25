@@ -124,6 +124,58 @@ index 1ffa0311..03c7eac0 100644
  	ksu_sucompat_exit();
  	ksu_setuid_hook_exit();
  #endif
+diff --git a/kernel/feature/adb_root.c b/kernel/feature/adb_root.c
+index e2978d17..205e9858 100644
+--- a/kernel/feature/adb_root.c
++++ b/kernel/feature/adb_root.c
+@@ -34,6 +34,25 @@ static inline long is_exec_adbd(const char *filename)
+     return (susfs_starts_with(filename, "/apex/") &&
+                 susfs_ends_with(filename, "/adbd"));
+ }
++#elif defined(CONFIG_KSU_MANUAL_HOOK)
++static inline long is_exec_adbd(const char *filename)
++{
++    static const char kApexPrefix[] = "/apex/";
++    static const char kAdbdSuffix[] = "/adbd";
++    size_t len;
++
++    if (strstr(filename, "adbd"))
++        pr_info("is_exec_adbd() => filename: %s\n", filename);
++
++    if (strncmp(filename, kApexPrefix, sizeof(kApexPrefix) - 1) != 0)
++        return 0;
++
++    len = strlen(filename);
++    if (len < sizeof(kAdbdSuffix) - 1)
++        return 0;
++
++    return !strcmp(filename + len - (sizeof(kAdbdSuffix) - 1), kAdbdSuffix);
++}
+ #else
+ static long is_exec_adbd(const char __user *filename_user)
+ {
+@@ -81,7 +100,7 @@ static long is_libadbroot_ok(void)
+     return ret;
+ }
+ 
+-#ifdef CONFIG_KSU_SUSFS
++#if defined(CONFIG_KSU_SUSFS) || defined(CONFIG_KSU_MANUAL_HOOK)
+ static long setup_ld_preload(void ***envp_user_ptr)
+ {
+     static const char kLdPreload[] = "LD_PRELOAD=/data/adb/ksu/lib/libadbroot.so";
+diff --git a/kernel/feature/adb_root.h b/kernel/feature/adb_root.h
+index f808ac06..8e8d3f96 100644
+--- a/kernel/feature/adb_root.h
++++ b/kernel/feature/adb_root.h
+@@ -2,7 +2,7 @@
+ #define __KSU_H_ADB_ROOT
+ #include <asm/ptrace.h>
+ 
+-#ifdef CONFIG_KSU_SUSFS
++#if defined(CONFIG_KSU_SUSFS) || defined(CONFIG_KSU_MANUAL_HOOK)
+ long ksu_adb_root_handle_execveat(const char *filename, void __user ***envp_user_ptr);
+ #else
+ long ksu_adb_root_handle_execve(struct pt_regs *regs);
 diff --git a/kernel/feature/sucompat.c b/kernel/feature/sucompat.c
 index 783697df..efca9f1f 100644
 --- a/kernel/feature/sucompat.c
